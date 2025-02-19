@@ -26,7 +26,7 @@
 
 
 
-    Define technical indicators-  SP_Historical_data line #89 
+    functions for technical indicators-  SP_Historical_data line #89 
 
 
 
