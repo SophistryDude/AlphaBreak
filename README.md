@@ -5,54 +5,28 @@
 
 
 
-Creating a target: 
+1. Creating a target: 
 
 
 
 
-    Define a trendline break- 
+    Define a trendline break- SP_historical_data line #348 
 
 
 
-
-
-        SP_historical_data line #348 
-
-
-
-    Define trendline break accuracy - 
+    Define trendline break accuracy - SP_historical_data line #381 
 
 
 
-
-
-SP_historical_data line #381 
-
-
-
-    Implementing technical indicators: 
+2. Implementing technical indicators: 
 
 
 
-
-
-Definition of technical indicators- 
-
+    Definition of technical indicators- SP_Historical_data line #26 
 
 
 
-
-    SP_Historical_data line #26 
-
-
-
-Define technical indicators- 
-
-
-
-
-
-    SP_Historical_data line #89 
+    Define technical indicators-  SP_Historical_data line #89 
 
 
 
