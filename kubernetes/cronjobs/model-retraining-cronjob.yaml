@@ -1,0 +1,65 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: model-retraining-job
+  namespace: trading-system
+  labels:
+    app: model-retraining
+    component: scheduler
+spec:
+  # Run weekly on Sunday at 3 AM UTC
+  schedule: "0 3 * * 0"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: model-retraining
+            component: scheduler
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: model-retraining
+            image: trading-api:latest
+            imagePullPolicy: IfNotPresent
+            command:
+            - python
+            - /app/scripts/retrain_models.py
+            env:
+            - name: FLASK_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-api-config
+                  key: FLASK_ENV
+            - name: MODEL_DIR
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-api-config
+                  key: MODEL_DIR
+            - name: LOOKAHEAD_DAYS
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-api-config
+                  key: LOOKAHEAD_DAYS
+            volumeMounts:
+            - name: model-storage
+              mountPath: /app/models
+            - name: logs
+              mountPath: /app/logs
+            resources:
+              requests:
+                memory: "4Gi"
+                cpu: "2000m"
+              limits:
+                memory: "8Gi"
+                cpu: "4000m"
+          volumes:
+          - name: model-storage
+            persistentVolumeClaim:
+              claimName: trading-models-pvc
+          - name: logs
+            emptyDir: {}

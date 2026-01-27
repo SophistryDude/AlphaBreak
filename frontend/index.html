@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading System - AI-Powered Stock Predictions</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <h1>📈 Trading System</h1>
+                <p class="tagline">AI-Powered Stock & Options Analysis</p>
+            </div>
+            <div class="api-status" id="apiStatus">
+                <span class="status-indicator"></span>
+                <span class="status-text">Checking API...</span>
+            </div>
+        </header>
+
+        <!-- Dashboard Widgets -->
+        <section class="dashboard-section" id="dashboardSection">
+            <h2 class="dashboard-title">Market Dashboard</h2>
+            <p class="dashboard-subtitle">Real-time market overview &mdash; auto-refreshes every 5 minutes</p>
+
+            <div class="dashboard-grid">
+                <!-- Widget 1: Market Sentiment -->
+                <div class="widget-card" id="widgetMarketSentiment">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Market Sentiment</h3>
+                        <span class="widget-badge" id="marketSentimentBadge">Loading...</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="sentiment-display" id="marketSentimentDisplay">
+                            <div class="sentiment-label" id="marketSentimentLabel">--</div>
+                            <div class="sentiment-confidence" id="marketSentimentConfidence"></div>
+                        </div>
+                        <div class="widget-chart-container">
+                            <canvas id="marketSentimentChart"></canvas>
+                        </div>
+                        <div class="widget-indicators" id="marketSentimentIndicators"></div>
+                        <div class="widget-context" id="marketSentimentContext"></div>
+                    </div>
+                    <div class="widget-footer">
+                        <span class="widget-updated" id="marketSentimentUpdated"></span>
+                    </div>
+                </div>
+
+                <!-- Widget 2: Sector Sentiment -->
+                <div class="widget-card" id="widgetSectorSentiment">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Sector Sentiment</h3>
+                        <select id="sectorSelector" class="sector-select">
+                            <option value="all">All Sectors</option>
+                        </select>
+                    </div>
+                    <div class="widget-body">
+                        <div class="sector-grid" id="sectorGrid"></div>
+                        <div class="widget-chart-container" id="sectorChartContainer" style="display:none;">
+                            <canvas id="sectorChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="widget-footer">
+                        <span class="widget-updated" id="sectorSentimentUpdated"></span>
+                    </div>
+                </div>
+
+                <!-- Widget 3: VIX & Index Sentiment -->
+                <div class="widget-card" id="widgetIndexSentiment">
+                    <div class="widget-header">
+                        <h3 class="widget-title">VIX &amp; Index Sentiment</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="vix-display" id="vixDisplay">
+                            <div class="vix-value" id="vixValue">--</div>
+                            <div class="vix-fear-label" id="vixFearLabel">Loading...</div>
+                            <div class="vix-description" id="vixDescription"></div>
+                        </div>
+                        <div class="index-sentiment-grid" id="indexSentimentGrid"></div>
+                        <div class="inverse-etf-section" id="inverseEtfSection">
+                            <h4>Inverse ETF Signal</h4>
+                            <div class="inverse-etf-sentiment" id="inverseEtfSentiment"></div>
+                        </div>
+                    </div>
+                    <div class="widget-footer">
+                        <span class="widget-updated" id="indexSentimentUpdated"></span>
+                    </div>
+                </div>
+
+                <!-- Widget 4: Commodities & Crypto -->
+                <div class="widget-card widget-card-wide" id="widgetCommoditiesCrypto">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Commodities &amp; Crypto</h3>
+                        <div class="asset-tabs" id="assetTabs">
+                            <button class="asset-tab active" data-asset="GC=F">Gold</button>
+                            <button class="asset-tab" data-asset="SI=F">Silver</button>
+                            <button class="asset-tab" data-asset="ETH-USD">ETH</button>
+                            <button class="asset-tab" data-asset="BTC-USD">BTC</button>
+                        </div>
+                    </div>
+                    <div class="widget-body">
+                        <div class="asset-summary-grid" id="assetSummaryGrid"></div>
+                        <div class="widget-chart-container widget-chart-large">
+                            <canvas id="commodityCryptoChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="widget-footer">
+                        <span class="widget-updated" id="commodityCryptoUpdated"></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-button active" data-tab="trend">Trend Break Prediction</button>
+                <button class="tab-button" data-tab="options">Options Analysis</button>
+                <button class="tab-button" data-tab="stats">Performance Stats</button>
+            </div>
+
+            <!-- Trend Break Tab -->
+            <div class="tab-content active" id="trendTab">
+                <div class="card">
+                    <h2>Predict Trend Breaks</h2>
+                    <p class="description">Get AI-powered predictions for potential trend breaks in stock prices.</p>
+
+                    <form id="trendForm" class="prediction-form">
+                        <div class="form-group">
+                            <label for="trendTicker">Stock Ticker</label>
+                            <input
+                                type="text"
+                                id="trendTicker"
+                                name="ticker"
+                                placeholder="e.g., AAPL, GOOGL, MSFT"
+                                required
+                                pattern="[A-Z]{1,5}"
+                                title="Enter a valid stock ticker (1-5 uppercase letters)"
+                            >
+                            <span class="help-text">Enter stock symbol (e.g., AAPL for Apple Inc.)</span>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="trendStartDate">Start Date</label>
+                                <input type="date" id="trendStartDate" name="start_date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="trendEndDate">End Date</label>
+                                <input type="date" id="trendEndDate" name="end_date" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">Analyze Trend</span>
+                            <span class="btn-loader" style="display: none;">Analyzing...</span>
+                        </button>
+                    </form>
+
+                    <!-- Results -->
+                    <div id="trendResults" class="results" style="display: none;">
+                        <h3>Prediction Results</h3>
+                        <div class="result-card">
+                            <div class="result-header">
+                                <span class="ticker-badge" id="resultTicker"></span>
+                                <span class="timestamp" id="resultTimestamp"></span>
+                            </div>
+
+                            <div class="prediction-summary">
+                                <div class="metric-card">
+                                    <div class="metric-label">Trend Break Probability</div>
+                                    <div class="metric-value large" id="breakProbability"></div>
+                                    <div class="confidence-bar">
+                                        <div class="confidence-fill" id="confidenceBar"></div>
+                                    </div>
+                                </div>
+
+                                <div class="metric-grid">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Predicted Direction</div>
+                                        <div class="metric-value" id="predictedDirection"></div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-label">Confidence</div>
+                                        <div class="metric-value" id="confidence"></div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-label">Current Price</div>
+                                        <div class="metric-value" id="currentPrice"></div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-label">Target Price</div>
+                                        <div class="metric-value" id="targetPrice"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="indicators-section">
+                                <h4>Key Indicators Used</h4>
+                                <div id="indicatorsList" class="indicators-list"></div>
+                            </div>
+
+                            <div class="model-info">
+                                <span>Model Version: <strong id="modelVersion"></strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Options Analysis Tab -->
+            <div class="tab-content" id="optionsTab">
+                <div class="card">
+                    <h2>Options Analysis</h2>
+                    <p class="description">Analyze options trading opportunities with fair value pricing and Greeks.</p>
+
+                    <form id="optionsForm" class="prediction-form">
+                        <div class="form-group">
+                            <label for="optionsTicker">Stock Ticker</label>
+                            <input
+                                type="text"
+                                id="optionsTicker"
+                                name="ticker"
+                                placeholder="e.g., AAPL"
+                                required
+                                pattern="[A-Z]{1,5}"
+                            >
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="optionsStartDate">Start Date</label>
+                                <input type="date" id="optionsStartDate" name="start_date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="optionsEndDate">End Date</label>
+                                <input type="date" id="optionsEndDate" name="end_date" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="optionType">Option Type</label>
+                                <select id="optionType" name="option_type">
+                                    <option value="">Both</option>
+                                    <option value="call">Call</option>
+                                    <option value="put">Put</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="trendDirection">Trend Direction</label>
+                                <select id="trendDirection" name="trend_direction">
+                                    <option value="">Any</option>
+                                    <option value="bullish">Bullish</option>
+                                    <option value="bearish">Bearish</option>
+                                    <option value="neutral">Neutral</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">Analyze Options</span>
+                            <span class="btn-loader" style="display: none;">Analyzing...</span>
+                        </button>
+                    </form>
+
+                    <!-- Options Results -->
+                    <div id="optionsResults" class="results" style="display: none;">
+                        <h3>Options Analysis Results</h3>
+                        <div class="result-card">
+                            <div class="result-header">
+                                <span class="ticker-badge" id="optionsResultTicker"></span>
+                                <span class="timestamp" id="optionsResultTimestamp"></span>
+                            </div>
+
+                            <div class="strategy-summary">
+                                <h4>Recommended Strategy</h4>
+                                <div class="strategy-card">
+                                    <div class="strategy-name" id="strategyName"></div>
+                                    <div class="metric-grid">
+                                        <div class="metric-card">
+                                            <div class="metric-label">Confidence</div>
+                                            <div class="metric-value" id="strategyConfidence"></div>
+                                        </div>
+                                        <div class="metric-card">
+                                            <div class="metric-label">Expected Return</div>
+                                            <div class="metric-value" id="expectedReturn"></div>
+                                        </div>
+                                        <div class="metric-card">
+                                            <div class="metric-label">Risk Level</div>
+                                            <div class="metric-value" id="riskLevel"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="options-table-section">
+                                <h4>Available Options</h4>
+                                <div class="table-container">
+                                    <table class="options-table" id="optionsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Type</th>
+                                                <th>Strike</th>
+                                                <th>Expiration</th>
+                                                <th>Last Price</th>
+                                                <th>Fair Value</th>
+                                                <th>IV</th>
+                                                <th>Delta</th>
+                                                <th>Recommendation</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="optionsTableBody">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Stats Tab -->
+            <div class="tab-content" id="statsTab">
+                <div class="card">
+                    <h2>Model Performance Statistics</h2>
+                    <p class="description">View historical accuracy and performance metrics.</p>
+
+                    <form id="statsForm" class="prediction-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="modelVersion">Model Version</label>
+                                <input
+                                    type="text"
+                                    id="modelVersionInput"
+                                    name="model_version"
+                                    placeholder="Leave empty for latest"
+                                >
+                            </div>
+                            <div class="form-group">
+                                <label for="statsDays">Days Lookback</label>
+                                <select id="statsDays" name="days">
+                                    <option value="7">Last 7 Days</option>
+                                    <option value="30" selected>Last 30 Days</option>
+                                    <option value="60">Last 60 Days</option>
+                                    <option value="90">Last 90 Days</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">Get Statistics</span>
+                            <span class="btn-loader" style="display: none;">Loading...</span>
+                        </button>
+                    </form>
+
+                    <!-- Stats Results -->
+                    <div id="statsResults" class="results" style="display: none;">
+                        <h3>Performance Metrics</h3>
+                        <div class="result-card">
+                            <div class="metric-grid large">
+                                <div class="metric-card">
+                                    <div class="metric-label">Accuracy</div>
+                                    <div class="metric-value" id="statsAccuracy"></div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-label">Precision</div>
+                                    <div class="metric-value" id="statsPrecision"></div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-label">Recall</div>
+                                    <div class="metric-value" id="statsRecall"></div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-label">F1 Score</div>
+                                    <div class="metric-value" id="statsF1"></div>
+                                </div>
+                            </div>
+
+                            <h4>Trading Performance</h4>
+                            <div class="metric-grid">
+                                <div class="metric-card">
+                                    <div class="metric-label">Total Return</div>
+                                    <div class="metric-value" id="statsTotalReturn"></div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-label">Sharpe Ratio</div>
+                                    <div class="metric-value" id="statsSharpe"></div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-label">Win Rate</div>
+                                    <div class="metric-value" id="statsWinRate"></div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-label">Max Drawdown</div>
+                                    <div class="metric-value" id="statsDrawdown"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Error Display -->
+        <div id="errorDisplay" class="error-display" style="display: none;">
+            <div class="error-content">
+                <span class="error-icon">⚠️</span>
+                <span class="error-message" id="errorMessage"></span>
+                <button class="error-close" onclick="closeError()">×</button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Trading System v1.0 | Powered by XGBoost & TimescaleDB</p>
+            <p class="disclaimer">⚠️ For informational purposes only. Not financial advice.</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>

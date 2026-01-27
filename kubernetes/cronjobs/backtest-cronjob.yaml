@@ -1,0 +1,57 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backtest-job
+  namespace: trading-system
+spec:
+  schedule: "0 4 1 * *"  # Monthly on 1st at 4 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: backtest-job
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: backtest
+            image: your-registry.com/trading-api:latest
+            command:
+            - python
+            - /app/scripts/run_backtest.py
+            env:
+            - name: ALPHA_VANTAGE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: trading-secrets
+                  key: alpha-vantage-key
+            - name: MODEL_DIR
+              value: "/app/models"
+            - name: BACKTEST_START_DATE
+              value: "2023-01-01"
+            - name: BACKTEST_TICKERS
+              value: "AAPL,GOOGL,MSFT,TSLA,AMZN"
+            resources:
+              requests:
+                memory: "2Gi"
+                cpu: "500m"
+              limits:
+                memory: "4Gi"
+                cpu: "2000m"
+            volumeMounts:
+            - name: models
+              mountPath: /app/models
+              readOnly: true
+            - name: logs
+              mountPath: /app/logs
+          volumes:
+          - name: models
+            persistentVolumeClaim:
+              claimName: trading-models-pvc
+          - name: logs
+            persistentVolumeClaim:
+              claimName: trading-logs-pvc

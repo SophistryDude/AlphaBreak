@@ -1,0 +1,110 @@
+# Airflow Helm Chart Values
+# Use this file when installing Airflow via Helm
+
+executor: "CeleryExecutor"
+
+# PostgreSQL Configuration
+postgresql:
+  enabled: true
+  auth:
+    username: airflow
+    password: airflow
+    database: airflow
+  persistence:
+    enabled: true
+    size: 5Gi
+
+# Redis Configuration
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: false
+
+# Airflow Configuration
+config:
+  core:
+    dags_folder: /opt/airflow/dags
+    load_examples: false
+    executor: CeleryExecutor
+  webserver:
+    expose_config: true
+    rbac: true
+  api:
+    auth_backends: airflow.api.auth.backend.basic_auth
+
+# DAGs Configuration
+dags:
+  persistence:
+    enabled: false
+  gitSync:
+    enabled: false
+
+# Logs Configuration
+logs:
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClassName: trading-storage
+
+# Worker Configuration
+workers:
+  replicas: 2
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+  persistence:
+    enabled: false
+
+# Scheduler Configuration
+scheduler:
+  replicas: 1
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+# Webserver Configuration
+webserver:
+  replicas: 1
+  service:
+    type: LoadBalancer
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# Default Airflow User
+webserverSecretKeySecretName: airflow-webserver-secret
+
+# Extra Environment Variables
+env:
+  - name: ALPHA_VANTAGE_KEY
+    valueFrom:
+      secretKeyRef:
+        name: trading-secrets
+        key: alpha-vantage-key
+  - name: MODEL_DIR
+    value: "/app/models"
+
+# Extra Volumes
+extraVolumes:
+  - name: models
+    persistentVolumeClaim:
+      claimName: trading-models-pvc
+
+extraVolumeMounts:
+  - name: models
+    mountPath: /app/models

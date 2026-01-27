@@ -1,0 +1,701 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-timeseries
+  namespace: trading-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-timeseries
+  template:
+    metadata:
+      labels:
+        app: postgres-timeseries
+    spec:
+      containers:
+      - name: postgres
+        image: timescale/timescaledb:latest-pg15  # TimescaleDB for time series optimization
+        env:
+        - name: POSTGRES_USER
+          value: "trading"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: trading-secrets
+              key: timeseries-postgres-password
+        - name: POSTGRES_DB
+          value: "trading_data"
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        ports:
+        - containerPort: 5432
+          name: postgres
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: init-scripts
+          mountPath: /docker-entrypoint-initdb.d
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - trading
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - trading
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-timeseries-pvc
+      - name: init-scripts
+        configMap:
+          name: postgres-init-scripts
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-timeseries-service
+  namespace: trading-system
+spec:
+  selector:
+    app: postgres-timeseries
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-timeseries-pvc
+  namespace: trading-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi  # Reduced for local development
+  storageClassName: hostpath  # Use default Docker Desktop storage
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-scripts
+  namespace: trading-system
+data:
+  01-init-timescaledb.sql: |
+    -- Enable TimescaleDB extension
+    CREATE EXTENSION IF NOT EXISTS timescaledb;
+
+    -- Create time series tables
+
+    -- Stock price data (OHLCV)
+    CREATE TABLE IF NOT EXISTS stock_prices (
+        id SERIAL,
+        ticker VARCHAR(10) NOT NULL,
+        timestamp TIMESTAMPTZ NOT NULL,
+        open NUMERIC(12, 4),
+        high NUMERIC(12, 4),
+        low NUMERIC(12, 4),
+        close NUMERIC(12, 4),
+        volume BIGINT,
+        adjusted_close NUMERIC(12, 4),
+        PRIMARY KEY (ticker, timestamp)
+    );
+
+    -- Convert to hypertable (TimescaleDB optimization)
+    SELECT create_hypertable('stock_prices', 'timestamp',
+                             chunk_time_interval => INTERVAL '7 days',
+                             if_not_exists => TRUE);
+
+    -- Create indexes
+    CREATE INDEX IF NOT EXISTS idx_stock_prices_ticker_time
+        ON stock_prices (ticker, timestamp DESC);
+
+    -- Technical indicators table
+    CREATE TABLE IF NOT EXISTS technical_indicators (
+        id SERIAL,
+        ticker VARCHAR(10) NOT NULL,
+        timestamp TIMESTAMPTZ NOT NULL,
+        indicator_name VARCHAR(50) NOT NULL,
+        indicator_value NUMERIC(12, 4),
+        PRIMARY KEY (ticker, timestamp, indicator_name)
+    );
+
+    SELECT create_hypertable('technical_indicators', 'timestamp',
+                             chunk_time_interval => INTERVAL '7 days',
+                             if_not_exists => TRUE);
+
+    CREATE INDEX IF NOT EXISTS idx_indicators_ticker_name_time
+        ON technical_indicators (ticker, indicator_name, timestamp DESC);
+
+    -- Feature engineering data
+    CREATE TABLE IF NOT EXISTS engineered_features (
+        id SERIAL,
+        ticker VARCHAR(10) NOT NULL,
+        timestamp TIMESTAMPTZ NOT NULL,
+        feature_name VARCHAR(100) NOT NULL,
+        feature_value NUMERIC(12, 6),
+        feature_metadata JSONB,
+        PRIMARY KEY (ticker, timestamp, feature_name)
+    );
+
+    SELECT create_hypertable('engineered_features', 'timestamp',
+                             chunk_time_interval => INTERVAL '7 days',
+                             if_not_exists => TRUE);
+
+    CREATE INDEX IF NOT EXISTS idx_features_ticker_time
+        ON engineered_features (ticker, timestamp DESC);
+
+    -- Trend break events
+    CREATE TABLE IF NOT EXISTS trend_breaks (
+        id SERIAL PRIMARY KEY,
+        ticker VARCHAR(10) NOT NULL,
+        timestamp TIMESTAMPTZ NOT NULL,
+        break_type VARCHAR(20) NOT NULL, -- 'bullish', 'bearish', 'consolidation'
+        confidence NUMERIC(5, 4), -- 0.0 to 1.0
+        predicted_direction VARCHAR(10), -- 'up', 'down', 'sideways'
+        actual_direction VARCHAR(10),
+        price_at_break NUMERIC(12, 4),
+        model_version VARCHAR(50),
+        metadata JSONB
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_trend_breaks_ticker_time
+        ON trend_breaks (ticker, timestamp DESC);
+
+    -- Indicator accuracy tracking
+    CREATE TABLE IF NOT EXISTS indicator_accuracy (
+        id SERIAL PRIMARY KEY,
+        ticker VARCHAR(10) NOT NULL,
+        timestamp TIMESTAMPTZ NOT NULL,
+        indicator_name VARCHAR(50) NOT NULL,
+        lookback_window INT,
+        lookahead_window INT,
+        accuracy NUMERIC(5, 4), -- 0.0 to 1.0
+        precision_score NUMERIC(5, 4),
+        recall_score NUMERIC(5, 4),
+        f1_score NUMERIC(5, 4),
+        samples_analyzed INT,
+        metadata JSONB
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_accuracy_ticker_indicator_time
+        ON indicator_accuracy (ticker, indicator_name, timestamp DESC);
+
+    -- Model performance tracking
+    CREATE TABLE IF NOT EXISTS model_performance (
+        id SERIAL PRIMARY KEY,
+        model_name VARCHAR(100) NOT NULL,
+        model_version VARCHAR(50) NOT NULL,
+        timestamp TIMESTAMPTZ NOT NULL,
+        metric_name VARCHAR(50) NOT NULL,
+        metric_value NUMERIC(12, 6),
+        ticker VARCHAR(10), -- NULL for aggregate metrics
+        metadata JSONB
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_model_perf_name_time
+        ON model_performance (model_name, timestamp DESC);
+
+    -- Predictions log
+    CREATE TABLE IF NOT EXISTS predictions_log (
+        id SERIAL PRIMARY KEY,
+        ticker VARCHAR(10) NOT NULL,
+        prediction_timestamp TIMESTAMPTZ NOT NULL,
+        prediction_type VARCHAR(50) NOT NULL, -- 'trend_break', 'price_target', etc.
+        predicted_value NUMERIC(12, 6),
+        confidence NUMERIC(5, 4),
+        actual_value NUMERIC(12, 6),
+        actual_timestamp TIMESTAMPTZ,
+        model_version VARCHAR(50),
+        features_used JSONB,
+        metadata JSONB
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_predictions_ticker_time
+        ON predictions_log (ticker, prediction_timestamp DESC);
+
+    -- Options data
+    CREATE TABLE IF NOT EXISTS options_data (
+        id SERIAL PRIMARY KEY,
+        ticker VARCHAR(10) NOT NULL,
+        timestamp TIMESTAMPTZ NOT NULL,
+        option_type VARCHAR(4) NOT NULL, -- 'call' or 'put'
+        strike_price NUMERIC(12, 4),
+        expiration_date DATE,
+        bid NUMERIC(12, 4),
+        ask NUMERIC(12, 4),
+        last_price NUMERIC(12, 4),
+        volume BIGINT,
+        open_interest BIGINT,
+        implied_volatility NUMERIC(8, 6),
+        delta NUMERIC(8, 6),
+        gamma NUMERIC(8, 6),
+        theta NUMERIC(8, 6),
+        vega NUMERIC(8, 6),
+        rho NUMERIC(8, 6)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_options_ticker_exp_time
+        ON options_data (ticker, expiration_date, timestamp DESC);
+
+    -- Backtest results
+    CREATE TABLE IF NOT EXISTS backtest_results (
+        id SERIAL PRIMARY KEY,
+        backtest_name VARCHAR(100) NOT NULL,
+        ticker VARCHAR(10) NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        initial_capital NUMERIC(15, 2),
+        final_capital NUMERIC(15, 2),
+        total_return NUMERIC(8, 4),
+        sharpe_ratio NUMERIC(8, 4),
+        max_drawdown NUMERIC(8, 4),
+        win_rate NUMERIC(5, 4),
+        total_trades INT,
+        winning_trades INT,
+        losing_trades INT,
+        avg_profit NUMERIC(12, 2),
+        avg_loss NUMERIC(12, 2),
+        metadata JSONB,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_backtest_name_ticker
+        ON backtest_results (backtest_name, ticker, created_at DESC);
+
+    -- Market Indices and Macro ETFs table for predictive features
+    -- Includes: S&P 500, DJI, S&P Futures, and inverse/volatility ETFs
+    CREATE TABLE IF NOT EXISTS market_indices (
+        id SERIAL,
+        symbol VARCHAR(20) NOT NULL,
+        timestamp TIMESTAMPTZ NOT NULL,
+        open NUMERIC(12, 4),
+        high NUMERIC(12, 4),
+        low NUMERIC(12, 4),
+        close NUMERIC(12, 4),
+        volume BIGINT,
+        adjusted_close NUMERIC(12, 4),
+        PRIMARY KEY (symbol, timestamp)
+    );
+
+    COMMENT ON TABLE market_indices IS 'Market indices and macro ETFs used as features for prediction models';
+
+    SELECT create_hypertable('market_indices', 'timestamp',
+                             chunk_time_interval => INTERVAL '7 days',
+                             if_not_exists => TRUE);
+
+    CREATE INDEX IF NOT EXISTS idx_market_indices_symbol_time
+        ON market_indices (symbol, timestamp DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_market_indices_time
+        ON market_indices (timestamp DESC);
+
+    -- Intraday version for 5min and 1hour data
+    CREATE TABLE IF NOT EXISTS market_indices_intraday (
+        id SERIAL,
+        symbol VARCHAR(20) NOT NULL,
+        timestamp TIMESTAMPTZ NOT NULL,
+        interval_type VARCHAR(10) NOT NULL, -- '5min', '1hour'
+        open NUMERIC(12, 4),
+        high NUMERIC(12, 4),
+        low NUMERIC(12, 4),
+        close NUMERIC(12, 4),
+        volume BIGINT,
+        PRIMARY KEY (symbol, timestamp, interval_type)
+    );
+
+    COMMENT ON TABLE market_indices_intraday IS 'Intraday market indices data (5min, 1hour) for short-term predictions';
+
+    SELECT create_hypertable('market_indices_intraday', 'timestamp',
+                             chunk_time_interval => INTERVAL '1 day',
+                             if_not_exists => TRUE);
+
+    CREATE INDEX IF NOT EXISTS idx_market_indices_intraday_symbol_interval_time
+        ON market_indices_intraday (symbol, interval_type, timestamp DESC);
+
+    -- Metadata for market indices and macro ETFs
+    CREATE TABLE IF NOT EXISTS market_index_definitions (
+        symbol VARCHAR(20) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        category VARCHAR(50) NOT NULL, -- 'index', 'futures', 'inverse_etf', 'volatility'
+        description TEXT,
+        inverse_of VARCHAR(20), -- NULL if not inverse, otherwise the index it tracks inversely
+        leverage_factor NUMERIC(3, 1) DEFAULT 1.0, -- 1.0 for regular, -1.0 for inverse, etc.
+        data_source VARCHAR(50), -- 'yfinance', 'polygon', etc.
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    COMMENT ON TABLE market_index_definitions IS 'Definitions and metadata for market indices and ETFs used in predictions';
+
+    -- Insert the market indices and ETFs we want to track
+    INSERT INTO market_index_definitions (symbol, name, category, description, inverse_of, leverage_factor, data_source) VALUES
+        -- Major Indices
+        ('^GSPC', 'S&P 500 Index', 'index', 'Standard and Poors 500 - broad US market benchmark', NULL, 1.0, 'yfinance'),
+        ('^DJI', 'Dow Jones Industrial Average', 'index', 'Price-weighted index of 30 large US companies', NULL, 1.0, 'yfinance'),
+        ('^VIX', 'CBOE Volatility Index', 'volatility', 'Market volatility expectation derived from S&P 500 options', NULL, 1.0, 'yfinance'),
+        -- S&P 500 Futures
+        ('ES=F', 'E-mini S&P 500 Futures', 'futures', 'CME E-mini S&P 500 futures contract - leads cash market', '^GSPC', 1.0, 'yfinance'),
+        -- Inverse ETFs (Short Market)
+        ('SH', 'ProShares Short S&P 500', 'inverse_etf', 'Inverse ETF that seeks -1x daily return of S&P 500', '^GSPC', -1.0, 'yfinance'),
+        ('PSQ', 'ProShares Short QQQ', 'inverse_etf', 'Inverse ETF that seeks -1x daily return of NASDAQ-100', '^NDX', -1.0, 'yfinance'),
+        ('DOG', 'ProShares Short Dow 30', 'inverse_etf', 'Inverse ETF that seeks -1x daily return of Dow Jones', '^DJI', -1.0, 'yfinance'),
+        -- Volatility ETF
+        ('VXX', 'iPath Series B S&P 500 VIX Short-Term Futures ETN', 'volatility', 'ETN tracking short-term VIX futures, spikes during market fear', '^VIX', 1.0, 'yfinance')
+    ON CONFLICT (symbol) DO NOTHING;
+
+    -- 13F Hedge Fund Holdings Tables
+
+    -- Table for hedge fund manager information
+    CREATE TABLE IF NOT EXISTS hedge_fund_managers (
+        cik VARCHAR(20) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        filing_manager_name VARCHAR(255),
+        business_address TEXT,
+        mailing_address TEXT,
+        phone VARCHAR(50),
+        is_tracked BOOLEAN DEFAULT TRUE,
+        first_seen TIMESTAMPTZ DEFAULT NOW(),
+        last_updated TIMESTAMPTZ DEFAULT NOW(),
+        metadata JSONB
+    );
+
+    -- Table for individual 13F filings (quarterly)
+    CREATE TABLE IF NOT EXISTS f13_filings (
+        id SERIAL PRIMARY KEY,
+        cik VARCHAR(20) NOT NULL REFERENCES hedge_fund_managers(cik),
+        accession_number VARCHAR(30) NOT NULL UNIQUE,
+        filing_date DATE NOT NULL,
+        report_date DATE NOT NULL,
+        report_quarter VARCHAR(10) NOT NULL,
+        total_value NUMERIC(20, 2),
+        total_holdings INTEGER,
+        form_type VARCHAR(20) DEFAULT '13F-HR',
+        is_amendment BOOLEAN DEFAULT FALSE,
+        amendment_number INTEGER DEFAULT 0,
+        filed_as_of_date DATE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        raw_xml TEXT,
+        metadata JSONB
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_f13_filings_cik_date ON f13_filings(cik, report_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_f13_filings_quarter ON f13_filings(report_quarter, cik);
+
+    -- Individual holdings within each 13F filing
+    CREATE TABLE IF NOT EXISTS f13_holdings (
+        id SERIAL PRIMARY KEY,
+        filing_id INTEGER NOT NULL REFERENCES f13_filings(id) ON DELETE CASCADE,
+        cik VARCHAR(20) NOT NULL,
+        report_date DATE NOT NULL,
+        cusip VARCHAR(9) NOT NULL,
+        ticker VARCHAR(20),
+        issuer_name VARCHAR(255) NOT NULL,
+        security_class VARCHAR(100),
+        shares_held BIGINT NOT NULL,
+        market_value NUMERIC(20, 2) NOT NULL,
+        sole_voting_authority BIGINT,
+        shared_voting_authority BIGINT,
+        no_voting_authority BIGINT,
+        investment_discretion VARCHAR(20),
+        prev_shares BIGINT,
+        shares_change BIGINT,
+        shares_change_pct NUMERIC(15, 4),
+        prev_value NUMERIC(20, 2),
+        value_change NUMERIC(20, 2),
+        value_change_pct NUMERIC(15, 4),
+        position_type VARCHAR(20),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_f13_holdings_filing ON f13_holdings(filing_id);
+    CREATE INDEX IF NOT EXISTS idx_f13_holdings_ticker_date ON f13_holdings(ticker, report_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_f13_holdings_cusip_date ON f13_holdings(cusip, report_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_f13_holdings_cik_ticker ON f13_holdings(cik, ticker, report_date DESC);
+
+    -- CUSIP to Ticker mapping table
+    CREATE TABLE IF NOT EXISTS cusip_ticker_map (
+        cusip VARCHAR(12) PRIMARY KEY,
+        ticker VARCHAR(20),
+        company_name VARCHAR(255),
+        exchange VARCHAR(20),
+        last_verified TIMESTAMPTZ DEFAULT NOW(),
+        is_active BOOLEAN DEFAULT TRUE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_cusip_ticker ON cusip_ticker_map(ticker);
+
+    -- Aggregated quarterly statistics per stock
+    CREATE TABLE IF NOT EXISTS f13_stock_aggregates (
+        id SERIAL PRIMARY KEY,
+        report_quarter VARCHAR(10) NOT NULL,
+        ticker VARCHAR(20) NOT NULL,
+        cusip VARCHAR(9),
+        total_funds_holding INTEGER,
+        total_shares_held BIGINT,
+        total_market_value NUMERIC(20, 2),
+        avg_position_size NUMERIC(20, 2),
+        median_position_size NUMERIC(20, 2),
+        prev_funds_holding INTEGER,
+        funds_initiated INTEGER,
+        funds_increased INTEGER,
+        funds_decreased INTEGER,
+        funds_sold INTEGER,
+        net_shares_change BIGINT,
+        net_shares_change_pct NUMERIC(15, 6),
+        net_value_change NUMERIC(20, 2),
+        institutional_sentiment NUMERIC(10, 6),
+        pct_funds_holding NUMERIC(10, 6),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(report_quarter, ticker)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_f13_aggregates_ticker ON f13_stock_aggregates(ticker, report_quarter DESC);
+    CREATE INDEX IF NOT EXISTS idx_f13_aggregates_quarter ON f13_stock_aggregates(report_quarter);
+
+    -- ══════════════════════════════════════════════════════════════════
+    -- 13F ARCHIVE TRAINING TABLES (Kaggle dataset Q1 2015 - Q3 2017)
+    -- Used for correlating institutional holding changes with trend breaks
+    -- ══════════════════════════════════════════════════════════════════
+
+    -- Archive institutions (CIK -> fund name)
+    CREATE TABLE IF NOT EXISTS f13_archive_institutions (
+        cik INTEGER PRIMARY KEY,
+        institution_name VARCHAR(255) NOT NULL
+    );
+
+    -- Archive stock names (CUSIP -> stock name)
+    CREATE TABLE IF NOT EXISTS f13_archive_stocks (
+        cusip VARCHAR(12) PRIMARY KEY,
+        stock_name VARCHAR(255) NOT NULL,
+        ticker VARCHAR(20)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_f13_archive_stocks_ticker ON f13_archive_stocks(ticker);
+
+    -- Archive holdings - normalized from wide-format CSV
+    -- One row per institution/stock/quarter combination
+    CREATE TABLE IF NOT EXISTS f13_archive_holdings (
+        id SERIAL PRIMARY KEY,
+        cusip VARCHAR(12) NOT NULL,
+        cik INTEGER NOT NULL,
+        ticker VARCHAR(20),
+        report_date DATE NOT NULL,
+        shares_held BIGINT NOT NULL,
+        prev_shares BIGINT,
+        shares_change BIGINT,
+        shares_change_pct NUMERIC(15, 4),
+        position_action VARCHAR(20),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_f13_archive_holdings_ticker_date
+        ON f13_archive_holdings(ticker, report_date);
+    CREATE INDEX IF NOT EXISTS idx_f13_archive_holdings_cusip_date
+        ON f13_archive_holdings(cusip, report_date);
+    CREATE INDEX IF NOT EXISTS idx_f13_archive_holdings_cik
+        ON f13_archive_holdings(cik, report_date);
+    CREATE INDEX IF NOT EXISTS idx_f13_archive_holdings_date
+        ON f13_archive_holdings(report_date);
+
+    -- Aggregated archive data per ticker per quarter
+    -- Pre-computed for fast joins with trend_breaks
+    CREATE TABLE IF NOT EXISTS f13_archive_aggregates (
+        id SERIAL PRIMARY KEY,
+        ticker VARCHAR(20) NOT NULL,
+        report_date DATE NOT NULL,
+        total_institutions INTEGER,
+        total_shares_held BIGINT,
+        institutions_increased INTEGER,
+        institutions_decreased INTEGER,
+        institutions_new INTEGER,
+        institutions_sold INTEGER,
+        institutions_unchanged INTEGER,
+        net_shares_change BIGINT,
+        net_shares_change_pct NUMERIC(15, 6),
+        institutional_sentiment NUMERIC(10, 6),
+        avg_position_change_pct NUMERIC(15, 6),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(ticker, report_date)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_f13_archive_agg_ticker
+        ON f13_archive_aggregates(ticker, report_date);
+    CREATE INDEX IF NOT EXISTS idx_f13_archive_agg_date
+        ON f13_archive_aggregates(report_date);
+
+    -- ============================================================
+    -- DARK POOL (FINRA ATS) TABLES
+    -- Weekly OTC transparency data from FINRA
+    -- ============================================================
+
+    -- Raw weekly volume per ticker per ATS venue
+    CREATE TABLE IF NOT EXISTS darkpool_weekly_volume (
+        id SERIAL PRIMARY KEY,
+        ticker VARCHAR(20),
+        week_start_date DATE NOT NULL,
+        ats_name VARCHAR(255),
+        ats_mpid VARCHAR(10),
+        total_shares BIGINT,
+        total_trades INTEGER,
+        tier VARCHAR(5),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(ticker, week_start_date, ats_mpid)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_darkpool_ticker_date
+        ON darkpool_weekly_volume(ticker, week_start_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_darkpool_date
+        ON darkpool_weekly_volume(week_start_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_darkpool_ats
+        ON darkpool_weekly_volume(ats_mpid, week_start_date DESC);
+
+    -- Aggregated dark pool volume per ticker per week (across all ATS venues)
+    CREATE TABLE IF NOT EXISTS darkpool_ticker_aggregates (
+        id SERIAL PRIMARY KEY,
+        ticker VARCHAR(20) NOT NULL,
+        week_start_date DATE NOT NULL,
+        total_darkpool_shares BIGINT,
+        total_darkpool_trades INTEGER,
+        num_ats_venues INTEGER,
+        top_ats_mpid VARCHAR(10),
+        top_ats_shares BIGINT,
+        concentration_ratio NUMERIC(8, 6),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(ticker, week_start_date)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_darkpool_agg_ticker
+        ON darkpool_ticker_aggregates(ticker, week_start_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_darkpool_agg_date
+        ON darkpool_ticker_aggregates(week_start_date DESC);
+
+    -- ============================================================
+    -- CBOE OPTIONS VOLUME TABLES
+    -- Daily options volume and put/call ratios from CBOE
+    -- ============================================================
+
+    -- Daily options volume per ticker
+    CREATE TABLE IF NOT EXISTS cboe_options_volume (
+        id SERIAL PRIMARY KEY,
+        ticker VARCHAR(20) NOT NULL,
+        trade_date DATE NOT NULL,
+        call_volume BIGINT,
+        put_volume BIGINT,
+        total_volume BIGINT,
+        put_call_ratio NUMERIC(10, 6),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(ticker, trade_date)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_cboe_options_ticker
+        ON cboe_options_volume(ticker, trade_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_cboe_options_date
+        ON cboe_options_volume(trade_date DESC);
+
+    -- Daily market-wide options statistics from CBOE
+    CREATE TABLE IF NOT EXISTS cboe_market_options_stats (
+        id SERIAL PRIMARY KEY,
+        trade_date DATE NOT NULL UNIQUE,
+        total_call_volume BIGINT,
+        total_put_volume BIGINT,
+        total_volume BIGINT,
+        equity_call_volume BIGINT,
+        equity_put_volume BIGINT,
+        equity_put_call_ratio NUMERIC(10, 6),
+        index_call_volume BIGINT,
+        index_put_volume BIGINT,
+        index_put_call_ratio NUMERIC(10, 6),
+        etp_call_volume BIGINT,
+        etp_put_volume BIGINT,
+        etp_put_call_ratio NUMERIC(10, 6),
+        vix_call_volume BIGINT,
+        vix_put_volume BIGINT,
+        vix_put_call_ratio NUMERIC(10, 6),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_cboe_market_stats_date
+        ON cboe_market_options_stats(trade_date DESC);
+
+    -- Create continuous aggregates for common queries (TimescaleDB feature)
+
+    -- Daily stock price aggregates
+    CREATE MATERIALIZED VIEW IF NOT EXISTS stock_prices_daily
+    WITH (timescaledb.continuous) AS
+    SELECT
+        ticker,
+        time_bucket('1 day', timestamp) AS day,
+        first(open, timestamp) AS open,
+        max(high) AS high,
+        min(low) AS low,
+        last(close, timestamp) AS close,
+        sum(volume) AS volume
+    FROM stock_prices
+    GROUP BY ticker, day
+    WITH NO DATA;
+
+    -- Refresh policy (auto-update)
+    SELECT add_continuous_aggregate_policy('stock_prices_daily',
+        start_offset => INTERVAL '3 days',
+        end_offset => INTERVAL '1 hour',
+        schedule_interval => INTERVAL '1 hour',
+        if_not_exists => TRUE);
+
+    -- Hourly indicator averages
+    CREATE MATERIALIZED VIEW IF NOT EXISTS indicators_hourly
+    WITH (timescaledb.continuous) AS
+    SELECT
+        ticker,
+        indicator_name,
+        time_bucket('1 hour', timestamp) AS hour,
+        avg(indicator_value) AS avg_value,
+        stddev(indicator_value) AS stddev_value,
+        count(*) AS sample_count
+    FROM technical_indicators
+    GROUP BY ticker, indicator_name, hour
+    WITH NO DATA;
+
+    SELECT add_continuous_aggregate_policy('indicators_hourly',
+        start_offset => INTERVAL '1 day',
+        end_offset => INTERVAL '10 minutes',
+        schedule_interval => INTERVAL '10 minutes',
+        if_not_exists => TRUE);
+
+    -- Grant permissions
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO trading;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO trading;
+
+    -- Create app user with limited permissions (PostgreSQL syntax)
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'app_user') THEN
+        CREATE USER app_user WITH PASSWORD 'change_me';
+      END IF;
+    END
+    $$;
+    GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO app_user;
+    GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO app_user;

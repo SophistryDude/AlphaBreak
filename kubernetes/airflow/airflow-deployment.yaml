@@ -1,0 +1,129 @@
+---
+# Airflow Web Server Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-webserver
+  namespace: trading-system
+  labels:
+    app: airflow
+    component: webserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow
+      component: webserver
+  template:
+    metadata:
+      labels:
+        app: airflow
+        component: webserver
+    spec:
+      containers:
+      - name: webserver
+        image: apache/airflow:2.7.3-python3.10
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: web
+          containerPort: 8080
+        env:
+        - name: AIRFLOW__CORE__EXECUTOR
+          value: "CeleryExecutor"
+        - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+          value: "postgresql+psycopg2://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@airflow-postgres:5432/$(POSTGRES_DB)"
+        - name: AIRFLOW__CELERY__BROKER_URL
+          value: "redis://redis-service:6379/0"
+        - name: AIRFLOW__CELERY__RESULT_BACKEND
+          value: "db+postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@airflow-postgres:5432/$(POSTGRES_DB)"
+        - name: AIRFLOW__CORE__FERNET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: trading-api-secrets
+              key: SECRET_KEY
+        - name: AIRFLOW__CORE__LOAD_EXAMPLES
+          value: "False"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: trading-api-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: trading-api-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: trading-api-secrets
+              key: POSTGRES_DB
+        - name: AIRFLOW__WEBSERVER__SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: trading-api-secrets
+              key: SECRET_KEY
+        command:
+        - bash
+        - -c
+        - |
+          airflow db init && \
+          airflow users create \
+            --username admin \
+            --firstname Admin \
+            --lastname User \
+            --role Admin \
+            --email admin@example.com \
+            --password ${AIRFLOW_ADMIN_PASSWORD} || true && \
+          airflow webserver
+        volumeMounts:
+        - name: dags
+          mountPath: /opt/airflow/dags
+        - name: logs
+          mountPath: /opt/airflow/logs
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: dags
+        configMap:
+          name: airflow-dags
+      - name: logs
+        emptyDir: {}
+
+---
+# Airflow Webserver Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-webserver
+  namespace: trading-system
+  labels:
+    app: airflow
+    component: webserver
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: web
+  selector:
+    app: airflow
+    component: webserver

@@ -1,0 +1,70 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: indicator-analysis-job
+  namespace: trading-system
+  labels:
+    app: indicator-analysis
+    component: scheduler
+spec:
+  # Run daily at 2 AM UTC
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid  # Don't run if previous job still running
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: indicator-analysis
+            component: scheduler
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: indicator-analysis
+            image: trading-api:latest  # Replace with your image
+            imagePullPolicy: IfNotPresent
+            command:
+            - python
+            - /app/scripts/run_indicator_analysis.py
+            env:
+            - name: FLASK_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-api-config
+                  key: FLASK_ENV
+            - name: MODEL_DIR
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-api-config
+                  key: MODEL_DIR
+            - name: MIN_INDICATOR_ACCURACY
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-api-config
+                  key: MIN_INDICATOR_ACCURACY
+            - name: MAX_INDICATOR_ACCURACY
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-api-config
+                  key: MAX_INDICATOR_ACCURACY
+            volumeMounts:
+            - name: model-storage
+              mountPath: /app/models
+            - name: logs
+              mountPath: /app/logs
+            resources:
+              requests:
+                memory: "2Gi"
+                cpu: "1000m"
+              limits:
+                memory: "4Gi"
+                cpu: "2000m"
+          volumes:
+          - name: model-storage
+            persistentVolumeClaim:
+              claimName: trading-models-pvc
+          - name: logs
+            emptyDir: {}

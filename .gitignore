@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment
+.env
+*.env
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+nul
+Thumbs.db
+.DS_Store
+
+# Claude Code
+.claude/
+
+# Logs
+logs/
+*.log
+
+# Models (large binary files)
+models/*.pkl
+models/*.h5
+models/*.joblib

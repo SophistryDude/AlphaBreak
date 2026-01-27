@@ -1,0 +1,81 @@
+# Persistent Volumes for Local Docker Desktop Kubernetes
+# ======================================================
+# For local development, we use hostPath volumes that map to your Windows filesystem
+# Docker Desktop automatically handles the path translation
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: trading-models-pv
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    # Docker Desktop maps /run/desktop/mnt/host/c/ to C:\
+    # This points to your project's models directory
+    path: /run/desktop/mnt/host/c/Users/nicho/OneDrive/Desktop/code/Securities_prediction_model/models
+    type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trading-models-pvc
+  namespace: trading-system
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: local-storage
+  volumeName: trading-models-pv
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: trading-logs-pv
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    path: /run/desktop/mnt/host/c/Users/nicho/OneDrive/Desktop/code/Securities_prediction_model/logs
+    type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trading-logs-pvc
+  namespace: trading-system
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: local-storage
+  volumeName: trading-logs-pv
+
+---
+# StorageClass for local volumes
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer

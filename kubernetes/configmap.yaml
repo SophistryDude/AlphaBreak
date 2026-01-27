@@ -1,0 +1,22 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trading-api-config
+  namespace: trading-system
+data:
+  FLASK_ENV: "production"
+  MODEL_DIR: "/app/models"
+  REDIS_URL: "redis://redis-service:6379/0"
+  CORS_ORIGINS: "*"
+  LOG_LEVEL: "INFO"
+
+  # Model retraining schedule
+  INDICATOR_ANALYSIS_SCHEDULE: "0 2 * * *"    # Daily at 2 AM
+  MODEL_RETRAIN_SCHEDULE: "0 3 * * 0"         # Weekly on Sunday at 3 AM
+  BACKTEST_SCHEDULE: "0 4 1 * *"              # Monthly on 1st at 4 AM
+
+  # Trading parameters
+  LOOKAHEAD_DAYS: "10"
+  MIN_INDICATOR_ACCURACY: "0.80"
+  MAX_INDICATOR_ACCURACY: "0.90"

@@ -1,0 +1,94 @@
+# Trading Prediction API - Docker Compose Configuration
+# =====================================================
+# Orchestrates the API with Redis for rate limiting/caching
+#
+# Usage:
+#   docker-compose up -d           # Start all services
+#   docker-compose logs -f api     # View API logs
+#   docker-compose down            # Stop all services
+
+version: '3.8'
+
+services:
+  # Trading Prediction API
+  api:
+    build:
+      context: ..
+      dockerfile: flask_app/Dockerfile
+    container_name: trading-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - API_KEY_REQUIRED=true
+      - API_KEYS=${API_KEYS:-}
+      - REDIS_URL=redis://redis:6379/0
+      - RATELIMIT_STORAGE_URL=redis://redis:6379/1
+      - MODEL_DIR=/app/models
+      - GUNICORN_WORKERS=4
+      - GUNICORN_LOG_LEVEL=info
+    volumes:
+      - ../models:/app/models:ro
+      - ./logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - trading-network
+
+  # Redis for rate limiting and caching
+  redis:
+    image: redis:7-alpine
+    container_name: trading-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - trading-network
+
+  # Optional: PostgreSQL for time series data storage
+  # Uncomment when database integration is ready
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: trading-postgres
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     - POSTGRES_USER=trading
+  #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change-me}
+  #     - POSTGRES_DB=trading_data
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #     - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U trading"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - trading-network
+
+networks:
+  trading-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  # postgres-data:

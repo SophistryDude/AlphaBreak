@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trading-api
+  namespace: trading-system
+  labels:
+    app: trading-api
+spec:
+  replicas: 1  # Single replica for local development (saves memory)
+  selector:
+    matchLabels:
+      app: trading-api
+  template:
+    metadata:
+      labels:
+        app: trading-api
+    spec:
+      containers:
+      - name: trading-api
+        image: trading-api:latest
+        imagePullPolicy: Never  # Use local Docker image (Docker Desktop)
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: FLASK_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: trading-api-config
+              key: FLASK_ENV
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: trading-secrets
+              key: secret-key
+        - name: API_KEY_REQUIRED
+          value: "false"  # Disable for local dev
+        - name: REDIS_URL
+          value: "redis://redis-service:6379/0"
+        - name: RATELIMIT_STORAGE_URL
+          value: "redis://redis-service:6379/1"
+        - name: MODEL_DIR
+          value: "/app/models"
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: trading-api-config
+              key: LOG_LEVEL
+        # TimescaleDB connection
+        - name: TIMESERIES_DB_HOST
+          value: "postgres-timeseries-service"
+        - name: TIMESERIES_DB_PORT
+          value: "5432"
+        - name: TIMESERIES_DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: trading-secrets
+              key: timeseries-postgres-db
+        - name: TIMESERIES_DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: trading-secrets
+              key: timeseries-postgres-user
+        - name: TIMESERIES_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: trading-secrets
+              key: timeseries-postgres-password
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: models
+          mountPath: /app/models
+          readOnly: true
+        - name: logs
+          mountPath: /app/logs
+        livenessProbe:
+          httpGet:
+            path: /api/live
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/ready
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: models
+        persistentVolumeClaim:
+          claimName: trading-models-pvc
+      - name: logs
+        persistentVolumeClaim:
+          claimName: trading-logs-pvc
+      restartPolicy: Always
