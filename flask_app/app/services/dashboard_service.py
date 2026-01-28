@@ -395,7 +395,7 @@ def compute_market_sentiment(db_manager=None):
     # CBOE context
     cboe_context = _get_cboe_context()
 
-    # Chart data (last 26 weeks)
+    # Chart data (last 26 weeks) — includes OHLC for candlestick rendering
     chart_weeks = weekly.tail(26)
     chart_data = []
     for _, row in chart_weeks.iterrows():
@@ -403,9 +403,22 @@ def compute_market_sentiment(db_manager=None):
         sma_val = float(sma_20.iloc[idx[0]]) if len(idx) > 0 and not np.isnan(sma_20.iloc[idx[0]]) else None
         chart_data.append({
             'date': row['date'].strftime('%Y-%m-%d'),
+            'open': round(float(row['Open']), 2),
+            'high': round(float(row['High']), 2),
+            'low': round(float(row['Low']), 2),
             'close': round(float(row['Close']), 2),
             'sma_20': round(sma_val, 2) if sma_val is not None else None,
         })
+
+    # Detect peaks and troughs for trend lines
+    peaks = []
+    troughs = []
+    close_vals = [d['close'] for d in chart_data]
+    for i in range(1, len(close_vals) - 1):
+        if close_vals[i] > close_vals[i - 1] and close_vals[i] > close_vals[i + 1]:
+            peaks.append({'date': chart_data[i]['date'], 'price': close_vals[i]})
+        elif close_vals[i] < close_vals[i - 1] and close_vals[i] < close_vals[i + 1]:
+            troughs.append({'date': chart_data[i]['date'], 'price': close_vals[i]})
 
     return {
         'sentiment': sentiment,
@@ -414,6 +427,8 @@ def compute_market_sentiment(db_manager=None):
         'market_type': market_type,
         'cboe_context': cboe_context,
         'weekly_chart_data': chart_data,
+        'peaks': peaks,
+        'troughs': troughs,
         'last_updated': datetime.now().isoformat(),
     }
 

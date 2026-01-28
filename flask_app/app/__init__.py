@@ -74,12 +74,20 @@ def create_app(config_name='development'):
     from app.routes.options import options_bp
     from app.routes.frontend_compat import frontend_bp
     from app.routes.dashboard import dashboard_bp
+    from app.routes.reports import reports_bp
+    from app.routes.watchlist import watchlist_bp
+    from app.routes.earnings import earnings_bp
+    from app.routes.longterm import longterm_bp
 
     app.register_blueprint(health_bp, url_prefix='/api')
     app.register_blueprint(predictions_bp, url_prefix='/api')
     app.register_blueprint(options_bp, url_prefix='/api')
     app.register_blueprint(frontend_bp, url_prefix='/api')
     app.register_blueprint(dashboard_bp, url_prefix='/api')
+    app.register_blueprint(reports_bp, url_prefix='/api')
+    app.register_blueprint(watchlist_bp, url_prefix='/api')
+    app.register_blueprint(earnings_bp, url_prefix='/api')
+    app.register_blueprint(longterm_bp, url_prefix='/api')
 
     # Error handlers
     @app.errorhandler(404)

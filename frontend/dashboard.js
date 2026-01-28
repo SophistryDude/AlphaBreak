@@ -111,14 +111,13 @@ const Dashboard = {
                 '<span class="indicator-chip">Market Type: ' + (data.market_type || 'unknown') + '</span>';
         }
 
-        // Chart
+        // Chart — candlestick with trend lines
         if (data.weekly_chart_data && data.weekly_chart_data.length > 0) {
-            this.renderLineChart(
+            this.renderCandlestickChart(
                 'marketSentimentChart',
                 data.weekly_chart_data,
-                ['close', 'sma_20'],
-                ['S&P 500', 'SMA 20'],
-                ['#2563eb', '#f59e0b']
+                data.peaks || [],
+                data.troughs || []
             );
         }
 
@@ -183,7 +182,7 @@ const Dashboard = {
                 sector.weekly_chart_data,
                 ['close'],
                 [sector.name],
-                ['#2563eb']
+                ['#2962ff']
             );
         }
     },
@@ -343,25 +342,24 @@ const Dashboard = {
         const chartData = asset.hourly_chart_data;
         if (!chartData || chartData.length === 0) return;
 
-        const labels = chartData.map(d => new Date(d.timestamp));
-        const closes = chartData.map(d => d.close);
+        // Convert timestamps to luxon millis for the time axis
+        const timestamps = chartData.map(d => luxon.DateTime.fromISO(d.timestamp).toMillis());
 
-        const isUp = closes[closes.length - 1] >= closes[0];
-        const lineColor = isUp ? '#10b981' : '#ef4444';
+        // Candlestick dataset — {x, o, h, l, c} format
+        const candlestickData = chartData.map((d, i) => ({
+            x: timestamps[i],
+            o: d.open,
+            h: d.high,
+            l: d.low,
+            c: d.close,
+        }));
 
         this.charts.commodityCryptoChart = new Chart(ctx, {
-            type: 'line',
+            type: 'candlestick',
             data: {
-                labels: labels,
                 datasets: [{
                     label: asset.name,
-                    data: closes,
-                    borderColor: lineColor,
-                    backgroundColor: lineColor + '20',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 0,
-                    borderWidth: 2,
+                    data: candlestickData,
                 }],
             },
             options: {
@@ -370,11 +368,11 @@ const Dashboard = {
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        callbacks: {
-                            label: function(ctx) {
-                                return '$' + ctx.parsed.y.toLocaleString(undefined, { minimumFractionDigits: 2 });
-                            },
-                        },
+                        backgroundColor: '#1c2030',
+                        titleColor: '#e2e8f0',
+                        bodyColor: '#8b95a5',
+                        borderColor: '#2a2e39',
+                        borderWidth: 1,
                     },
                 },
                 scales: {
@@ -382,13 +380,14 @@ const Dashboard = {
                         type: 'time',
                         time: { unit: 'hour', displayFormats: { hour: 'MMM d, ha' } },
                         grid: { display: false },
-                        ticks: { maxTicksLimit: 6, font: { size: 10 } },
+                        ticks: { maxTicksLimit: 6, font: { size: 10 }, color: '#8b95a5' },
                     },
                     y: {
-                        grid: { color: '#e5e7eb40' },
+                        grid: { color: '#2a2e3960' },
                         ticks: {
                             callback: function(v) { return '$' + v.toLocaleString(); },
                             font: { size: 10 },
+                            color: '#8b95a5',
                         },
                     },
                 },
@@ -398,7 +397,141 @@ const Dashboard = {
     },
 
     // ──────────────────────────────────────────────────────────
-    // SHARED CHART HELPER
+    // CANDLESTICK CHART (Market Sentiment + Earnings)
+    // ──────────────────────────────────────────────────────────
+
+    renderCandlestickChart(canvasId, chartData, peaks, troughs) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+
+        // Convert dates to luxon timestamps for the time axis
+        const timestamps = chartData.map(d => luxon.DateTime.fromISO(d.date).toMillis());
+
+        // Candlestick dataset — {x, o, h, l, c} format
+        const candlestickData = chartData.map((d, i) => ({
+            x: timestamps[i],
+            o: d.open,
+            h: d.high,
+            l: d.low,
+            c: d.close,
+        }));
+
+        // SMA 20 overlay — {x, y} point format for time axis compatibility
+        const smaData = chartData.map((d, i) => d.sma_20 !== null ? {x: timestamps[i], y: d.sma_20} : null).filter(p => p !== null);
+
+        // Resistance trend line (peaks) — {x, y} points only at peak dates
+        const peakDateSet = new Set(peaks.map(p => p.date));
+        const resistanceData = chartData
+            .map((d, i) => peakDateSet.has(d.date) ? {x: timestamps[i], y: peaks.find(p => p.date === d.date).price} : null)
+            .filter(p => p !== null);
+
+        // Support trend line (troughs) — {x, y} points only at trough dates
+        const troughDateSet = new Set(troughs.map(t => t.date));
+        const supportData = chartData
+            .map((d, i) => troughDateSet.has(d.date) ? {x: timestamps[i], y: troughs.find(t => t.date === d.date).price} : null)
+            .filter(p => p !== null);
+
+        const datasets = [
+            {
+                label: 'S&P 500',
+                data: candlestickData,
+            },
+            {
+                label: 'SMA 20',
+                data: smaData,
+                type: 'line',
+                borderColor: '#f59e0b',
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.3,
+                fill: false,
+                order: 1,
+            },
+        ];
+
+        // Add resistance line if we have >= 2 peaks
+        if (resistanceData.length >= 2) {
+            datasets.push({
+                label: 'Resistance',
+                data: resistanceData,
+                type: 'line',
+                borderColor: '#ef5350',
+                borderWidth: 1.5,
+                borderDash: [6, 3],
+                pointRadius: 3,
+                pointBackgroundColor: '#ef5350',
+                fill: false,
+                tension: 0,
+                order: 2,
+            });
+        }
+
+        // Add support line if we have >= 2 troughs
+        if (supportData.length >= 2) {
+            datasets.push({
+                label: 'Support',
+                data: supportData,
+                type: 'line',
+                borderColor: '#26a69a',
+                borderWidth: 1.5,
+                borderDash: [6, 3],
+                pointRadius: 3,
+                pointBackgroundColor: '#26a69a',
+                fill: false,
+                tension: 0,
+                order: 3,
+            });
+        }
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'candlestick',
+            data: {
+                datasets: datasets,
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: { boxWidth: 12, font: { size: 10 }, color: '#8b95a5' },
+                    },
+                    tooltip: {
+                        backgroundColor: '#1c2030',
+                        titleColor: '#e2e8f0',
+                        bodyColor: '#8b95a5',
+                        borderColor: '#2a2e39',
+                        borderWidth: 1,
+                    },
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'week' },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 6, font: { size: 10 }, color: '#8b95a5' },
+                    },
+                    y: {
+                        grid: { color: '#2a2e3960' },
+                        ticks: {
+                            callback: function(v) { return '$' + v.toLocaleString(); },
+                            font: { size: 10 },
+                            color: '#8b95a5',
+                        },
+                    },
+                },
+                interaction: { intersect: false, mode: 'index' },
+            },
+        });
+    },
+
+    // ──────────────────────────────────────────────────────────
+    // SHARED LINE CHART HELPER
     // ──────────────────────────────────────────────────────────
 
     renderLineChart(canvasId, chartData, valueKeys, labels, colors) {
@@ -438,17 +571,24 @@ const Dashboard = {
                     legend: {
                         display: valueKeys.length > 1,
                         position: 'top',
-                        labels: { boxWidth: 12, font: { size: 10 } },
+                        labels: { boxWidth: 12, font: { size: 10 }, color: '#8b95a5' },
+                    },
+                    tooltip: {
+                        backgroundColor: '#1c2030',
+                        titleColor: '#e2e8f0',
+                        bodyColor: '#8b95a5',
+                        borderColor: '#2a2e39',
+                        borderWidth: 1,
                     },
                 },
                 scales: {
                     x: {
                         grid: { display: false },
-                        ticks: { maxTicksLimit: 5, font: { size: 10 } },
+                        ticks: { maxTicksLimit: 5, font: { size: 10 }, color: '#8b95a5' },
                     },
                     y: {
-                        grid: { color: '#e5e7eb40' },
-                        ticks: { font: { size: 10 } },
+                        grid: { color: '#2a2e3960' },
+                        ticks: { font: { size: 10 }, color: '#8b95a5' },
                     },
                 },
                 interaction: { intersect: false, mode: 'index' },

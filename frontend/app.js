@@ -2,14 +2,14 @@
 
 // Configuration
 const CONFIG = {
-    API_BASE_URL: 'http://localhost:5000',
+    API_BASE_URL: 'http://localhost:5001',
     API_KEY: '', // Empty for development mode (no API key required)
 };
 
 // State management
 const state = {
     apiHealthy: false,
-    activeTab: 'trend',
+    activeTab: 'reports',
 };
 
 // Initialize application

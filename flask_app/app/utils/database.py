@@ -402,3 +402,148 @@ def get_ticker_summary():
         }
         for row in result
     ]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Earnings cache helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+def ensure_earnings_tables():
+    """Create earnings cache tables if they don't exist."""
+    create_sql = """
+    CREATE TABLE IF NOT EXISTS earnings_calendar (
+        id              SERIAL PRIMARY KEY,
+        ticker          VARCHAR(10)  NOT NULL,
+        earnings_date   DATE         NOT NULL,
+        eps_estimate    NUMERIC(10,2),
+        eps_actual      NUMERIC(10,2),
+        surprise_pct    NUMERIC(10,2),
+        is_upcoming     BOOLEAN      DEFAULT TRUE,
+        fetched_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
+        CONSTRAINT uq_earnings_ticker_date UNIQUE (ticker, earnings_date)
+    );
+
+    CREATE TABLE IF NOT EXISTS earnings_cache_meta (
+        ticker          VARCHAR(10)  PRIMARY KEY,
+        last_fetched    TIMESTAMP    NOT NULL DEFAULT NOW()
+    );
+    """
+    try:
+        with db_manager.get_cursor(commit=True) as cursor:
+            cursor.execute(create_sql)
+        logger.info("Earnings cache tables ensured")
+    except Exception as e:
+        logger.warning(f"Could not create earnings tables: {e}")
+
+
+def get_cached_earnings(ticker, stale_hours=6):
+    """Fetch cached earnings for a ticker if data is fresh enough.
+
+    Returns list of dicts or None if cache is stale/missing.
+    """
+    meta_query = """
+        SELECT last_fetched FROM earnings_cache_meta
+        WHERE ticker = %s AND last_fetched > NOW() - INTERVAL '%s hours'
+    """
+    try:
+        rows = db_manager.execute_query(meta_query, (ticker, stale_hours))
+        if not rows:
+            return None
+
+        data_query = """
+            SELECT earnings_date, eps_estimate, eps_actual, surprise_pct, is_upcoming
+            FROM earnings_calendar
+            WHERE ticker = %s
+            ORDER BY earnings_date ASC
+        """
+        rows = db_manager.execute_query(data_query, (ticker,))
+        if not rows:
+            return None
+
+        return [
+            {
+                'date': str(row[0]),
+                'eps_estimate': float(row[1]) if row[1] is not None else None,
+                'eps_actual': float(row[2]) if row[2] is not None else None,
+                'surprise_pct': float(row[3]) if row[3] is not None else None,
+                'is_upcoming': bool(row[4]),
+            }
+            for row in rows
+        ]
+    except Exception as e:
+        logger.debug(f"Earnings cache read failed for {ticker}: {e}")
+        return None
+
+
+def get_all_cached_earnings(stale_hours=6):
+    """Fetch all cached earnings where the ticker data is still fresh.
+
+    Returns dict keyed by ticker -> list of earnings entries.
+    """
+    query = """
+        SELECT ec.ticker, ec.earnings_date, ec.eps_estimate, ec.eps_actual,
+               ec.surprise_pct, ec.is_upcoming
+        FROM earnings_calendar ec
+        JOIN earnings_cache_meta ecm ON ec.ticker = ecm.ticker
+        WHERE ecm.last_fetched > NOW() - INTERVAL '%s hours'
+        ORDER BY ec.ticker, ec.earnings_date ASC
+    """
+    try:
+        rows = db_manager.execute_query(query, (stale_hours,))
+        if not rows:
+            return {}
+
+        result = {}
+        for row in rows:
+            ticker = row[0]
+            if ticker not in result:
+                result[ticker] = []
+            result[ticker].append({
+                'date': str(row[1]),
+                'eps_estimate': float(row[2]) if row[2] is not None else None,
+                'eps_actual': float(row[3]) if row[3] is not None else None,
+                'surprise_pct': float(row[4]) if row[4] is not None else None,
+                'is_upcoming': bool(row[5]),
+            })
+        return result
+    except Exception as e:
+        logger.debug(f"Bulk earnings cache read failed: {e}")
+        return {}
+
+
+def store_ticker_earnings(ticker, entries):
+    """Cache earnings entries for a ticker. Upserts rows + updates meta timestamp.
+
+    Args:
+        ticker: Stock ticker symbol
+        entries: List of dicts with keys: date, eps_estimate, eps_actual, surprise_pct, is_upcoming
+    """
+    upsert_query = """
+        INSERT INTO earnings_calendar (ticker, earnings_date, eps_estimate, eps_actual, surprise_pct, is_upcoming, fetched_at)
+        VALUES (%s, %s, %s, %s, %s, %s, NOW())
+        ON CONFLICT (ticker, earnings_date) DO UPDATE SET
+            eps_estimate  = EXCLUDED.eps_estimate,
+            eps_actual    = EXCLUDED.eps_actual,
+            surprise_pct  = EXCLUDED.surprise_pct,
+            is_upcoming   = EXCLUDED.is_upcoming,
+            fetched_at    = NOW()
+    """
+    meta_query = """
+        INSERT INTO earnings_cache_meta (ticker, last_fetched)
+        VALUES (%s, NOW())
+        ON CONFLICT (ticker) DO UPDATE SET last_fetched = NOW()
+    """
+    try:
+        with db_manager.get_cursor(commit=True) as cursor:
+            for entry in entries:
+                cursor.execute(upsert_query, (
+                    ticker,
+                    entry['date'],
+                    entry.get('eps_estimate'),
+                    entry.get('eps_actual'),
+                    entry.get('surprise_pct'),
+                    entry.get('is_upcoming', True),
+                ))
+            cursor.execute(meta_query, (ticker,))
+    except Exception as e:
+        logger.warning(f"Failed to cache earnings for {ticker}: {e}")

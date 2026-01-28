@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trading System - AI-Powered Stock Predictions</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=2">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -119,13 +122,17 @@
         <main class="main-content">
             <!-- Tabs -->
             <div class="tabs">
-                <button class="tab-button active" data-tab="trend">Trend Break Prediction</button>
+                <button class="tab-button" data-tab="trend">Trend Break Prediction</button>
                 <button class="tab-button" data-tab="options">Options Analysis</button>
+                <button class="tab-button active" data-tab="reports">Reports</button>
+                <button class="tab-button" data-tab="watchlist">Watchlist</button>
+                <button class="tab-button" data-tab="earnings">Quarterly Earnings</button>
+                <button class="tab-button" data-tab="longterm">Long Term Trading</button>
                 <button class="tab-button" data-tab="stats">Performance Stats</button>
             </div>
 
             <!-- Trend Break Tab -->
-            <div class="tab-content active" id="trendTab">
+            <div class="tab-content" id="trendTab">
                 <div class="card">
                     <h2>Predict Trend Breaks</h2>
                     <p class="description">Get AI-powered predictions for potential trend breaks in stock prices.</p>
@@ -325,6 +332,293 @@
                 </div>
             </div>
 
+            <!-- Reports Tab -->
+            <div class="tab-content active" id="reportsTab">
+                <div class="card">
+                    <h2>Trend Break Reports</h2>
+                    <p class="description">Automated scans of securities with 80%+ trend break probability. Includes indicators, sector sentiment, and options data.</p>
+
+                    <!-- Frequency Sub-tabs -->
+                    <div class="report-frequency-tabs">
+                        <button class="freq-tab active" data-frequency="daily">Daily (9AM EST)</button>
+                        <button class="freq-tab" data-frequency="hourly">Hourly</button>
+                        <button class="freq-tab" data-frequency="10min">10-Minute</button>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="report-controls">
+                        <div class="report-filter-group">
+                            <label for="reportDirectionFilter">Direction</label>
+                            <select id="reportDirectionFilter" class="report-filter-select">
+                                <option value="">All</option>
+                                <option value="bullish">Bullish</option>
+                                <option value="bearish">Bearish</option>
+                            </select>
+                        </div>
+                        <div class="report-filter-group">
+                            <label for="reportSectorFilter">Sector</label>
+                            <select id="reportSectorFilter" class="report-filter-select">
+                                <option value="">All Sectors</option>
+                                <option value="Technology">Technology</option>
+                                <option value="Health Care">Health Care</option>
+                                <option value="Financials">Financials</option>
+                                <option value="Consumer Discretionary">Consumer Disc.</option>
+                                <option value="Communication Services">Communication</option>
+                                <option value="Industrials">Industrials</option>
+                                <option value="Consumer Staples">Consumer Staples</option>
+                                <option value="Energy">Energy</option>
+                                <option value="Utilities">Utilities</option>
+                                <option value="Materials">Materials</option>
+                                <option value="Real Estate">Real Estate</option>
+                            </select>
+                        </div>
+                        <div class="report-filter-group report-toggle-group">
+                            <label for="reportAlertsOnly">
+                                <input type="checkbox" id="reportAlertsOnly">
+                                Recent Alerts Only
+                            </label>
+                        </div>
+                        <button id="reportApplyFilters" class="btn btn-primary btn-sm">Apply</button>
+                    </div>
+
+                    <!-- Summary Bar -->
+                    <div class="report-summary" id="reportSummaryBar"></div>
+
+                    <!-- Report Table -->
+                    <div class="table-container">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Ticker</th>
+                                    <th>Probability</th>
+                                    <th>Direction</th>
+                                    <th>Price</th>
+                                    <th>Change</th>
+                                    <th>Sector</th>
+                                    <th>Indicators</th>
+                                    <th>Options</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportTableBody">
+                                <tr><td colspan="9" class="report-loading">Select a frequency to load report.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Watchlist Tab -->
+            <div class="tab-content" id="watchlistTab">
+                <div class="card">
+                    <h2>My Watchlist</h2>
+                    <p class="description">Track your favorite securities. Data refreshes every 60 seconds.</p>
+
+                    <!-- Add Ticker Form -->
+                    <form id="watchlistAddForm" class="watchlist-add-form">
+                        <input
+                            type="text"
+                            id="watchlistTickerInput"
+                            placeholder="Enter ticker (e.g., AAPL)"
+                            maxlength="5"
+                            pattern="[A-Za-z]{1,5}"
+                            required
+                        >
+                        <button type="submit" class="btn btn-primary">Add to Watchlist</button>
+                    </form>
+
+                    <!-- Empty State -->
+                    <div class="watchlist-empty" id="watchlistEmpty">
+                        <p>Your watchlist is empty. Add a ticker above to start tracking securities.</p>
+                    </div>
+
+                    <!-- Watchlist Grid -->
+                    <div class="watchlist-grid" id="watchlistGrid"></div>
+                </div>
+            </div>
+
+            <!-- Quarterly Earnings Tab -->
+            <div class="tab-content" id="earningsTab">
+                <div class="card">
+                    <h2>Quarterly Earnings Calendar</h2>
+                    <p class="description">Upcoming earnings for top 100 stocks by volume. Add custom tickers to track alongside.</p>
+
+                    <!-- Add Custom Ticker Form -->
+                    <form id="earningsAddForm" class="earnings-add-form">
+                        <input
+                            type="text"
+                            id="earningsTickerInput"
+                            placeholder="Add ticker (e.g., AAPL)"
+                            maxlength="5"
+                            pattern="[A-Za-z]{1,5}"
+                        >
+                        <button type="submit" class="btn btn-primary">Add to Calendar</button>
+                    </form>
+
+                    <!-- Custom Tickers Display -->
+                    <div class="earnings-custom-tickers" id="earningsCustomTickers"></div>
+
+                    <!-- Futures Context Bar -->
+                    <div class="earnings-futures-bar" id="earningsFuturesBar">
+                        <span class="futures-label">E-mini S&amp;P 500 Futures (ES=F):</span>
+                        <span class="futures-price" id="futuresPrice">--</span>
+                        <span class="futures-change" id="futuresChange">--</span>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div class="earnings-loading" id="earningsLoading">
+                        <p>Loading earnings calendar...</p>
+                    </div>
+
+                    <!-- Calendar Table -->
+                    <div class="table-container" id="earningsTableContainer" style="display: none;">
+                        <table class="earnings-calendar-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Ticker</th>
+                                    <th>EPS Estimate</th>
+                                    <th>EPS Actual</th>
+                                    <th>Surprise %</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="earningsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Detail Panel (shown when row is expanded) -->
+                    <div class="earnings-detail-panel" id="earningsDetailPanel" style="display: none;">
+                        <div class="earnings-detail-header">
+                            <h3 id="earningsDetailTicker"></h3>
+                            <button class="btn btn-sm" id="earningsDetailClose">Close</button>
+                        </div>
+                        <div class="earnings-detail-grid">
+                            <!-- CBOE Activity -->
+                            <div class="earnings-cboe" id="earningsDetailCBOE">
+                                <h4>CBOE Options Activity</h4>
+                                <div class="cboe-metrics" id="cboeMetrics"></div>
+                            </div>
+                            <!-- Candlestick Chart -->
+                            <div class="earnings-chart-container">
+                                <h4>3-Month Daily Chart</h4>
+                                <div class="chart-wrapper">
+                                    <canvas id="earningsCandlestickChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- News Section -->
+                        <div class="earnings-news-section">
+                            <h4>Recent News</h4>
+                            <div class="earnings-news-grid" id="earningsNewsGrid"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Long Term Trading Tab -->
+            <div class="tab-content" id="longtermTab">
+                <div class="card">
+                    <h2>Long Term Trading</h2>
+                    <p class="description">Institutional holdings from 13F filings, benchmark comparisons, and dividend tracking. Select a stock to see detailed analysis.</p>
+
+                    <!-- Ticker Selection -->
+                    <div class="longterm-controls">
+                        <div class="longterm-search-group">
+                            <input
+                                type="text"
+                                id="longtermTickerInput"
+                                placeholder="Enter ticker (e.g., AAPL)"
+                                maxlength="5"
+                                pattern="[A-Za-z]{1,5}"
+                            >
+                            <button id="longtermAnalyzeBtn" class="btn btn-primary">Analyze</button>
+                            <button id="longtermSaveBtn" class="btn btn-sm longterm-save-btn" title="Save to holdings" style="display:none;">Save Holding</button>
+                        </div>
+                        <div class="longterm-period-group">
+                            <label for="longtermPeriod">Comparison Period</label>
+                            <select id="longtermPeriod">
+                                <option value="26">6 Months</option>
+                                <option value="52" selected>1 Year</option>
+                                <option value="104">2 Years</option>
+                                <option value="260">5 Years</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Sector Filter Bar -->
+                    <div class="longterm-sector-bar" id="longtermSectorBar">
+                        <span class="longterm-sector-label">Sectors:</span>
+                    </div>
+
+                    <!-- Weekly Comparison Chart (top of page) -->
+                    <div class="longterm-comparison-section" id="longtermComparisonSection" style="display:none;">
+                        <h3 class="longterm-section-title" id="longtermComparisonTitle">Weekly Performance Comparison</h3>
+                        <div class="longterm-summary-row" id="longtermSummaryRow"></div>
+                        <div class="longterm-chart-container longterm-chart-large">
+                            <canvas id="longtermComparisonChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Candlestick Chart -->
+                    <div class="longterm-candlestick-section" id="longtermCandlestickSection" style="display:none;">
+                        <h3 class="longterm-section-title">Daily Candlestick Chart</h3>
+                        <div class="longterm-chart-container longterm-chart-large">
+                            <canvas id="longtermCandlestickChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Institutional Holdings Table -->
+                    <div class="longterm-holdings-section">
+                        <h3 class="longterm-section-title">Hedge Fund Holdings <span class="longterm-quarter-badge" id="longtermQuarterBadge"></span></h3>
+                        <p class="longterm-section-desc">Aggregated 13F filings from top institutional investors. <span class="longterm-dividend-legend"><span class="longterm-dividend-icon"></span> = Pays Dividend</span></p>
+
+                        <div class="longterm-holdings-loading" id="longtermHoldingsLoading">Loading institutional holdings...</div>
+
+                        <div class="table-container" id="longtermHoldingsTableContainer" style="display:none;">
+                            <table class="longterm-holdings-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ticker</th>
+                                        <th>Sector</th>
+                                        <th>Funds Holding</th>
+                                        <th>Sentiment</th>
+                                        <th>New</th>
+                                        <th>Increased</th>
+                                        <th>Decreased</th>
+                                        <th>Sold</th>
+                                        <th>Net Change</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="longtermHoldingsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Fund Detail Panel -->
+                    <div class="longterm-fund-detail" id="longtermFundDetail" style="display:none;">
+                        <div class="longterm-fund-detail-header">
+                            <h4 id="longtermFundDetailTitle"></h4>
+                            <button class="btn btn-sm" id="longtermFundDetailClose">Close</button>
+                        </div>
+                        <div class="longterm-fund-list" id="longtermFundList"></div>
+                    </div>
+
+                    <!-- Saved User Holdings -->
+                    <div class="longterm-saved-section">
+                        <h3 class="longterm-section-title">My Holdings</h3>
+                        <p class="longterm-section-desc">Your saved positions. Data persists in your browser.</p>
+                        <div class="longterm-saved-empty" id="longtermSavedEmpty">
+                            <p>No saved holdings yet. Select a stock above and click "Save Holding" to add it here.</p>
+                        </div>
+                        <div class="longterm-saved-grid" id="longtermSavedGrid"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Performance Stats Tab -->
             <div class="tab-content" id="statsTab">
                 <div class="card">
@@ -423,7 +717,11 @@
         </footer>
     </div>
 
-    <script src="app.js"></script>
-    <script src="dashboard.js"></script>
+    <script src="app.js?v=2"></script>
+    <script src="dashboard.js?v=2"></script>
+    <script src="reports.js?v=2"></script>
+    <script src="watchlist.js?v=2"></script>
+    <script src="earnings.js?v=2"></script>
+    <script src="longterm.js?v=2"></script>
 </body>
 </html>
