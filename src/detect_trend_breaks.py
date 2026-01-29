@@ -44,7 +44,8 @@ DB_CONFIG = {
     'port': int(os.getenv('DB_PORT', '5433')),  # Port-forwarded from k8s
     'database': os.getenv('DB_NAME', 'trading_data'),
     'user': os.getenv('DB_USER', 'trading'),
-    'password': os.getenv('DB_PASSWORD', 'trading123')
+    'password': os.getenv('DB_PASSWORD', 'trading123'),
+    'sslmode': os.getenv('DB_SSLMODE', 'prefer')
 }
 
 # Timeframe configurations

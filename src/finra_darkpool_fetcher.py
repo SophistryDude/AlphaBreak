@@ -34,7 +34,8 @@ DB_CONFIG = {
     'port': int(os.environ.get('POSTGRES_PORT', 5433)),
     'database': os.environ.get('POSTGRES_DB', 'trading_data'),
     'user': os.environ.get('POSTGRES_USER', 'trading'),
-    'password': os.environ.get('POSTGRES_PASSWORD', 'trading123')
+    'password': os.environ.get('POSTGRES_PASSWORD', 'trading123'),
+    'sslmode': os.environ.get('POSTGRES_SSLMODE', 'prefer')
 }
 
 # FINRA API settings

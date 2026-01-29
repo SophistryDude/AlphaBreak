@@ -67,6 +67,7 @@ DB_CONFIG = {
     'database': os.environ.get('TIMESERIES_DB_NAME', 'trading_data'),
     'user': os.environ.get('TIMESERIES_DB_USER', 'trading'),
     'password': os.environ.get('TIMESERIES_DB_PASSWORD', 'change-this-timeseries-password'),
+    'sslmode': os.environ.get('TIMESERIES_DB_SSLMODE', 'prefer'),
 }
 
 # S&P 500 tickers (current constituents as of 2024)

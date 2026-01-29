@@ -59,8 +59,11 @@ const Reports = {
         const summaryBar = document.getElementById('reportSummaryBar');
         if (!container) return;
 
-        // Show loading state
-        container.innerHTML = '<tr><td colspan="9" class="report-loading">Loading report...</td></tr>';
+        // Only show loading message if there's no existing content
+        const isFirstLoad = !this.currentReport;
+        if (isFirstLoad) {
+            container.innerHTML = '<tr><td colspan="9" class="report-loading">Loading report...</td></tr>';
+        }
 
         // Build query params
         const params = new URLSearchParams({ frequency });
@@ -90,8 +93,13 @@ const Reports = {
             this.renderReport(data);
             this.startAutoRefresh(frequency);
         } catch (err) {
-            container.innerHTML = `<tr><td colspan="9" class="report-error">Failed to load report: ${err.message}</td></tr>`;
-            if (summaryBar) summaryBar.innerHTML = '';
+            // Only show error if there's no existing data to keep displayed
+            if (isFirstLoad) {
+                container.innerHTML = `<tr><td colspan="9" class="report-error">Failed to load report: ${err.message}</td></tr>`;
+                if (summaryBar) summaryBar.innerHTML = '';
+            } else {
+                console.error('Background report refresh failed:', err);
+            }
         }
     },
 

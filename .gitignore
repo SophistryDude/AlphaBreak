@@ -9,6 +9,7 @@ build/
 # Environment
 .env
 *.env
+.env.*
 !.env.example
 
 # IDE
@@ -31,3 +32,18 @@ logs/
 models/*.pkl
 models/*.h5
 models/*.joblib
+
+# Database backups
+*.dump
+*.sql
+!kubernetes/*.sql
+
+# Security keys
+docs/security/
+*.pem
+
+# Temp files
+temp_*.html
+
+# Session history
+docs/claude_3.jsonl

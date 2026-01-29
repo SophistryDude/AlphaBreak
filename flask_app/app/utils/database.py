@@ -30,7 +30,8 @@ class DatabaseManager:
                 port=int(os.environ.get('TIMESERIES_DB_PORT', 5432)),
                 database=os.environ.get('TIMESERIES_DB_NAME', 'trading_data'),
                 user=os.environ.get('TIMESERIES_DB_USER', 'trading'),
-                password=os.environ.get('TIMESERIES_DB_PASSWORD', 'change-this-timeseries-password')
+                password=os.environ.get('TIMESERIES_DB_PASSWORD', 'change-this-timeseries-password'),
+                sslmode=os.environ.get('TIMESERIES_DB_SSLMODE', 'prefer')
             )
             logger.info("Database connection pool initialized")
         except Exception as e:

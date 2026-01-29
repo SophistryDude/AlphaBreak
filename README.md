@@ -161,6 +161,13 @@ The system automatically fetches current Treasury yields:
 - [ ] Push notifications for high-probability trades
 - [ ] Visualizations dashboard
 
+## Future Work
+
+- **User Authentication** — Login system with per-user settings, saved watchlists, and personalized dashboards
+- **Forex Correlation Model** — Currency pair correlation analysis to inform equity and options positioning
+- **Trading Platform Integration** — Direct connectivity to Schwab and/or Robinhood APIs for order execution and portfolio sync
+- **Pullback/Continuation Model** — Predict candlestick count after a trend break, model whether price action represents a pullback (continuation) or full reversal
+
 ## License
 
 MIT
