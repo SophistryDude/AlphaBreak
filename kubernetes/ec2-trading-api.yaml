@@ -1,0 +1,75 @@
+# Lightweight Trading API deployment for EC2 (low memory)
+# Uses existing PostgreSQL on host, no persistent volumes needed
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trading-api
+  namespace: trading-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trading-api
+  template:
+    metadata:
+      labels:
+        app: trading-api
+    spec:
+      containers:
+      - name: trading-api
+        image: python:3.11-slim
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            pip install flask flask-cors gunicorn psycopg2-binary pandas numpy yfinance ta requests python-dotenv &&
+            cd /app &&
+            gunicorn --bind 0.0.0.0:5000 --workers 1 --timeout 120 wsgi:app
+        ports:
+        - containerPort: 5000
+        env:
+        - name: FLASK_ENV
+          value: "production"
+        - name: TIMESERIES_DB_HOST
+          value: "172.31.22.21"  # EC2 private IP (PostgreSQL on host)
+        - name: TIMESERIES_DB_PORT
+          value: "5432"
+        - name: TIMESERIES_DB_NAME
+          value: "trading_data"
+        - name: TIMESERIES_DB_USER
+          value: "trading"
+        - name: TIMESERIES_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: trading-secrets
+              key: db-password
+        - name: TIMESERIES_DB_SSLMODE
+          value: "prefer"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+      volumes:
+      - name: app-code
+        emptyDir: {}
+      # Use hostNetwork to access PostgreSQL on localhost
+      hostNetwork: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trading-api
+  namespace: trading-system
+spec:
+  type: NodePort
+  selector:
+    app: trading-api
+  ports:
+  - port: 5000
+    targetPort: 5000
+    nodePort: 30500
