@@ -2,7 +2,7 @@
 
 // Configuration
 const CONFIG = {
-    API_BASE_URL: 'http://localhost:5001',
+    API_BASE_URL: 'http://3.140.78.15:5000',
     API_KEY: '', // Empty for development mode (no API key required)
 };
 
