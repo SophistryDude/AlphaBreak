@@ -1,4 +1,4 @@
-# Trading System API Documentation
+# AlphaBreak API Documentation
 
 Complete API reference for front-end developers.
 

@@ -1,4 +1,4 @@
-// Trading System Frontend Application
+// AlphaBreak Frontend Application
 
 // Configuration
 const CONFIG = {
@@ -9,35 +9,82 @@ const CONFIG = {
 // State management
 const state = {
     apiHealthy: false,
-    activeTab: 'reports',
+    activeTab: 'sentiment',
+};
+
+// Page titles for sidebar navigation
+const PAGE_TITLES = {
+    sentiment: 'Sentiment Analysis',
+    reports: 'Trend Break Reports',
+    trend: 'Trend Prediction',
+    options: 'Options Analysis',
+    watchlist: 'Watchlist',
+    earnings: 'Quarterly Earnings',
+    longterm: 'Long Term Trading',
+    stats: 'Performance Stats',
 };
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', () => {
-    initializeTabs();
+    initializeSidebar();
     initializeForms();
     checkApiHealth();
     setDefaultDates();
 });
 
-// Tab management
-function initializeTabs() {
-    const tabButtons = document.querySelectorAll('.tab-button');
+// Sidebar and hamburger menu management
+function initializeSidebar() {
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarLinks = document.querySelectorAll('.sidebar-link');
     const tabContents = document.querySelectorAll('.tab-content');
 
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const tabName = button.dataset.tab;
+    // Toggle sidebar expansion
+    function toggleSidebar() {
+        sidebar.classList.toggle('expanded');
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('expanded');
+    }
+
+    // Hamburger button click
+    hamburgerBtn.addEventListener('click', toggleSidebar);
+
+    // Sidebar link clicks
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tabName = link.dataset.tab;
 
             // Update active states
-            tabButtons.forEach(btn => btn.classList.remove('active'));
+            sidebarLinks.forEach(l => l.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
 
-            button.classList.add('active');
+            link.classList.add('active');
             document.getElementById(`${tabName}Tab`).classList.add('active');
 
+            // Update page title
+            document.getElementById('currentPageTitle').textContent = PAGE_TITLES[tabName] || tabName;
+
             state.activeTab = tabName;
+
+            // Hide persistent sentiment widget on forex tab
+            const persistentSentiment = document.getElementById('persistentSentiment');
+            if (persistentSentiment) {
+                persistentSentiment.style.display = tabName === 'forex' ? 'none' : '';
+            }
+
+            // Close sidebar after selection
+            closeSidebar();
         });
+    });
+
+    // Keyboard escape to close
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebar.classList.contains('expanded')) {
+            closeSidebar();
+        }
     });
 }
 

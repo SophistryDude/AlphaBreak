@@ -1,6 +1,6 @@
-# Kubernetes Deployment Summary
+# AlphaBreak Kubernetes Deployment Summary
 
-Complete deployment package for the Securities Prediction Trading System with automated scheduling.
+Complete deployment package for AlphaBreak with automated scheduling.
 
 ## What's Included
 

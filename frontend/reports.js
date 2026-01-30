@@ -25,7 +25,8 @@ const Reports = {
     },
 
     setupFrequencyTabs() {
-        const tabs = document.querySelectorAll('.freq-tab');
+        // Support both legacy and compact frequency tabs
+        const tabs = document.querySelectorAll('.freq-tab, .freq-tab-compact');
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 tabs.forEach(t => t.classList.remove('active'));
@@ -37,6 +38,22 @@ const Reports = {
     },
 
     setupFilters() {
+        // Direction and sector filters auto-apply on change
+        const dirFilter = document.getElementById('reportDirectionFilter');
+        if (dirFilter) {
+            dirFilter.addEventListener('change', () => {
+                this.loadReport(this.activeFrequency);
+            });
+        }
+
+        const sectorFilter = document.getElementById('reportSectorFilter');
+        if (sectorFilter) {
+            sectorFilter.addEventListener('change', () => {
+                this.loadReport(this.activeFrequency);
+            });
+        }
+
+        // Legacy apply button
         const applyBtn = document.getElementById('reportApplyFilters');
         if (applyBtn) {
             applyBtn.addEventListener('click', () => {
@@ -115,25 +132,41 @@ const Reports = {
         if (!bar) return;
 
         const alertsClass = data.alerts_count > 0 ? 'report-stat-alert pulse-number' : 'report-stat-value';
+        const isCompact = bar.classList.contains('report-stats-compact');
 
-        bar.innerHTML = `
-            <div class="report-stat">
-                <span class="report-stat-label">Securities Flagged</span>
-                <span class="report-stat-value">${data.securities_count || 0}</span>
-            </div>
-            <div class="report-stat">
-                <span class="report-stat-label">Recent Alerts</span>
-                <span class="${alertsClass}">${data.alerts_count || 0}</span>
-            </div>
-            <div class="report-stat">
-                <span class="report-stat-label">Generated</span>
-                <span class="report-stat-value">${data.generated_at ? new Date(data.generated_at).toLocaleString() : '--'}</span>
-            </div>
-            <div class="report-stat">
-                <span class="report-stat-label">Frequency</span>
-                <span class="report-stat-value">${(data.frequency || '').toUpperCase()}</span>
-            </div>
-        `;
+        if (isCompact) {
+            // Compact version for header
+            bar.innerHTML = `
+                <div class="report-stat">
+                    <span class="report-stat-label">Flagged:</span>
+                    <span class="report-stat-value">${data.securities_count || 0}</span>
+                </div>
+                <div class="report-stat">
+                    <span class="report-stat-label">Alerts:</span>
+                    <span class="${alertsClass}">${data.alerts_count || 0}</span>
+                </div>
+            `;
+        } else {
+            // Full version
+            bar.innerHTML = `
+                <div class="report-stat">
+                    <span class="report-stat-label">Securities Flagged</span>
+                    <span class="report-stat-value">${data.securities_count || 0}</span>
+                </div>
+                <div class="report-stat">
+                    <span class="report-stat-label">Recent Alerts</span>
+                    <span class="${alertsClass}">${data.alerts_count || 0}</span>
+                </div>
+                <div class="report-stat">
+                    <span class="report-stat-label">Generated</span>
+                    <span class="report-stat-value">${data.generated_at ? new Date(data.generated_at).toLocaleString() : '--'}</span>
+                </div>
+                <div class="report-stat">
+                    <span class="report-stat-label">Frequency</span>
+                    <span class="report-stat-value">${(data.frequency || '').toUpperCase()}</span>
+                </div>
+            `;
+        }
     },
 
     renderTable(securities) {
@@ -161,9 +194,13 @@ const Reports = {
             const cciDisplay = indicators.cci != null ? indicators.cci.toFixed(0) : '--';
 
             const opts = sec.options_summary || {};
+            const ivInfo = this.getIVClass(opts.implied_volatility);
             const optionsDisplay = opts.available
-                ? `IV: ${opts.implied_volatility != null ? (opts.implied_volatility * 100).toFixed(1) + '%' : '--'}`
-                : 'N/A';
+                ? `<span class="iv-indicator ${ivInfo.class}" title="${ivInfo.quality}">
+                     <span class="iv-value">${opts.implied_volatility != null ? (opts.implied_volatility * 100).toFixed(0) + '%' : '--'}</span>
+                     <span class="iv-label">${ivInfo.label}</span>
+                   </span>`
+                : '<span class="iv-indicator iv-na">N/A</span>';
 
             const sectorSent = sec.sector_sentiment || {};
             const sectorDisplay = sec.sector
@@ -282,14 +319,9 @@ const Reports = {
                     <p>Sentiment: <strong class="${(sent.sentiment || '').toLowerCase()}">${sent.sentiment || '--'}</strong></p>
                     <p>Confidence: ${sent.confidence != null ? (sent.confidence * 100).toFixed(1) + '%' : '--'}</p>
                 </div>
-                <div class="detail-section">
-                    <h5>Options</h5>
-                    ${opts.available ? `
-                        <p>Expiry: ${opts.nearest_expiry || '--'}</p>
-                        <p>Call: $${opts.nearest_call_strike?.toFixed(2) || '--'} @ $${opts.nearest_call_fair_value?.toFixed(2) || opts.nearest_call_price?.toFixed(2) || '--'}</p>
-                        <p>Put: $${opts.nearest_put_strike?.toFixed(2) || '--'} @ $${opts.nearest_put_fair_value?.toFixed(2) || opts.nearest_put_price?.toFixed(2) || '--'}</p>
-                        <p>IV: ${opts.implied_volatility != null ? (opts.implied_volatility * 100).toFixed(1) + '%' : '--'}</p>
-                    ` : '<p>Options data not available</p>'}
+                <div class="detail-section detail-section-options">
+                    <h5>Options Analysis</h5>
+                    ${opts.available ? this.renderOptionsAnalysis(sec, opts) : '<p>Options data not available</p>'}
                 </div>
                 <div class="detail-section">
                     <h5>Daily Overview</h5>
@@ -302,6 +334,105 @@ const Reports = {
     detailInd(label, value, decimals = 2) {
         const display = value != null ? Number(value).toFixed(decimals) : '--';
         return `<span class="detail-ind"><strong>${label}:</strong> ${display}</span>`;
+    },
+
+    renderOptionsAnalysis(sec, opts) {
+        const ivInfo = this.getIVClass(opts.implied_volatility);
+        const ivPct = opts.implied_volatility != null ? (opts.implied_volatility * 100).toFixed(1) : '--';
+        const stockPrice = sec.current_price || 100;
+        const isBullish = sec.break_direction === 'bullish';
+
+        // Expected move based on trend break probability (conservative 3% estimate)
+        const expectedMove = isBullish ? 3 : -3;
+        const returns = this.calculateOptionReturns(stockPrice, Math.abs(expectedMove), opts.implied_volatility);
+
+        // Determine recommendation
+        let recommendation = '';
+        let recClass = '';
+        if (opts.implied_volatility == null) {
+            recommendation = 'IV data unavailable';
+            recClass = 'neutral';
+        } else if (opts.implied_volatility < 0.35 && sec.break_probability >= 0.80) {
+            recommendation = isBullish ? 'FAVORABLE - Low IV + High Probability Bullish' : 'FAVORABLE - Low IV + High Probability Bearish';
+            recClass = 'positive';
+        } else if (opts.implied_volatility >= 0.50) {
+            recommendation = 'CAUTION - High IV makes options expensive';
+            recClass = 'negative';
+        } else {
+            recommendation = 'MODERATE - Consider position sizing carefully';
+            recClass = 'neutral';
+        }
+
+        return `
+            <div class="options-quick-stats">
+                <div class="iv-display ${ivInfo.class}">
+                    <span class="iv-big">${ivPct}%</span>
+                    <span class="iv-quality">${ivInfo.quality}</span>
+                </div>
+                <div class="options-recommendation ${recClass}">${recommendation}</div>
+            </div>
+
+            <div class="options-pricing-info">
+                <p><strong>Nearest Expiry:</strong> ${opts.nearest_expiry || '--'}</p>
+                <p><strong>${isBullish ? 'Call' : 'Put'}:</strong> $${(isBullish ? opts.nearest_call_strike : opts.nearest_put_strike)?.toFixed(2) || '--'} @ $${(isBullish ? (opts.nearest_call_fair_value || opts.nearest_call_price) : (opts.nearest_put_fair_value || opts.nearest_put_price))?.toFixed(2) || '--'}</p>
+            </div>
+
+            <div class="options-education">
+                <h6>Expiration Comparison (Expected ${Math.abs(expectedMove)}% ${isBullish ? 'Rise' : 'Drop'})</h6>
+                <div class="expiry-comparison">
+                    <div class="expiry-card">
+                        <div class="expiry-header">1-Month Option</div>
+                        <div class="expiry-stats">
+                            <p>Est. Premium: <strong>$${returns.oneMonth.premium.toFixed(2)}</strong></p>
+                            <p>Est. Return: <strong class="${returns.oneMonth.returnPct >= 0 ? 'positive' : 'negative'}">${returns.oneMonth.returnPct.toFixed(0)}%</strong></p>
+                            <p>Leverage: <strong>${returns.oneMonth.leverage}x</strong></p>
+                        </div>
+                        <div class="expiry-pros-cons">
+                            <span class="pro">Higher leverage</span>
+                            <span class="con">More time decay risk</span>
+                        </div>
+                    </div>
+                    <div class="expiry-card recommended">
+                        <div class="expiry-header">3-Month Option <span class="rec-badge">SAFER</span></div>
+                        <div class="expiry-stats">
+                            <p>Est. Premium: <strong>$${returns.threeMonth.premium.toFixed(2)}</strong></p>
+                            <p>Est. Return: <strong class="${returns.threeMonth.returnPct >= 0 ? 'positive' : 'negative'}">${returns.threeMonth.returnPct.toFixed(0)}%</strong></p>
+                            <p>Leverage: <strong>${returns.threeMonth.leverage}x</strong></p>
+                        </div>
+                        <div class="expiry-pros-cons">
+                            <span class="pro">More time for move</span>
+                            <span class="pro">Less theta decay/day</span>
+                        </div>
+                    </div>
+                </div>
+
+                <details class="options-guide">
+                    <summary>Options Buying Guide</summary>
+                    <div class="guide-content">
+                        <h6>When to Buy Options:</h6>
+                        <ul>
+                            <li><strong>Low IV (<35%)</strong> - Options are cheap relative to expected movement</li>
+                            <li><strong>High probability signal (>85%)</strong> - Higher confidence in direction</li>
+                            <li><strong>Clear trend break pattern</strong> - Technical confirmation</li>
+                        </ul>
+
+                        <h6>Expiration Selection:</h6>
+                        <ul>
+                            <li><strong>1 Month:</strong> Best when you expect a quick move within 2-3 weeks. Higher risk/reward.</li>
+                            <li><strong>3 Months:</strong> Safer choice - gives the trade time to work. Recommended for most traders.</li>
+                            <li><strong>Rule of thumb:</strong> Buy 2x the time you think you need</li>
+                        </ul>
+
+                        <h6>Position Sizing:</h6>
+                        <ul>
+                            <li>Risk max 2% of portfolio per options trade</li>
+                            <li>Options can go to zero - only risk what you can lose</li>
+                            <li>Consider buying fewer contracts with longer expiry vs more with shorter</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+        `;
     },
 
     // ── Chart Loading ─────────────────────────────────────────────────
@@ -491,6 +622,53 @@ const Reports = {
         if (prob >= 0.90) return 'danger';
         if (prob >= 0.85) return 'warning';
         return 'primary';
+    },
+
+    // IV assessment: Low IV = good to buy, High IV = expensive/risky
+    getIVClass(iv) {
+        if (iv == null) return { class: 'neutral', label: '--', quality: 'unknown' };
+        const ivPct = iv * 100;
+        if (ivPct < 25) return { class: 'iv-excellent', label: 'LOW', quality: 'Excellent - Options are cheap' };
+        if (ivPct < 35) return { class: 'iv-good', label: 'GOOD', quality: 'Good - Options reasonably priced' };
+        if (ivPct < 50) return { class: 'iv-neutral', label: 'FAIR', quality: 'Fair - Average pricing' };
+        if (ivPct < 70) return { class: 'iv-high', label: 'HIGH', quality: 'High - Options are expensive' };
+        return { class: 'iv-extreme', label: 'EXTREME', quality: 'Extreme - Very risky to buy' };
+    },
+
+    // Calculate estimated option returns based on expected move
+    calculateOptionReturns(stockPrice, expectedMovePct, iv) {
+        // Simplified Black-Scholes approximation for educational purposes
+        const move = stockPrice * (expectedMovePct / 100);
+        const ivDecimal = iv || 0.30;
+
+        // 1-month ATM call estimate (higher theta decay, more leverage)
+        const premium1m = stockPrice * ivDecimal * Math.sqrt(1/12); // ~30 days
+        const intrinsic1m = Math.max(0, move);
+        const timeValue1m = premium1m * 0.4; // Remaining time value after move
+        const value1m = intrinsic1m + timeValue1m;
+        const return1m = ((value1m - premium1m) / premium1m) * 100;
+
+        // 3-month ATM call estimate (lower theta decay, less leverage)
+        const premium3m = stockPrice * ivDecimal * Math.sqrt(3/12); // ~90 days
+        const intrinsic3m = Math.max(0, move);
+        const timeValue3m = premium3m * 0.7; // More time value remaining
+        const value3m = intrinsic3m + timeValue3m;
+        const return3m = ((value3m - premium3m) / premium3m) * 100;
+
+        return {
+            oneMonth: {
+                premium: premium1m,
+                estimatedValue: value1m,
+                returnPct: return1m,
+                leverage: (expectedMovePct > 0 ? return1m / expectedMovePct : 0).toFixed(1)
+            },
+            threeMonth: {
+                premium: premium3m,
+                estimatedValue: value3m,
+                returnPct: return3m,
+                leverage: (expectedMovePct > 0 ? return3m / expectedMovePct : 0).toFixed(1)
+            }
+        };
     },
 
     timeAgo(date) {

@@ -1,6 +1,6 @@
-# Trading System Frontend
+# AlphaBreak Frontend
 
-Production-ready frontend interface for the AI-powered securities trading prediction system.
+Production-ready frontend interface for the AlphaBreak AI-powered securities trading prediction system.
 
 ## Features
 

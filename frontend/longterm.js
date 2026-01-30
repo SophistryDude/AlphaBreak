@@ -11,7 +11,7 @@ const LongTerm = {
     savedHoldings: [],
     savedHoldingsData: {},
     activeSectorFilter: null,
-    STORAGE_KEY: 'trading_system_longterm_holdings',
+    STORAGE_KEY: 'alphabreak_longterm_holdings',
 
     SECTOR_COLORS: {
         'Technology':               '#2962ff',

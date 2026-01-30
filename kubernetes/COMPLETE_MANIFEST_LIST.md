@@ -1,6 +1,6 @@
-# Complete Kubernetes Manifest List
+# AlphaBreak Complete Kubernetes Manifest List
 
-All Kubernetes files for deploying the trading system with scheduling capabilities.
+All Kubernetes files for deploying AlphaBreak with scheduling capabilities.
 
 ## Core Infrastructure
 

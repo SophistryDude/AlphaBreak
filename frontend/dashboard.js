@@ -5,6 +5,7 @@ const Dashboard = {
     charts: {},
     refreshTimers: {},
     data: {},
+    currentTimeframe: 'daily', // Default timeframe for market sentiment chart
 
     // ──────────────────────────────────────────────────────────
     // INITIALIZATION
@@ -14,6 +15,7 @@ const Dashboard = {
         this.loadAllWidgets();
         this.setupAutoRefresh();
         this.setupEventListeners();
+        this.setupTimeframeSelector();
     },
 
     async loadAllWidgets() {
@@ -52,6 +54,75 @@ const Dashboard = {
                 this.switchAssetChart(e.target.dataset.asset);
             });
         });
+    },
+
+    setupTimeframeSelector() {
+        const radios = document.querySelectorAll('input[name="chartTimeframe"]');
+        radios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.currentTimeframe = e.target.value;
+                this.updateMarketSentimentChart();
+            });
+        });
+    },
+
+    updateMarketSentimentChart() {
+        const data = this.data.marketSentiment;
+        if (!data) return;
+
+        // Get the appropriate chart data based on timeframe
+        let chartData = [];
+        let timeUnit = 'day';
+        let timeFormat = 'MMM d';
+        let peaks = [];
+        let troughs = [];
+
+        switch (this.currentTimeframe) {
+            case 'daily':
+                chartData = data.daily_chart_data || data.weekly_chart_data || [];
+                timeUnit = 'day';
+                timeFormat = 'MMM d';
+                // No peaks/troughs for daily (calculated on weekly)
+                break;
+            case 'weekly':
+                chartData = data.weekly_chart_data || [];
+                timeUnit = 'week';
+                timeFormat = 'MMM d';
+                // Peaks and troughs only for weekly view
+                peaks = data.peaks || [];
+                troughs = data.troughs || [];
+                break;
+            case 'hourly':
+                chartData = data.hourly_chart_data || [];
+                timeUnit = 'hour';
+                timeFormat = 'MMM d HH:mm';
+                // No peaks/troughs for hourly
+                break;
+            case '10min':
+                chartData = data.ten_min_chart_data || [];
+                timeUnit = 'minute';
+                timeFormat = 'HH:mm';
+                // No peaks/troughs for 10min
+                break;
+        }
+
+        if (chartData.length > 0) {
+            this.renderCandlestickChart(
+                'marketSentimentChart',
+                chartData,
+                peaks,
+                troughs,
+                timeUnit,
+                timeFormat
+            );
+        } else {
+            // Show message if no data for this timeframe
+            const ctx = document.getElementById('marketSentimentChart');
+            if (ctx && this.charts['marketSentimentChart']) {
+                this.charts['marketSentimentChart'].destroy();
+                delete this.charts['marketSentimentChart'];
+            }
+        }
     },
 
     // ──────────────────────────────────────────────────────────
@@ -111,15 +182,8 @@ const Dashboard = {
                 '<span class="indicator-chip">Market Type: ' + (data.market_type || 'unknown') + '</span>';
         }
 
-        // Chart — candlestick with trend lines
-        if (data.weekly_chart_data && data.weekly_chart_data.length > 0) {
-            this.renderCandlestickChart(
-                'marketSentimentChart',
-                data.weekly_chart_data,
-                data.peaks || [],
-                data.troughs || []
-            );
-        }
+        // Chart — use selected timeframe
+        this.updateMarketSentimentChart();
 
         // Timestamp
         document.getElementById('marketSentimentUpdated').textContent =
@@ -153,37 +217,188 @@ const Dashboard = {
             selector.appendChild(opt);
         });
 
-        // Render sector pills
+        // Render sector pills with mini charts
         const grid = document.getElementById('sectorGrid');
         grid.innerHTML = '';
-        data.sectors.forEach(sector => {
+        data.sectors.forEach((sector, index) => {
             const pill = document.createElement('div');
             const sentimentClass = sector.sentiment.toLowerCase();
             pill.className = 'sector-pill ' + sentimentClass;
-            pill.innerHTML =
-                '<div class="sector-pill-name">' + sector.name + '</div>' +
-                '<div class="sector-pill-sentiment">' + sector.sentiment + '</div>';
+
+            const canvasId = `sectorMiniChart_${index}`;
+            pill.innerHTML = `
+                <div class="sector-pill-content">
+                    <div class="sector-pill-info">
+                        <div class="sector-pill-name">${sector.name}</div>
+                        <div class="sector-pill-sentiment">${sector.sentiment}</div>
+                    </div>
+                    <div class="sector-pill-chart">
+                        <canvas id="${canvasId}"></canvas>
+                    </div>
+                </div>
+            `;
             pill.addEventListener('click', () => {
                 this.showSectorChart(sector);
             });
             grid.appendChild(pill);
+
+            // Render mini sparkline chart
+            if (sector.weekly_chart_data && sector.weekly_chart_data.length > 0) {
+                this.renderSectorMiniChart(canvasId, sector.weekly_chart_data, sentimentClass);
+            }
         });
 
         document.getElementById('sectorSentimentUpdated').textContent =
             'Updated: ' + new Date(data.last_updated).toLocaleTimeString();
     },
 
+    renderSectorMiniChart(canvasId, chartData, sentimentClass) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+
+        // Get last 10 data points for mini chart
+        const recentData = chartData.slice(-10);
+        const closes = recentData.map(d => d.close);
+
+        // Determine color based on sentiment
+        let lineColor = '#888';
+        if (sentimentClass === 'bullish') lineColor = '#26a69a';
+        else if (sentimentClass === 'bearish') lineColor = '#ef5350';
+        else if (sentimentClass === 'neutral') lineColor = '#f0b90b';
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: recentData.map((_, i) => i),
+                datasets: [{
+                    data: closes,
+                    borderColor: lineColor,
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                },
+                animation: false,
+            }
+        });
+    },
+
     showSectorChart(sector) {
         const container = document.getElementById('sectorChartContainer');
         container.style.display = 'block';
         if (sector.weekly_chart_data && sector.weekly_chart_data.length > 0) {
-            this.renderLineChart(
+            this.renderSectorCandlestickChart(
                 'sectorChart',
                 sector.weekly_chart_data,
-                ['close'],
-                [sector.name],
-                ['#2962ff']
+                sector.name
             );
+        }
+    },
+
+    renderSectorCandlestickChart(canvasId, chartData, sectorName) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+
+        // Check if we have OHLC data
+        const hasOHLC = chartData[0] && chartData[0].open !== undefined;
+
+        if (hasOHLC) {
+            // Render candlestick chart
+            const timestamps = chartData.map(d => luxon.DateTime.fromISO(d.date).toMillis());
+
+            const candlestickData = chartData.map((d, i) => ({
+                x: timestamps[i],
+                o: d.open,
+                h: d.high,
+                l: d.low,
+                c: d.close,
+            }));
+
+            // SMA 10 overlay
+            const smaData = [];
+            for (let i = 0; i < chartData.length; i++) {
+                if (i >= 9) {
+                    let sum = 0;
+                    for (let j = i - 9; j <= i; j++) {
+                        sum += chartData[j].close;
+                    }
+                    smaData.push({ x: timestamps[i], y: sum / 10 });
+                }
+            }
+
+            const datasets = [
+                {
+                    label: sectorName,
+                    data: candlestickData,
+                },
+                {
+                    label: 'SMA 10',
+                    data: smaData,
+                    type: 'line',
+                    borderColor: '#f59e0b',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: false,
+                    order: 1,
+                },
+            ];
+
+            this.charts[canvasId] = new Chart(ctx, {
+                type: 'candlestick',
+                data: { datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { boxWidth: 12, font: { size: 10 }, color: '#8b95a5' },
+                        },
+                        tooltip: {
+                            backgroundColor: '#1c2030',
+                            titleColor: '#e2e8f0',
+                            bodyColor: '#8b95a5',
+                            borderColor: '#2a2e39',
+                            borderWidth: 1,
+                        },
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'week', displayFormats: { week: 'MMM d' } },
+                            grid: { display: false },
+                            ticks: { maxTicksLimit: 8, font: { size: 10 }, color: '#8b95a5' },
+                        },
+                        y: {
+                            grid: { color: '#2a2e3960' },
+                            ticks: {
+                                callback: function(v) { return '$' + v.toLocaleString(); },
+                                font: { size: 10 },
+                                color: '#8b95a5',
+                            },
+                        },
+                    },
+                    interaction: { intersect: false, mode: 'index' },
+                },
+            });
+        } else {
+            // Fallback to line chart if no OHLC data
+            this.renderLineChart(canvasId, chartData, ['close'], [sectorName], ['#2962ff']);
         }
     },
 
@@ -214,22 +429,30 @@ const Dashboard = {
     },
 
     renderIndexSentiment(data) {
-        // VIX
+        // VIX - New layout with market type prominent
         if (data.vix) {
-            document.getElementById('vixValue').textContent = data.vix.value.toFixed(1);
-
+            // Market type label (prominent)
             const fearLabel = document.getElementById('vixFearLabel');
             fearLabel.textContent = data.vix.fear_level;
-            fearLabel.className = 'vix-fear-label ' + this.vixFearClass(data.vix.fear_level);
+            fearLabel.className = 'vix-market-type ' + this.vixFearClass(data.vix.fear_level);
 
+            // VIX number (secondary)
+            document.getElementById('vixValue').textContent = data.vix.value.toFixed(1);
+
+            // Description
             document.getElementById('vixDescription').textContent = data.vix.description;
+
+            // VIX Sparkline
+            if (data.vix.history && data.vix.history.length > 1) {
+                this.renderMiniSparkline('vixSparkline', data.vix.history, this.vixFearClass(data.vix.fear_level));
+            }
         }
 
-        // Index cards
+        // Index cards with mini sparklines
         const grid = document.getElementById('indexSentimentGrid');
         grid.innerHTML = '';
         if (data.indices) {
-            data.indices.forEach(idx => {
+            data.indices.forEach((idx, i) => {
                 const card = document.createElement('div');
                 card.className = 'index-card';
                 const changeClass = idx.weekly_change_pct >= 0 ? 'positive' : 'negative';
@@ -237,12 +460,27 @@ const Dashboard = {
                 const priceText = idx.current_price
                     ? '$' + idx.current_price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
                     : '--';
+                const canvasId = 'indexSparkline' + i;
                 card.innerHTML =
-                    '<div class="index-name">' + idx.name + '</div>' +
-                    '<div class="index-sentiment-badge ' + idx.sentiment.toLowerCase() + '">' + idx.sentiment + '</div>' +
-                    '<div class="index-price">' + priceText + '</div>' +
-                    '<div class="index-change ' + changeClass + '">' + changeSign + idx.weekly_change_pct.toFixed(1) + '%</div>';
+                    '<div class="index-card-content">' +
+                        '<div class="index-info">' +
+                            '<div class="index-name">' + idx.name + '</div>' +
+                            '<div class="index-sentiment-badge ' + idx.sentiment.toLowerCase() + '">' + idx.sentiment + '</div>' +
+                            '<div class="index-price">' + priceText + '</div>' +
+                            '<div class="index-change ' + changeClass + '">' + changeSign + idx.weekly_change_pct.toFixed(1) + '%</div>' +
+                        '</div>' +
+                        '<div class="index-chart-container">' +
+                            '<canvas id="' + canvasId + '" width="60" height="30"></canvas>' +
+                        '</div>' +
+                    '</div>';
                 grid.appendChild(card);
+
+                // Render sparkline after card is in DOM
+                if (idx.history && idx.history.length > 1) {
+                    setTimeout(() => {
+                        this.renderMiniSparkline(canvasId, idx.history, changeClass);
+                    }, 0);
+                }
             });
         }
 
@@ -258,6 +496,57 @@ const Dashboard = {
 
         document.getElementById('indexSentimentUpdated').textContent =
             'Updated: ' + new Date(data.last_updated).toLocaleTimeString();
+    },
+
+    renderMiniSparkline(canvasId, data, colorClass) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !data || data.length < 2) return;
+
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Determine color based on class or trend
+        let color = '#00d4aa'; // Default green
+        if (colorClass === 'negative' || colorClass === 'elevated' || colorClass === 'extreme') {
+            color = '#ef5350'; // Red
+        } else if (colorClass === 'low') {
+            color = '#26a69a'; // Teal (calm)
+        }
+
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+
+        // Calculate min/max for scaling
+        const min = Math.min(...data);
+        const max = Math.max(...data);
+        const range = max - min || 1;
+        const padding = 2;
+
+        // Draw line
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.lineJoin = 'round';
+
+        data.forEach((val, i) => {
+            const x = padding + (i / (data.length - 1)) * (width - padding * 2);
+            const y = height - padding - ((val - min) / range) * (height - padding * 2);
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        ctx.stroke();
+
+        // Draw end dot
+        const lastX = width - padding;
+        const lastY = height - padding - ((data[data.length - 1] - min) / range) * (height - padding * 2);
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 2, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
     },
 
     vixFearClass(level) {
@@ -400,7 +689,7 @@ const Dashboard = {
     // CANDLESTICK CHART (Market Sentiment + Earnings)
     // ──────────────────────────────────────────────────────────
 
-    renderCandlestickChart(canvasId, chartData, peaks, troughs) {
+    renderCandlestickChart(canvasId, chartData, peaks, troughs, timeUnit = 'week', timeFormat = 'MMM d') {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
@@ -408,8 +697,11 @@ const Dashboard = {
             this.charts[canvasId].destroy();
         }
 
-        // Convert dates to luxon timestamps for the time axis
-        const timestamps = chartData.map(d => luxon.DateTime.fromISO(d.date).toMillis());
+        // Convert dates/timestamps to luxon timestamps for the time axis
+        const timestamps = chartData.map(d => {
+            const dateStr = d.date || d.timestamp;
+            return luxon.DateTime.fromISO(dateStr).toMillis();
+        });
 
         // Candlestick dataset — {x, o, h, l, c} format
         const candlestickData = chartData.map((d, i) => ({
@@ -512,9 +804,9 @@ const Dashboard = {
                 scales: {
                     x: {
                         type: 'time',
-                        time: { unit: 'week' },
+                        time: { unit: timeUnit, displayFormats: { [timeUnit]: timeFormat } },
                         grid: { display: false },
-                        ticks: { maxTicksLimit: 6, font: { size: 10 }, color: '#8b95a5' },
+                        ticks: { maxTicksLimit: 8, font: { size: 10 }, color: '#8b95a5' },
                     },
                     y: {
                         grid: { color: '#2a2e3960' },

@@ -1136,10 +1136,10 @@
                     <h2>Forex Correlation Analysis</h2>
                     <p class="description">Currency pair correlations and trend break analysis. Identifies patterns between forex pairs to inform equity positioning.</p>
 
-                    <!-- USD Pairs Chart (replaces market sentiment) -->
+                    <!-- USD Index Chart with DXY Backdrop -->
                     <div class="forex-section forex-main-chart-section">
                         <div class="forex-chart-header">
-                            <h3>US Dollar Index (Top 5 USD Pairs)</h3>
+                            <h3>US Dollar Index (DXY) vs Major Pairs</h3>
                             <div class="forex-timeframe-toggle">
                                 <label class="radio-btn">
                                     <input type="radio" name="forexTimeframe" value="10min" checked>
@@ -1159,20 +1159,30 @@
                             <canvas id="forexUsdChart"></canvas>
                         </div>
                         <div class="forex-chart-legend" id="forexChartLegend"></div>
-                    </div>
 
-                    <!-- Summary Stats Row -->
-                    <div class="forex-summary-section">
-                        <div class="forex-summary-stats" id="forexSummaryStats">
-                            <p class="loading-text">Loading summary...</p>
+                        <!-- USD Strength Indicator -->
+                        <div class="forex-usd-strength" id="forexUsdStrength">
+                            <div class="usd-strength-indicator" id="usdStrengthIndicator">
+                                <span class="strength-label">USD Trend:</span>
+                                <span class="strength-value" id="usdStrengthValue">Loading...</span>
+                            </div>
+                            <div class="currency-movement-summary" id="currencyMovementSummary">
+                                <div class="movement-group rising">
+                                    <span class="group-label">Rising vs USD:</span>
+                                    <span class="group-pairs" id="risingPairs">--</span>
+                                </div>
+                                <div class="movement-group falling">
+                                    <span class="group-label">Falling vs USD:</span>
+                                    <span class="group-pairs" id="fallingPairs">--</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="forex-pattern-counts" id="forexPatternCounts"></div>
                     </div>
 
-                    <!-- Recent Notable Movements with Correlated Pairs -->
+                    <!-- Recent Notable Movements with Correlated Pairs & Buy Signals -->
                     <div class="forex-section forex-movements-widget">
-                        <h3>Recent Movements & Correlated Pairs</h3>
-                        <p class="section-subtitle">Notable movements and which pairs historically move together</p>
+                        <h3>Recent Movements & Trading Signals</h3>
+                        <p class="section-subtitle">Notable movements with correlated pairs and recommended positions</p>
                         <div class="forex-movements-grid" id="forexMovementsGrid">
                             <p class="loading-text">Loading recent movements...</p>
                         </div>
@@ -1206,6 +1216,26 @@
                                     <tr><td colspan="6" class="loading-text">Loading correlations...</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <!-- Summary Stats Row (single row) -->
+                    <div class="forex-summary-row" id="forexSummaryStats">
+                        <div class="forex-stat-item">
+                            <span class="stat-value" id="statPairsCount">--</span>
+                            <span class="stat-label">Currency Pairs</span>
+                        </div>
+                        <div class="forex-stat-item">
+                            <span class="stat-value" id="statDataPoints">--</span>
+                            <span class="stat-label">Data Points</span>
+                        </div>
+                        <div class="forex-stat-item">
+                            <span class="stat-value" id="statNotableMovements">--</span>
+                            <span class="stat-label">Notable Movements</span>
+                        </div>
+                        <div class="forex-stat-item">
+                            <span class="stat-value" id="statRecentBreaks">--</span>
+                            <span class="stat-label">Recent (7d)</span>
                         </div>
                     </div>
 

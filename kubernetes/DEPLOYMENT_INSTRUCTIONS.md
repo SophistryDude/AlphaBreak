@@ -1,6 +1,6 @@
-# Kubernetes Deployment Instructions
+# AlphaBreak Kubernetes Deployment Instructions
 
-Complete step-by-step guide to deploy the trading system on Kubernetes with Airflow scheduling.
+Complete step-by-step guide to deploy AlphaBreak on Kubernetes with Airflow scheduling.
 
 ## Prerequisites
 

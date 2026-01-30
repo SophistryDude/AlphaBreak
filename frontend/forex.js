@@ -17,6 +17,10 @@ const Forex = {
         '#ba68c8',  // Purple - USD/CAD
     ],
 
+    // DXY backdrop color
+    DXY_COLOR: 'rgba(100, 181, 246, 0.15)',  // Light blue filled area
+    DXY_BORDER: 'rgba(100, 181, 246, 0.4)',
+
     // ──────────────────────────────────────────────────────────
     // INITIALIZATION
     // ──────────────────────────────────────────────────────────
@@ -74,6 +78,7 @@ const Forex = {
             const data = await response.json();
             this.renderUsdChart(data);
             this.renderChartLegend(data.pairs, legendEl);
+            this.updateUsdStrengthIndicator(data);
         } catch (error) {
             console.error('USD Chart load failed:', error);
             if (legendEl) {
@@ -93,8 +98,42 @@ const Forex = {
 
         const ctx = canvas.getContext('2d');
 
+        // Calculate DXY proxy (weighted average of USD pairs - inverted for XXX/USD pairs)
+        const dxyData = data.chart_data.map(d => {
+            let sum = 0;
+            let count = 0;
+            data.pairs.forEach(pair => {
+                const val = d[pair.replace('/', '_')];
+                if (val != null) {
+                    // For XXX/USD pairs (EUR/USD, GBP/USD), invert to show USD strength
+                    // For USD/XXX pairs, use as-is
+                    const isUsdBase = pair.startsWith('USD/');
+                    sum += isUsdBase ? val : (200 - val); // Invert XXX/USD pairs
+                    count++;
+                }
+            });
+            return {
+                x: new Date(d.timestamp),
+                y: count > 0 ? sum / count : null,
+            };
+        }).filter(d => d.y != null);
+
+        // DXY backdrop dataset (filled area)
+        const dxyDataset = {
+            label: 'DXY (USD Index)',
+            data: dxyData,
+            borderColor: this.DXY_BORDER,
+            backgroundColor: this.DXY_COLOR,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 1,
+            order: 10, // Render behind other lines
+            yAxisID: 'y',
+        };
+
         // Build datasets for each pair
-        const datasets = data.pairs.map((pair, idx) => {
+        const pairDatasets = data.pairs.map((pair, idx) => {
             const chartData = data.chart_data.map(d => ({
                 x: new Date(d.timestamp),
                 y: d[pair.replace('/', '_')],
@@ -109,8 +148,11 @@ const Forex = {
                 tension: 0.2,
                 pointRadius: 0,
                 borderWidth: 2,
+                order: idx,
             };
         });
+
+        const datasets = [dxyDataset, ...pairDatasets];
 
         // Configure time unit based on timeframe
         let timeUnit = 'hour';
@@ -140,7 +182,9 @@ const Forex = {
                             label: (context) => {
                                 const value = context.parsed.y;
                                 if (value != null) {
-                                    return `${context.dataset.label}: ${value.toFixed(4)}`;
+                                    const change = (value - 100).toFixed(2);
+                                    const sign = change >= 0 ? '+' : '';
+                                    return `${context.dataset.label}: ${sign}${change}%`;
                                 }
                                 return '';
                             },
@@ -157,17 +201,95 @@ const Forex = {
                     y: {
                         position: 'right',
                         grid: { color: '#2a2e3960' },
-                        ticks: { color: '#8b95a5' },
+                        ticks: {
+                            color: '#8b95a5',
+                            callback: (value) => `${(value - 100).toFixed(1)}%`,
+                        },
                     },
                 },
             },
         });
     },
 
+    updateUsdStrengthIndicator(data) {
+        const strengthEl = document.getElementById('usdStrengthValue');
+        const risingEl = document.getElementById('risingPairs');
+        const fallingEl = document.getElementById('fallingPairs');
+
+        if (!data.chart_data || data.chart_data.length < 2) return;
+
+        const firstData = data.chart_data[0];
+        const lastData = data.chart_data[data.chart_data.length - 1];
+
+        const rising = [];
+        const falling = [];
+        let usdStrengthSum = 0;
+        let count = 0;
+
+        data.pairs.forEach(pair => {
+            const pairCol = pair.replace('/', '_');
+            const first = firstData[pairCol];
+            const last = lastData[pairCol];
+
+            if (first != null && last != null) {
+                const change = last - first;
+                const isUsdBase = pair.startsWith('USD/');
+                const currency = isUsdBase ? pair.split('/')[1] : pair.split('/')[0];
+
+                // For XXX/USD: if it goes up, that currency is rising vs USD (USD weakening)
+                // For USD/XXX: if it goes up, USD is strengthening vs that currency
+                if (isUsdBase) {
+                    // USD/XXX pair - positive change = USD strengthening
+                    if (change > 0.5) falling.push(currency);
+                    else if (change < -0.5) rising.push(currency);
+                    usdStrengthSum += change;
+                } else {
+                    // XXX/USD pair - positive change = that currency rising (USD weakening)
+                    if (change > 0.5) rising.push(currency);
+                    else if (change < -0.5) falling.push(currency);
+                    usdStrengthSum -= change; // Invert for USD perspective
+                }
+                count++;
+            }
+        });
+
+        const avgUsdChange = count > 0 ? usdStrengthSum / count : 0;
+
+        // Update USD strength indicator
+        if (strengthEl) {
+            if (avgUsdChange > 0.3) {
+                strengthEl.innerHTML = '<span class="strength-up">↑ STRENGTHENING</span>';
+                strengthEl.className = 'strength-value positive';
+            } else if (avgUsdChange < -0.3) {
+                strengthEl.innerHTML = '<span class="strength-down">↓ WEAKENING</span>';
+                strengthEl.className = 'strength-value negative';
+            } else {
+                strengthEl.innerHTML = '<span class="strength-neutral">→ NEUTRAL</span>';
+                strengthEl.className = 'strength-value neutral';
+            }
+        }
+
+        // Update currency lists
+        if (risingEl) {
+            risingEl.textContent = rising.length > 0 ? rising.join(', ') : 'None';
+        }
+        if (fallingEl) {
+            fallingEl.textContent = falling.length > 0 ? falling.join(', ') : 'None';
+        }
+    },
+
     renderChartLegend(pairs, container) {
         if (!container || !pairs) return;
 
-        container.innerHTML = pairs.map((pair, idx) => {
+        // Add DXY to legend first
+        let html = `
+            <span class="chart-legend-item">
+                <span class="legend-dot" style="background:${this.DXY_BORDER}"></span>
+                DXY
+            </span>
+        `;
+
+        html += pairs.map((pair, idx) => {
             const color = this.CHART_COLORS[idx % this.CHART_COLORS.length];
             return `
                 <span class="chart-legend-item">
@@ -176,6 +298,8 @@ const Forex = {
                 </span>
             `;
         }).join('');
+
+        container.innerHTML = html;
     },
 
     // ──────────────────────────────────────────────────────────
@@ -210,14 +334,20 @@ const Forex = {
             const dirClass = move.direction === 'bullish' ? 'positive' : 'negative';
             const arrow = move.direction === 'bullish' ? '↑' : '↓';
 
-            // Render correlated pairs
+            // Calculate buy recommendation
+            const buyRec = this.getBuyRecommendation(move.pair, move.direction);
+
+            // Render correlated pairs with their buy recommendations
             const correlatedHtml = (move.correlated_pairs || []).map(cp => {
                 const corrSign = cp.correlation >= 0 ? '+' : '';
                 const corrClass = cp.correlation >= 0 ? 'positive-corr' : 'negative-corr';
+                // Derive correlated pair recommendation based on correlation direction
+                const corrBuyRec = this.getCorrelatedBuyRec(cp.pair, move.direction, cp.correlation);
                 return `
                     <div class="correlated-pair ${corrClass}">
                         <span class="cp-pair">${cp.pair}</span>
                         <span class="cp-corr">${corrSign}${(cp.correlation * 100).toFixed(0)}%</span>
+                        <span class="cp-action">${corrBuyRec}</span>
                     </div>
                 `;
             }).join('');
@@ -228,17 +358,62 @@ const Forex = {
                         <span class="movement-pair">${move.pair}</span>
                         <span class="movement-direction ${dirClass}">${arrow} ${move.direction.toUpperCase()}</span>
                     </div>
+                    <div class="movement-action">
+                        <span class="action-label">Signal:</span>
+                        <span class="action-value ${buyRec.class}">${buyRec.action}</span>
+                    </div>
                     <div class="movement-details">
                         <span class="movement-date">${move.date}</span>
                         <span class="movement-change ${dirClass}">${move.change_pct >= 0 ? '+' : ''}${move.change_pct?.toFixed(2) || '--'}%</span>
                     </div>
                     <div class="movement-correlated">
-                        <div class="correlated-label">Strongly Correlated:</div>
+                        <div class="correlated-label">Correlated Pairs:</div>
                         <div class="correlated-pairs">${correlatedHtml || '<span class="no-corr">None</span>'}</div>
                     </div>
                 </div>
             `;
         }).join('');
+    },
+
+    // Get buy/sell recommendation for a pair based on trend direction
+    getBuyRecommendation(pair, direction) {
+        const isUsdBase = pair.startsWith('USD/');
+        const [base, quote] = pair.split('/');
+
+        // For XXX/USD pairs:
+        //   - Bullish (pair rising) = Buy XXX (base currency)
+        //   - Bearish (pair falling) = Buy USD (quote currency)
+        // For USD/XXX pairs:
+        //   - Bullish (pair rising) = Buy USD (base currency)
+        //   - Bearish (pair falling) = Buy XXX (quote currency)
+
+        if (direction === 'bullish') {
+            return {
+                action: `BUY ${base}`,
+                class: 'buy-signal',
+            };
+        } else {
+            return {
+                action: `BUY ${quote}`,
+                class: 'sell-signal',
+            };
+        }
+    },
+
+    // Get recommendation for correlated pair
+    getCorrelatedBuyRec(pair, originalDirection, correlation) {
+        const [base, quote] = pair.split('/');
+
+        // If positive correlation: same direction as original
+        // If negative correlation: opposite direction
+        const effectiveDirection = correlation >= 0 ? originalDirection :
+            (originalDirection === 'bullish' ? 'bearish' : 'bullish');
+
+        if (effectiveDirection === 'bullish') {
+            return `→ ${base}`;
+        } else {
+            return `→ ${quote}`;
+        }
     },
 
     // ──────────────────────────────────────────────────────────
@@ -261,51 +436,16 @@ const Forex = {
     },
 
     renderSummary(data) {
-        const container = document.getElementById('forexSummaryStats');
-        if (!container) return;
+        // Update individual stat elements (new single-row layout)
+        const pairsEl = document.getElementById('statPairsCount');
+        const dataEl = document.getElementById('statDataPoints');
+        const movementsEl = document.getElementById('statNotableMovements');
+        const recentEl = document.getElementById('statRecentBreaks');
 
-        container.innerHTML = `
-            <div class="forex-stat-card">
-                <div class="forex-stat-value">${data.pairs_count || 0}</div>
-                <div class="forex-stat-label">Currency Pairs</div>
-            </div>
-            <div class="forex-stat-card">
-                <div class="forex-stat-value">${this.formatNumber(data.data_points || 0)}</div>
-                <div class="forex-stat-label">Data Points</div>
-            </div>
-            <div class="forex-stat-card">
-                <div class="forex-stat-value">${data.total_trend_breaks || 0}</div>
-                <div class="forex-stat-label">Notable Movements</div>
-            </div>
-            <div class="forex-stat-card">
-                <div class="forex-stat-value">${data.recent_breaks_7d || 0}</div>
-                <div class="forex-stat-label">Recent (7d)</div>
-            </div>
-        `;
-
-        // Pattern counts
-        const patternContainer = document.getElementById('forexPatternCounts');
-        if (patternContainer && data.pattern_counts) {
-            const pc = data.pattern_counts;
-            patternContainer.innerHTML = `
-                <div class="pattern-bar">
-                    <div class="pattern-segment strong" style="flex: ${pc.strong || 0};" title="Strong: ${pc.strong || 0}">
-                        <span class="pattern-count">${pc.strong || 0}</span>
-                    </div>
-                    <div class="pattern-segment mid" style="flex: ${pc.mid || 0};" title="Mid: ${pc.mid || 0}">
-                        <span class="pattern-count">${pc.mid || 0}</span>
-                    </div>
-                    <div class="pattern-segment weak" style="flex: ${pc.weak || 0};" title="Weak: ${pc.weak || 0}">
-                        <span class="pattern-count">${pc.weak || 0}</span>
-                    </div>
-                </div>
-                <div class="pattern-legend">
-                    <span class="legend-item"><span class="legend-color strong"></span> Strong</span>
-                    <span class="legend-item"><span class="legend-color mid"></span> Mid</span>
-                    <span class="legend-item"><span class="legend-color weak"></span> Weak</span>
-                </div>
-            `;
-        }
+        if (pairsEl) pairsEl.textContent = data.pairs_count || 0;
+        if (dataEl) dataEl.textContent = this.formatNumber(data.data_points || 0);
+        if (movementsEl) movementsEl.textContent = this.formatNumber(data.total_trend_breaks || 0);
+        if (recentEl) recentEl.textContent = data.recent_breaks_7d || 0;
     },
 
     // ──────────────────────────────────────────────────────────

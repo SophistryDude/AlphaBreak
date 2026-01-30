@@ -5,7 +5,7 @@
 // Each ticker shows: price, trend break, sector, indicators, options.
 
 const Watchlist = {
-    STORAGE_KEY: 'trading_system_watchlist',
+    STORAGE_KEY: 'alphabreak_watchlist',
     tickers: [],
     data: {},
     charts: {},

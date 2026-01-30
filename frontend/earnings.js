@@ -7,7 +7,7 @@ const Earnings = {
     customTickers: [],
     expandedTicker: null,
     calendarData: null,
-    STORAGE_KEY: 'trading_system_earnings_custom',
+    STORAGE_KEY: 'alphabreak_earnings_custom',
 
     // ──────────────────────────────────────────────────────────
     // INITIALIZATION
@@ -176,8 +176,9 @@ const Earnings = {
 
         earnings.forEach(entry => {
             const row = document.createElement('tr');
-            row.className = 'earnings-row' + (entry.is_upcoming ? ' upcoming' : ' reported');
+            row.className = 'earnings-row clickable' + (entry.is_upcoming ? ' upcoming' : ' reported');
             if (entry.is_custom) row.classList.add('custom');
+            row.dataset.ticker = entry.ticker;
 
             const epsEstimate = entry.eps_estimate !== null ? '$' + entry.eps_estimate.toFixed(2) : '--';
             const epsActual = entry.eps_actual !== null ? '$' + entry.eps_actual.toFixed(2) : '--';
@@ -199,10 +200,10 @@ const Earnings = {
                 '<td>' + epsActual + '</td>' +
                 '<td>' + surpriseHtml + '</td>' +
                 '<td>' + statusBadge + '</td>' +
-                '<td><button class="btn btn-sm btn-detail" data-ticker="' + entry.ticker + '">Details</button></td>';
+                '<td><span class="row-expand-hint">▶</span></td>';
 
-            row.querySelector('.btn-detail').addEventListener('click', (e) => {
-                e.stopPropagation();
+            // Make entire row clickable
+            row.addEventListener('click', () => {
                 this.expandRow(entry.ticker);
             });
 
@@ -224,6 +225,15 @@ const Earnings = {
             return;
         }
 
+        // Remove highlight from previously selected row
+        document.querySelectorAll('.earnings-row.selected').forEach(r => r.classList.remove('selected'));
+
+        // Highlight the selected row
+        const selectedRow = document.querySelector(`.earnings-row[data-ticker="${ticker}"]`);
+        if (selectedRow) {
+            selectedRow.classList.add('selected');
+        }
+
         this.expandedTicker = ticker;
         document.getElementById('earningsDetailTicker').textContent = ticker + ' — Earnings Detail';
         document.getElementById('cboeMetrics').innerHTML = '<p>Loading CBOE data...</p>';
@@ -236,7 +246,8 @@ const Earnings = {
         }
 
         panel.style.display = 'block';
-        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Scroll panel into view at the top of the viewport
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         try {
             const response = await apiRequest('/api/earnings/ticker/' + ticker, 'GET');
@@ -254,6 +265,10 @@ const Earnings = {
     closeDetail() {
         const panel = document.getElementById('earningsDetailPanel');
         if (panel) panel.style.display = 'none';
+
+        // Remove highlight from selected row
+        document.querySelectorAll('.earnings-row.selected').forEach(r => r.classList.remove('selected'));
+
         this.expandedTicker = null;
 
         if (this.charts.earningsCandlestickChart) {

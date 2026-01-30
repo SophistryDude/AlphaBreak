@@ -1,6 +1,6 @@
-# Frontend Developer Handoff Document
+# AlphaBreak Frontend Developer Handoff Document
 
-Complete handoff package for front-end developers to integrate with the Trading System API.
+Complete handoff package for front-end developers to integrate with the AlphaBreak API.
 
 ## 📦 What's Included
 

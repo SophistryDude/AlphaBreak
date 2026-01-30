@@ -339,8 +339,9 @@ def compute_market_sentiment(db_manager=None):
     """
     Compute overall market sentiment from S&P 500 weekly data.
     Uses CCI + Stochastic (weekly timeframe) + SMA crossover + RSI.
+    Returns chart data for multiple timeframes: daily, weekly, hourly, and 10-minute.
     """
-    # Fetch S&P 500 data
+    # Fetch S&P 500 daily data
     df = pd.DataFrame()
     if db_manager:
         df = _fetch_market_index_from_db(db_manager, '^GSPC', days=210)
@@ -350,16 +351,20 @@ def compute_market_sentiment(db_manager=None):
         if df.empty:
             return {'sentiment': 'NEUTRAL', 'confidence': 0, 'indicators': {},
                     'market_type': 'unknown', 'cboe_context': None,
-                    'weekly_chart_data': [], 'last_updated': datetime.now().isoformat()}
+                    'weekly_chart_data': [], 'daily_chart_data': [],
+                    'hourly_chart_data': [], 'ten_min_chart_data': [],
+                    'last_updated': datetime.now().isoformat()}
 
     # Resample to weekly
     weekly = _resample_to_weekly(df)
     if len(weekly) < 20:
         return {'sentiment': 'NEUTRAL', 'confidence': 0, 'indicators': {},
                 'market_type': 'unknown', 'cboe_context': None,
-                'weekly_chart_data': [], 'last_updated': datetime.now().isoformat()}
+                'weekly_chart_data': [], 'daily_chart_data': [],
+                'hourly_chart_data': [], 'ten_min_chart_data': [],
+                'last_updated': datetime.now().isoformat()}
 
-    # Calculate indicators
+    # Calculate indicators on weekly data
     cci = _calculate_cci(weekly, length=20)
     stoch_k, stoch_d = _calculate_stochastic(weekly)
     rsi = _calculate_rsi(weekly)
@@ -395,13 +400,13 @@ def compute_market_sentiment(db_manager=None):
     # CBOE context
     cboe_context = _get_cboe_context()
 
-    # Chart data (last 26 weeks) — includes OHLC for candlestick rendering
+    # ── Weekly chart data (last 26 weeks) ──
     chart_weeks = weekly.tail(26)
-    chart_data = []
+    weekly_chart_data = []
     for _, row in chart_weeks.iterrows():
         idx = chart_weeks.index[chart_weeks['date'] == row['date']]
         sma_val = float(sma_20.iloc[idx[0]]) if len(idx) > 0 and not np.isnan(sma_20.iloc[idx[0]]) else None
-        chart_data.append({
+        weekly_chart_data.append({
             'date': row['date'].strftime('%Y-%m-%d'),
             'open': round(float(row['Open']), 2),
             'high': round(float(row['High']), 2),
@@ -410,15 +415,90 @@ def compute_market_sentiment(db_manager=None):
             'sma_20': round(sma_val, 2) if sma_val is not None else None,
         })
 
-    # Detect peaks and troughs for trend lines
+    # ── Daily chart data (last 60 days) ──
+    daily_sma_20 = _calculate_sma(df['Close'], 20)
+    chart_days = df.tail(60)
+    daily_chart_data = []
+    for i, (_, row) in enumerate(chart_days.iterrows()):
+        idx = chart_days.index[i]
+        sma_val = float(daily_sma_20.iloc[idx]) if idx < len(daily_sma_20) and not np.isnan(daily_sma_20.iloc[idx]) else None
+        date_val = row['date']
+        if hasattr(date_val, 'strftime'):
+            date_str = date_val.strftime('%Y-%m-%d')
+        else:
+            date_str = str(date_val)[:10]
+        daily_chart_data.append({
+            'date': date_str,
+            'open': round(float(row['Open']), 2),
+            'high': round(float(row['High']), 2),
+            'low': round(float(row['Low']), 2),
+            'close': round(float(row['Close']), 2),
+            'sma_20': round(sma_val, 2) if sma_val is not None else None,
+        })
+
+    # ── Hourly chart data (last 5 days via yfinance) ──
+    hourly_chart_data = []
+    try:
+        hourly_df = _fetch_yfinance_data('^GSPC', period='5d', interval='1h')
+        if not hourly_df.empty:
+            hourly_sma_20 = _calculate_sma(hourly_df['Close'], 20)
+            chart_hours = hourly_df.tail(120)  # Last 120 hours (~5 days)
+            for i, (_, row) in enumerate(chart_hours.iterrows()):
+                idx = chart_hours.index[i]
+                sma_val = float(hourly_sma_20.iloc[idx]) if idx < len(hourly_sma_20) and not np.isnan(hourly_sma_20.iloc[idx]) else None
+                ts = row['date']
+                if hasattr(ts, 'isoformat'):
+                    ts_str = ts.isoformat()
+                else:
+                    ts_str = str(ts)
+                hourly_chart_data.append({
+                    'date': ts_str,
+                    'open': round(float(row['Open']), 2),
+                    'high': round(float(row['High']), 2),
+                    'low': round(float(row['Low']), 2),
+                    'close': round(float(row['Close']), 2),
+                    'sma_20': round(sma_val, 2) if sma_val is not None else None,
+                })
+    except Exception as e:
+        logger.warning(f"Failed to fetch hourly data for market sentiment: {e}")
+
+    # ── 10-minute chart data (last 1 day via yfinance) ──
+    ten_min_chart_data = []
+    try:
+        # yfinance uses '5m' or '15m' intervals; '10m' is not available, so use '5m' and resample
+        # Actually, let's use 5m data directly as it's close enough
+        ten_min_df = _fetch_yfinance_data('^GSPC', period='1d', interval='5m')
+        if not ten_min_df.empty:
+            ten_min_sma_20 = _calculate_sma(ten_min_df['Close'], 20)
+            chart_10m = ten_min_df.tail(78)  # Last ~6.5 hours of trading
+            for i, (_, row) in enumerate(chart_10m.iterrows()):
+                idx = chart_10m.index[i]
+                sma_val = float(ten_min_sma_20.iloc[idx]) if idx < len(ten_min_sma_20) and not np.isnan(ten_min_sma_20.iloc[idx]) else None
+                ts = row['date']
+                if hasattr(ts, 'isoformat'):
+                    ts_str = ts.isoformat()
+                else:
+                    ts_str = str(ts)
+                ten_min_chart_data.append({
+                    'date': ts_str,
+                    'open': round(float(row['Open']), 2),
+                    'high': round(float(row['High']), 2),
+                    'low': round(float(row['Low']), 2),
+                    'close': round(float(row['Close']), 2),
+                    'sma_20': round(sma_val, 2) if sma_val is not None else None,
+                })
+    except Exception as e:
+        logger.warning(f"Failed to fetch 10-min data for market sentiment: {e}")
+
+    # Detect peaks and troughs for trend lines (on weekly data)
     peaks = []
     troughs = []
-    close_vals = [d['close'] for d in chart_data]
+    close_vals = [d['close'] for d in weekly_chart_data]
     for i in range(1, len(close_vals) - 1):
         if close_vals[i] > close_vals[i - 1] and close_vals[i] > close_vals[i + 1]:
-            peaks.append({'date': chart_data[i]['date'], 'price': close_vals[i]})
+            peaks.append({'date': weekly_chart_data[i]['date'], 'price': close_vals[i]})
         elif close_vals[i] < close_vals[i - 1] and close_vals[i] < close_vals[i + 1]:
-            troughs.append({'date': chart_data[i]['date'], 'price': close_vals[i]})
+            troughs.append({'date': weekly_chart_data[i]['date'], 'price': close_vals[i]})
 
     return {
         'sentiment': sentiment,
@@ -426,7 +506,10 @@ def compute_market_sentiment(db_manager=None):
         'indicators': signals,
         'market_type': market_type,
         'cboe_context': cboe_context,
-        'weekly_chart_data': chart_data,
+        'weekly_chart_data': weekly_chart_data,
+        'daily_chart_data': daily_chart_data,
+        'hourly_chart_data': hourly_chart_data,
+        'ten_min_chart_data': ten_min_chart_data,
         'peaks': peaks,
         'troughs': troughs,
         'last_updated': datetime.now().isoformat(),
@@ -560,12 +643,19 @@ def compute_index_sentiment(db_manager=None):
             if len(vix_df) >= 6:
                 change_5d = float(vix_df['Close'].iloc[-1] - vix_df['Close'].iloc[-6])
 
+            # Get last 10 days of VIX for sparkline
+            vix_history = []
+            for i in range(min(10, len(vix_df))):
+                vix_history.append(round(float(vix_df['Close'].iloc[-(10-i)]), 1) if len(vix_df) >= (10-i) else None)
+            vix_history = [v for v in vix_history if v is not None]
+
             result['vix'] = {
                 'value': round(latest_vix, 1),
                 'fear_level': fear_level,
                 'description': description,
                 'change_1d': round(change_1d, 1),
                 'change_5d': round(change_5d, 1),
+                'history': vix_history[-10:],  # Last 10 days for sparkline
             }
     except Exception as e:
         logger.warning(f"VIX fetch failed: {e}")
@@ -621,6 +711,12 @@ def compute_index_sentiment(db_manager=None):
                 if prev:
                     weekly_change = (float(weekly['Close'].iloc[-1]) - prev) / prev * 100
 
+            # Get last 10 days for sparkline
+            idx_history = []
+            for i in range(min(10, len(df))):
+                idx_history.append(round(float(df['Close'].iloc[-(10-i)]), 2) if len(df) >= (10-i) else None)
+            idx_history = [v for v in idx_history if v is not None]
+
             result['indices'].append({
                 'symbol': idx_info['symbol'],
                 'name': idx_info['name'],
@@ -629,6 +725,7 @@ def compute_index_sentiment(db_manager=None):
                 'stochastic_k': round(latest_k, 1),
                 'current_price': round(current_price, 2),
                 'weekly_change_pct': round(weekly_change, 1),
+                'history': idx_history[-10:],  # Last 10 days for sparkline
             })
 
             time.sleep(0.2)

@@ -1,6 +1,6 @@
-# PostgreSQL Time Series Database Schema Guide
+# AlphaBreak PostgreSQL Time Series Database Schema Guide
 
-Complete guide to the trading system's time series database using TimescaleDB.
+Complete guide to AlphaBreak's time series database using TimescaleDB.
 
 ## Overview
 

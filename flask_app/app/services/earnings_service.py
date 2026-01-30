@@ -392,37 +392,96 @@ def _fetch_daily_chart(ticker):
 
 
 def _fetch_news(ticker):
-    """Fetch recent news for a ticker using yfinance."""
-    t = yf.Ticker(ticker)
-    try:
-        news_items = t.news
-    except Exception:
-        return []
+    """Fetch recent news for a ticker using yfinance with RSS fallback."""
+    results = []
 
-    if not news_items:
-        return []
+    # Try yfinance first
+    try:
+        t = yf.Ticker(ticker)
+        news_items = t.news
+        if news_items and len(news_items) > 0:
+            for item in news_items[:5]:
+                try:
+                    thumbnail = None
+                    # Handle different thumbnail formats
+                    if 'thumbnail' in item and item['thumbnail']:
+                        resolutions = item['thumbnail'].get('resolutions', [])
+                        if resolutions:
+                            thumbnail = resolutions[0].get('url')
+
+                    publish_time = None
+                    if 'providerPublishTime' in item:
+                        publish_time = datetime.fromtimestamp(item['providerPublishTime']).isoformat()
+
+                    results.append({
+                        'title': item.get('title', ''),
+                        'publisher': item.get('publisher', ''),
+                        'link': item.get('link', ''),
+                        'publish_time': publish_time,
+                        'thumbnail': thumbnail,
+                    })
+                except Exception:
+                    continue
+    except Exception as e:
+        logger.debug(f"yfinance news failed for {ticker}: {e}")
+
+    # If no results, try Yahoo Finance RSS feed as fallback
+    if not results:
+        results = _fetch_yahoo_rss_news(ticker)
+
+    return results
+
+
+def _fetch_yahoo_rss_news(ticker):
+    """Fetch news from Yahoo Finance RSS feed (free, no API key needed)."""
+    import urllib.request
+    import xml.etree.ElementTree as ET
 
     results = []
-    for item in news_items[:5]:
-        try:
-            thumbnail = None
-            if 'thumbnail' in item and item['thumbnail']:
-                resolutions = item['thumbnail'].get('resolutions', [])
-                if resolutions:
-                    thumbnail = resolutions[0].get('url')
+    try:
+        # Yahoo Finance RSS feed for a ticker
+        rss_url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={ticker}&region=US&lang=en-US"
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        req = urllib.request.Request(rss_url, headers=headers)
 
-            publish_time = None
-            if 'providerPublishTime' in item:
-                publish_time = datetime.fromtimestamp(item['providerPublishTime']).isoformat()
+        with urllib.request.urlopen(req, timeout=5) as response:
+            xml_data = response.read()
 
-            results.append({
-                'title': item.get('title', ''),
-                'publisher': item.get('publisher', ''),
-                'link': item.get('link', ''),
-                'publish_time': publish_time,
-                'thumbnail': thumbnail,
-            })
-        except Exception:
-            continue
+        root = ET.fromstring(xml_data)
+        channel = root.find('channel')
+        if channel is None:
+            return results
+
+        for item in channel.findall('item')[:5]:
+            try:
+                title = item.find('title')
+                link = item.find('link')
+                pub_date = item.find('pubDate')
+
+                if title is None or link is None:
+                    continue
+
+                # Parse pub date to ISO format
+                publish_time = None
+                if pub_date is not None and pub_date.text:
+                    try:
+                        from email.utils import parsedate_to_datetime
+                        dt = parsedate_to_datetime(pub_date.text)
+                        publish_time = dt.isoformat()
+                    except Exception:
+                        pass
+
+                results.append({
+                    'title': title.text or '',
+                    'publisher': 'Yahoo Finance',
+                    'link': link.text or '',
+                    'publish_time': publish_time,
+                    'thumbnail': None,
+                })
+            except Exception:
+                continue
+
+    except Exception as e:
+        logger.debug(f"Yahoo RSS news fetch failed for {ticker}: {e}")
 
     return results
