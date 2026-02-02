@@ -36,7 +36,6 @@ def _get_db_manager():
 
 @forex_bp.route('/forex/pairs', methods=['GET'])
 @log_request
-@require_api_key
 def get_forex_pairs():
     """Get list of all forex pairs with metadata."""
     try:
@@ -82,7 +81,6 @@ def get_forex_pairs():
 
 @forex_bp.route('/forex/data/<pair>', methods=['GET'])
 @log_request
-@require_api_key
 def get_forex_data(pair):
     """Get historical data for a forex pair."""
     # Normalize pair format
@@ -135,7 +133,6 @@ def get_forex_data(pair):
 
 @forex_bp.route('/forex/correlations', methods=['GET'])
 @log_request
-@require_api_key
 def get_forex_correlations():
     """Get correlation matrix between forex pairs."""
     strength_filter = request.args.get('strength')  # 'strong', 'mid', 'weak'
@@ -216,7 +213,6 @@ def get_forex_correlations():
 
 @forex_bp.route('/forex/trend-breaks', methods=['GET'])
 @log_request
-@require_api_key
 def get_forex_trend_breaks():
     """Get trend breaks across all forex pairs."""
     pair = request.args.get('pair')
@@ -301,7 +297,6 @@ def get_forex_trend_breaks():
 
 @forex_bp.route('/forex/summary', methods=['GET'])
 @log_request
-@require_api_key
 def get_forex_summary():
     """Get summary statistics for forex models."""
     try:
@@ -373,7 +368,6 @@ def get_forex_summary():
 
 @forex_bp.route('/forex/usd-chart', methods=['GET'])
 @log_request
-@require_api_key
 def get_forex_usd_chart():
     """
     Get USD pairs chart data for the top 5 pairs by volume.
@@ -469,7 +463,6 @@ def get_forex_usd_chart():
 
 @forex_bp.route('/forex/recent-movements', methods=['GET'])
 @log_request
-@require_api_key
 def get_forex_recent_movements():
     """
     Get recent notable movements with their correlated pairs.
