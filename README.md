@@ -84,12 +84,17 @@ Securities_prediction_model/
 │   ├── index.html                # Main HTML with auth modal
 │   ├── app.js                    # Core app + API request handler
 │   ├── auth.js                   # Authentication state management
-│   ├── dashboard.js              # Dashboard widgets
-│   ├── reports.js                # Reports tab
+│   ├── dashboard.js              # Dashboard widgets (sentiment, sector analysis)
+│   ├── trading.js                # Trend break predictions
+│   ├── reports.js                # Historical analysis reports
 │   ├── watchlist.js              # Watchlist with server sync
 │   ├── earnings.js               # Earnings calendar
+│   ├── longterm.js               # Long-term position analysis
+│   ├── indicators.js             # Technical indicators tab
 │   ├── forex.js                  # Forex correlation charts
-│   └── styles.css                # Dark theme styling
+│   ├── portfolio.js              # Portfolio tracker tab
+│   ├── descriptions.js           # Shared UI descriptions
+│   └── styles.css                # Dark theme styling (~5000 lines)
 │
 ├── kubernetes/                   # Database schemas & Airflow
 │   ├── schema_auth.sql           # Users, tokens, watchlists
@@ -294,13 +299,17 @@ See [docs/setup guide/SETUP_GUIDE.md](docs/setup%20guide/SETUP_GUIDE.md) for com
 
 - [x] Database integration (PostgreSQL/TimescaleDB)
 - [x] Multi-timeframe models (5min, 1hr, daily)
-- [x] 13F report analysis (SEC hedge fund holdings)
+- [x] 13F report analysis (SEC hedge fund holdings, 8.4M archive rows)
 - [x] Market indices & ETF tracking
-- [x] Forex correlation model with 54 years of data
+- [x] Forex correlation model with 54 years of data (21 pairs)
 - [x] User authentication (JWT + bcrypt)
 - [x] Server-side watchlist sync
-- [x] Live web dashboard
-- [x] Airflow DAG for automated portfolio management
+- [x] Live web dashboard (9 tabs)
+- [x] SSL/HTTPS (Let's Encrypt, auto-renewing)
+- [x] Airflow automation (LocalExecutor, portfolio DAG, daily updates)
+- [x] Dark pool data pipeline
+- [x] Portfolio tracker (paper trading, $100K)
+- [ ] Kubernetes containerization
 - [ ] Push notifications for high-probability trades
 - [ ] Trading platform integration (Schwab/Robinhood)
 - [ ] Premium subscription tier with real-time data

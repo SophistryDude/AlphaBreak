@@ -1,7 +1,7 @@
 # Product Roadmap
 
-**Version**: 2.0
-**Last Updated**: February 2, 2026
+**Version**: 2.1
+**Last Updated**: March 15, 2026
 **Planning Horizon**: 12 months (2026)
 
 ---
@@ -54,20 +54,23 @@ Build a comprehensive, AI-powered trading analysis platform that democratizes so
 - ✅ Market sentiment analysis (8 indicators)
 - ✅ Options pricing (Black-Scholes, Binomial Tree)
 - ✅ Trend break detection (ML-based, 78% accuracy)
-- ✅ 13F institutional holdings tracking
-- ✅ Forex correlation analysis (12 pairs, 50+ years data)
-- ✅ Portfolio automation (Airflow, daily updates)
-- ✅ User authentication (JWT)
-- ✅ Watchlist management
-- ✅ Web dashboard (4 tabs)
+- ✅ 13F institutional holdings tracking (20 funds, 8.4M archive rows)
+- ✅ Forex correlation analysis (21 pairs, 54 years data, 123K rows)
+- ✅ Portfolio automation (Airflow, daily updates, 2 DAGs)
+- ✅ User authentication (JWT + bcrypt)
+- ✅ Watchlist management (server-synced)
+- ✅ Web dashboard (9 tabs: Sentiment, Trading, Options, Reports, Watchlist, Earnings, Long-term, Indicators, Forex, Portfolio)
+- ✅ Dark pool data pipeline (621K rows, 101 MB)
+- ✅ CBOE options statistics tracking
 
 ### Infrastructure
 
 - ✅ EC2 deployment (t3.medium)
 - ✅ PostgreSQL 15 + TimescaleDB
-- ✅ Airflow 2.8.1 (LocalExecutor)
+- ✅ Airflow 2.8.1 (LocalExecutor, running since Feb 9, 2026)
 - ✅ Nginx reverse proxy
-- ⚠️ No SSL/HTTPS (planned Q2)
+- ✅ SSL/HTTPS via Let's Encrypt (Certbot) — HTTP auto-redirects to HTTPS
+- ✅ Domain: alphabreak.vip with www redirect
 - ⚠️ No caching layer (planned Q2)
 - ⚠️ No monitoring (planned Q3)
 
@@ -76,7 +79,7 @@ Build a comprehensive, AI-powered trading analysis platform that democratizes so
 ## Q1 2026 (Jan-Mar)
 
 **Theme**: Documentation, Stability, Performance
-**Status**: 🚧 In Progress (2/3 months complete)
+**Status**: ✅ Complete (March 15, 2026)
 
 ### Completed in Q1
 
@@ -88,30 +91,30 @@ Build a comprehensive, AI-powered trading analysis platform that democratizes so
   - ROADMAP.md - Future development plans
   - Consolidated SETUP_GUIDE.md
 
-### In Progress
+- ✅ **SSL/HTTPS** (completed ahead of Q2 schedule)
+  - Let's Encrypt / Certbot certificates installed
+  - Nginx configured for HTTPS on port 443
+  - HTTP (port 80) auto-redirects to HTTPS
+  - www.alphabreak.vip redirects to alphabreak.vip
 
-- 🚧 **Performance Optimization** (Target: Mid-March)
+- ✅ **Dark Pool Data Pipeline** (added Q1)
+  - 621,387 rows of weekly dark pool volume
+  - Ticker-level aggregates for 22,940 symbols
+  - 101 MB dataset
+
+### Deferred to Q2
+
+- ⏸️ **Performance Optimization**
   - [ ] Optimize database queries (add indexes, analyze query plans)
   - [ ] Implement connection pooling for API (increase pool size)
   - [ ] Reduce API response time to <200ms
   - [ ] Add database query caching (in-memory, 1-5 min TTL)
-  - **Goal**: Improve user experience with faster load times
 
-- 🚧 **Bug Fixes & Stability** (Ongoing)
-  - [ ] Fix Airflow port 8080 conflict with kube-rout
-  - [ ] Resolve occasional database connection timeouts
-  - [ ] Improve error handling in frontend (better error messages)
-  - [ ] Add retry logic for external API calls (yfinance, FRED)
-  - **Goal**: Increase uptime to 99.9%
-
-### Planned for Late Q1
-
-- ⏸️ **Database Backups** (Target: End of March)
+- ⏸️ **Database Backups**
   - [ ] Automated daily backups to S3
   - [ ] Backup retention policy (30 days)
   - [ ] Test restore procedure
   - [ ] Document backup/restore process
-  - **Goal**: Disaster recovery readiness
 
 ---
 
@@ -122,18 +125,8 @@ Build a comprehensive, AI-powered trading analysis platform that democratizes so
 
 ### Infrastructure (Priority: 🔴 High)
 
-#### SSL/HTTPS Implementation
-**Timeline**: April 2026
-**Effort**: 2 weeks
-**Dependencies**: Domain name registration (if not using IP)
-
-- [ ] Obtain domain name (e.g., alphabreak.vip)
-- [ ] Configure DNS records
-- [ ] Install Let's Encrypt SSL certificates
-- [ ] Configure Nginx for HTTPS (ports 443/8443)
-- [ ] Redirect HTTP to HTTPS
-- [ ] Test SSL renewal automation
-- **Goal**: Secure all communications, meet browser security requirements
+#### ~~SSL/HTTPS Implementation~~ — ✅ Completed Q1 2026
+Let's Encrypt + Certbot deployed. See Q1 section above.
 
 #### Redis Caching Layer
 **Timeline**: May 2026
@@ -454,15 +447,21 @@ Build a comprehensive, AI-powered trading analysis platform that democratizes so
   - Web dashboard (3 tabs)
   - JWT authentication
 
-### Q1 2026 (Jan-Feb 2026)
+### Q1 2026 (Jan-Mar 2026)
 
 - ✅ **Major Feature Release (v2.0.0)** - Feb 2, 2026
-  - Forex correlation analysis (12 pairs)
-  - Portfolio automation (Airflow)
+  - Forex correlation analysis (21 pairs, 123K rows)
+  - Portfolio automation (Airflow, 2 DAGs, LocalExecutor)
   - 12 new ML features (forex-specific)
   - Extended options window (90 days)
   - Documentation overhaul (6 new docs)
-  - UI improvements (4 tabs, notifications)
+  - UI improvements (9 tabs, notifications)
+
+- ✅ **Infrastructure** - Q1 2026
+  - SSL/HTTPS via Let's Encrypt (ahead of Q2 schedule)
+  - Nginx replacing Python http.server for frontend
+  - Dark pool data pipeline (101 MB, 621K rows)
+  - CBOE options statistics tracking (3,253 rows)
 
 ---
 

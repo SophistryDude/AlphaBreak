@@ -152,85 +152,7 @@ src/
 
 ---
 
-## Business Model
 
-### Subscription Tiers
-
-**Free Tier** (Customer Acquisition)
-- 5 predictions/day
-- S&P 500 stocks only
-- Basic forex data (no correlations)
-- 1-hour delayed data
-- **Price**: $0
-- **Goal**: 100,000 users Year 1
-
-**Pro Tier** (Target Market)
-- Unlimited predictions
-- All stocks + full forex correlation model
-- Real-time data
-- Options analysis
-- 13F institutional tracking
-- Email alerts
-- **Price**: $99/month or $950/year
-- **Goal**: 5,000 users Year 1
-
-**Elite Tier** (Power Users)
-- Everything in Pro
-- API access (1000 calls/day)
-- Custom indicator training
-- Backtesting tools
-- Advanced Greeks
-- **Price**: $299/month or $2,990/year
-- **Goal**: 500 users Year 1
-
-**Enterprise Tier** (B2B)
-- White-label solution
-- Unlimited API
-- Custom models
-- Dedicated infrastructure
-- **Price**: $10k-50k/month
-- **Goal**: 10 clients by Year 3
-
-### Revenue Projections (5-Year)
-
-| Year | Free Users | Pro Users | Elite Users | Enterprise | ARR |
-|------|-----------|-----------|-------------|------------|-----|
-| Y1 | 100,000 | 5,000 | 500 | 0 | $7.7M |
-| Y2 | 250,000 | 20,000 | 2,000 | 3 | $28M |
-| Y3 | 500,000 | 50,000 | 5,000 | 10 | $77M |
-| Y4 | 750,000 | 100,000 | 10,000 | 25 | $165M |
-| Y5 | 1,000,000 | 200,000 | 20,000 | 50 | $360M |
-
----
-
-## Unique Selling Points (USPs)
-
-### 1. Forex-Equity Intelligence
-- **What**: Only platform correlating forex movements with stock predictions
-- **Data**: 54 years of forex history, 21 currency pairs
-- **Accuracy**: 71.8% forex model accuracy (backtested)
-- **Differentiation**: Competitors ignore currency impacts
-
-### 2. Institutional Tracking
-- **What**: Real-time 13F analysis of 20 top hedge funds
-- **Coverage**: $500B+ AUM tracked
-- **Benefit**: Know what Berkshire, Bridgewater, Renaissance are buying
-- **Differentiation**: Most tools show outdated or incomplete data
-
-### 3. Meta-Learning Intelligence
-- **What**: AI learns which indicators work best for each stock
-- **Benefit**: Adaptive predictions, not one-size-fits-all
-- **Differentiation**: Competitors use static indicators
-
-### 4. Transparent Predictions
-- **What**: Show which indicators drove each prediction
-- **Benefit**: Users learn and trust the system
-- **Differentiation**: Black-box competitors don't explain
-
-### 5. Production-Ready Platform
-- **What**: Live dashboard with 9 tabs of analysis
-- **Benefit**: Not a prototype—real working product
-- **Differentiation**: Most pitches show mockups, we show live demo
 
 ---
 
@@ -281,39 +203,89 @@ src/
 
 ## Demo Script (5 Minutes)
 
-**[Open live dashboard at 3.140.78.15:8000]**
+### Opening — The Landing Page (~45 seconds)
 
-"Let me show you our live platform—this isn't a mockup."
+**[Open live dashboard at alphabreak.vip]**
 
-**[Click Forex tab]**
+"Let me show you our live platform — this isn't a mockup, this is production."
 
-"This is our forex correlation engine. We're tracking 21 currency pairs with 54 years of historical data. The DXY backdrop shows overall dollar strength."
+**[Gesture at Sentiment Analysis tab — the landing page]**
 
-**[Point to USD Strength Indicator]**
+"This is what greets you. Real-time market sentiment computed from eight technical indicators — CCI, RSI, SMA Crossover, Stochastic, ADX, TLEV, VIX, and Put/Call Ratio. You can toggle between daily, weekly, hourly, and even 10-minute timeframes. Right now you can see the overall market reading and a confidence score."
 
-"Right now USD is strengthening. These currencies are rising against the dollar, these are falling. That matters for your stock trades."
+**[Scroll to Sector Sentiment]**
 
-**[Point to Recent Movements]**
+"Below that, sector sentiment across all 11 GICS sectors — color-coded green for bullish, red for bearish. Instantly see which sectors are moving."
 
-"When EUR/USD had a bullish break, our model says USD/CHF and USD/CAD are correlated—so you should watch those too. We even give buy signals based on correlation direction."
+**[Point to Commodities & Crypto widget]**
 
-**[Click Trading tab]**
+"And we track Gold, Silver, Ethereum, and Bitcoin with their inverse correlations to USD strength and equity risk sentiment."
 
-"Now let's predict a stock. I'll enter TSLA..."
+---
 
-**[Wait for prediction]**
+### Trend Break Reports — The Core Signal (~45 seconds)
 
-"82% probability of bullish trend break. But here's what's different—we show you WHY. RSI is oversold at 32, MACD just crossed bullish. This is transparent AI."
+**[Click Trend Break Reports tab]**
 
-**[Click Options tab]**
+"This is the engine. Our ML model scans for stocks with 80%+ probability of breaking their current trend. You can filter by direction — bullish or bearish — by sector, and switch between daily, hourly, and 10-minute frequencies."
 
-"If you want to trade this signal with options, we calculate fair value using binomial tree pricing—the right method for American options. This $125 call is 8% undervalued."
+**[Point to a high-probability row]**
 
-**[Click Sentiment tab]**
+"Each row shows the probability, the predicted direction, and which indicators drove the signal. This is transparent AI — you see exactly WHY the model thinks a trend break is coming."
 
-"And we track what the big players are doing. These 20 hedge funds managing $500B+ just filed their 13Fs. Bridgewater increased their tech position 15%."
+**[Click to expand a row]**
 
-"This is the future of retail trading intelligence."
+"Expand any row for the full indicator breakdown — RSI, CCI, MACD, Stochastic, ADX, Bollinger Band position. The model doesn't just say 'buy' — it shows its work."
+
+---
+
+### Options Analysis — Monetizing the Signal (~30 seconds)
+
+**[Click Options Analysis tab]**
+
+"Once you have a trend break signal, you can trade it with options. We price using both Black-Scholes for European options and binomial tree for American options — which is the correct method for US stocks. Each option shows fair value versus market price, so you can see what's underpriced, overpriced, or fairly valued. Full Greeks — Delta, Gamma, Theta, Vega, Rho — all computed in real time."
+
+---
+
+### Forex Correlations — Our Unique Edge (~45 seconds)
+
+**[Click Forex Correlations tab]**
+
+"This is what no competitor has. We're tracking 21 currency pairs with up to 54 years of historical data — major pairs going back to 1971. The USD strength chart shows where the dollar is heading."
+
+**[Point to correlation analysis]**
+
+"Our model computes correlations at 30-day, 90-day, 1-year, and all-time windows. When EUR/USD makes a bullish break, the model tells you which correlated pairs will follow — and gives buy or sell signals based on correlation direction."
+
+**[Point to trend breaks section]**
+
+"We apply the same trend break detection to forex, backtested at 71.8% accuracy across 80,000 historical trend breaks. No one else is connecting forex movements to equity trading signals."
+
+---
+
+### Trade Execution & Portfolio — Full Loop (~45 seconds)
+
+**[Click Trade Execution tab]**
+
+"And here's where it all comes together. This is our brokerage integration — currently a paper trading proof-of-concept with Schwab connectivity. You get live quotes, a full order form with market, limit, stop, and stop-limit orders, position management with real-time P&L, and a complete order history."
+
+**[Click Portfolio Tracker tab]**
+
+"The portfolio tracker shows your theoretical performance starting from $100K. We allocate 75% to long-term positions and 25% to swing trades — all driven by our model's signals. You can see the performance chart, allocation breakdown, individual holdings with P&L, and pending signals waiting to be acted on. This runs automatically via our Airflow pipeline every market day at 9 AM."
+
+---
+
+### Long-Term Holdings & Institutional Tracking (~30 seconds)
+
+**[Click Long Term Trading Watchlist tab]**
+
+"For longer-horizon investors, we track 13F filings from 20 major hedge funds — Berkshire Hathaway, Bridgewater, Renaissance Technologies, Citadel, Two Sigma, DE Shaw, and more. Over $500 billion in assets under management. You can see what they're buying, selling, and how their positions changed quarter over quarter."
+
+---
+
+### Closing (~15 seconds)
+
+"Twelve analysis tabs. Real-time market sentiment. ML-powered trend break detection. Forex correlations across 54 years. Institutional tracking. Options pricing. And a full paper trading loop — all in one platform. This is Bloomberg-grade intelligence at $99 a month."
 
 ---
 
