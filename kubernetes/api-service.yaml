@@ -13,6 +13,6 @@ spec:
     protocol: TCP
     port: 5000
     targetPort: 5000
-  # LoadBalancer type works with Docker Desktop - exposes on localhost
-  type: LoadBalancer
+    nodePort: 30427
+  type: NodePort
   sessionAffinity: None

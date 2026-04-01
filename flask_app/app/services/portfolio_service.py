@@ -20,13 +20,17 @@ _manager = None
 
 
 def get_db_config():
-    """Get database configuration from environment."""
+    """Get database configuration from environment.
+
+    Reads TIMESERIES_DB_* env vars (set by K8s api-deployment.yaml),
+    falling back to DB_* for Airflow compatibility.
+    """
     return {
-        'host': os.getenv('DB_HOST', 'localhost'),
-        'port': int(os.getenv('DB_PORT', '5432')),
-        'database': os.getenv('DB_NAME', 'trading_data'),
-        'user': os.getenv('DB_USER', 'trading'),
-        'password': os.getenv('DB_PASSWORD', 'trading123'),
+        'host': os.getenv('TIMESERIES_DB_HOST', os.getenv('DB_HOST', 'localhost')),
+        'port': int(os.getenv('TIMESERIES_DB_PORT', os.getenv('DB_PORT', '5432'))),
+        'database': os.getenv('TIMESERIES_DB_NAME', os.getenv('DB_NAME', 'trading_data')),
+        'user': os.getenv('TIMESERIES_DB_USER', os.getenv('DB_USER', 'trading')),
+        'password': os.getenv('TIMESERIES_DB_PASSWORD', os.getenv('DB_PASSWORD', 'trading_password')),
         'sslmode': os.getenv('DB_SSLMODE', 'prefer')
     }
 

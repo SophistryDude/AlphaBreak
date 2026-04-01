@@ -17,10 +17,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - trading-api.yourdomain.com  # Replace with your domain
+    - alphabreak.vip  # Replace with your domain
     secretName: trading-api-tls
   rules:
-  - host: trading-api.yourdomain.com  # Replace with your domain
+  - host: alphabreak.vip  # Replace with your domain
     http:
       paths:
       - path: /

@@ -6,7 +6,7 @@ Provides connection pooling and utilities for interacting with PostgreSQL time s
 
 import os
 import psycopg2
-from psycopg2 import pool
+from psycopg2 import pool, extras
 from contextlib import contextmanager
 import logging
 
@@ -26,11 +26,11 @@ class DatabaseManager:
             self.connection_pool = psycopg2.pool.SimpleConnectionPool(
                 minconn=1,
                 maxconn=10,
-                host=os.environ.get('TIMESERIES_DB_HOST', 'postgres-timeseries-service'),
+                host=os.environ.get('TIMESERIES_DB_HOST', '127.0.0.1'),
                 port=int(os.environ.get('TIMESERIES_DB_PORT', 5432)),
                 database=os.environ.get('TIMESERIES_DB_NAME', 'trading_data'),
                 user=os.environ.get('TIMESERIES_DB_USER', 'trading'),
-                password=os.environ.get('TIMESERIES_DB_PASSWORD', 'change-this-timeseries-password'),
+                password=os.environ.get('TIMESERIES_DB_PASSWORD', 'trading_password'),
                 sslmode=os.environ.get('TIMESERIES_DB_SSLMODE', 'prefer')
             )
             logger.info("Database connection pool initialized")
