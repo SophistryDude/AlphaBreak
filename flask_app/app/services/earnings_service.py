@@ -80,8 +80,12 @@ def fetch_earnings_calendar(custom_tickers=None, db_manager=None):
             logger.warning(f"DB cache read failed, fetching all from yfinance: {e}")
             tickers_to_fetch = list(tickers)
 
-    # Fetch missing/stale tickers from yfinance
+    # Fetch missing/stale tickers from yfinance (batch with timeout)
     fetched_by_ticker = {}
+    MAX_FETCH = 20  # Cap per request to avoid timeouts
+    tickers_to_fetch = tickers_to_fetch[:MAX_FETCH]
+    if tickers_to_fetch:
+        logger.info(f"Fetching {len(tickers_to_fetch)} tickers from yfinance (max {MAX_FETCH})")
     for ticker in tickers_to_fetch:
         try:
             entries = _fetch_ticker_earnings(ticker)
@@ -102,7 +106,7 @@ def fetch_earnings_calendar(custom_tickers=None, db_manager=None):
                     logger.debug(f"DB cache write failed for {ticker}: {db_err}")
 
             fetched_by_ticker[ticker] = entries
-            time.sleep(0.15)  # Rate limit
+            time.sleep(0.1)  # Rate limit
         except Exception as e:
             logger.debug(f"Skipping {ticker} earnings: {e}")
             continue

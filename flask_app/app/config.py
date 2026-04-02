@@ -78,8 +78,8 @@ class ProductionConfig(Config):
     # Stricter rate limits
     RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or 'redis://redis:6379/1'
 
-    # Require API keys in production
-    API_KEY_REQUIRED = True
+    # API key requirement (can be overridden via env var API_KEY_REQUIRED=false)
+    API_KEY_REQUIRED = os.environ.get('API_KEY_REQUIRED', 'True').lower() not in ('false', '0', 'no')
 
 
 class TestingConfig(Config):
