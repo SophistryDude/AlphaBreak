@@ -4,13 +4,14 @@ Portfolio Manager Module
 Manages the theoretical paper trading portfolio for validating prediction model effectiveness.
 
 Starting balance: $100,000 USD
-Allocation: 75% long-term investing, 25% intra-day swing trading
+Allocation: 65% long-term investing, 35% swing trading (via options)
 
 Position Sizing Rules:
-- Max 5% of portfolio per individual stock position
-- Max 2% per options contract
-- Maintain 20% cash reserve minimum
-- Stop-loss: 7% below entry for stocks, 50% for options
+- Max 7% of portfolio per individual stock position (long-term)
+- Max 2% per options contract (swing)
+- Max 20% cash reserve ceiling (deploy capital aggressively)
+- Stop-loss: 7% below entry for stocks, 50% hard floor for options
+- Swing options: volume-based profit-taking, reversal-based loss-cutting
 
 Usage:
     # Get current portfolio state
@@ -58,13 +59,31 @@ DB_CONFIG = {
 # Portfolio configuration
 PORTFOLIO_CONFIG = {
     'starting_balance': 100000.00,
-    'long_term_allocation': 0.65,      # 65%
-    'swing_allocation': 0.35,          # 35%
-    'max_position_pct': 0.07,          # 7% max per stock position
-    'max_options_pct': 0.02,           # 2% max per options contract
-    'min_cash_reserve_pct': 0.20,      # 20% minimum cash reserve
+    # Allocation: $50K long-term stock, $30K swing options, $20K options float
+    'long_term_allocation': 0.50,      # 50% long-term stock positions
+    'swing_allocation': 0.30,          # 30% active swing options
+    'cash_float_pct': 0.20,            # 20% cash float for new options trades
+    # Position sizing
+    'max_position_pct': 0.07,          # 7% max per long-term stock position
+    'max_options_pct': 0.10,           # 10% ($10K) max per individual options trade
+    'max_concurrent_options': 5,       # Max 5 options positions at once
+    # Stop losses
     'stock_stop_loss_pct': 0.07,       # 7% stop-loss for stocks
-    'options_stop_loss_pct': 0.50,     # 50% stop-loss for options
+    'options_stop_loss_pct': 0.50,     # 50% hard floor for options
+    # Capital deployment
+    'capital_deployment_threshold': 0.70,  # Relax signal threshold when cash is high
+    'trend_break_threshold': 0.80,     # Default signal strength threshold
+    # Swing options selection
+    'swing_option_target_dte': 30,     # Target 30 days-to-expiry
+    'swing_option_max_dte': 45,        # Max DTE to consider
+    # Long-term exit (multi-timeframe confirmation)
+    'long_term_exit_threshold': 0.92,  # Daily+hourly bearish to fully exit
+    'long_term_trim_pct': 0.25,        # Trim 25% when only hourly bearish
+    # Smart options exit
+    'options_profit_volume_decline_ratio': 0.7,  # Take profit when volume drops to 70% of entry
+    # Daily limits
+    'max_swing_trades_per_day': 5,
+    'max_long_term_trades_per_day': 5,
 }
 
 
@@ -178,12 +197,12 @@ class PortfolioManager:
             return True, "Valid sell order"
 
         # Buying checks
-        # 1. Check cash availability
-        min_cash_reserve = total_value * self.config['min_cash_reserve_pct']
-        available_cash = cash - min_cash_reserve
+        # 1. Check cash availability (no minimum reserve — cash is a float, not a floor)
+        if trade_value > cash:
+            return False, f"Insufficient cash: need ${trade_value:.2f}, have ${cash:.2f}"
 
-        if trade_value > available_cash:
-            return False, f"Insufficient cash: need ${trade_value:.2f}, have ${available_cash:.2f} available (maintaining 20% reserve)"
+        if cash - trade_value < total_value * 0.05:
+            logger.warning(f"Cash will drop below 5% after {ticker} buy (${cash - trade_value:.2f} remaining)")
 
         # 2. Check position size limit
         max_position = self.config['max_options_pct'] if asset_type == 'option' else self.config['max_position_pct']
@@ -196,13 +215,20 @@ class PortfolioManager:
         if existing_value + trade_value > max_position_value:
             return False, f"Position too large: max {max_position * 100}% = ${max_position_value:.2f}, would be ${existing_value + trade_value:.2f}"
 
-        # 3. Check allocation limits
+        # 3. Check concurrent options limit
+        if asset_type == 'option':
+            current_options = len([h for h in self.get_holdings() if h['asset_type'] == 'option'])
+            if current_options >= self.config.get('max_concurrent_options', 5):
+                return False, f"Max concurrent options ({self.config['max_concurrent_options']}) reached"
+
+        # 4. Check allocation limits
         if holding_type == 'long_term':
             current_allocation = portfolio['long_term_value']
             max_allocation = total_value * self.config['long_term_allocation']
         else:  # swing
             current_allocation = portfolio['swing_value']
-            max_allocation = total_value * self.config['swing_allocation']
+            # Swing can use swing allocation + cash float
+            max_allocation = total_value * (self.config['swing_allocation'] + self.config.get('cash_float_pct', 0.20))
 
         if current_allocation + trade_value > max_allocation * 1.1:  # 10% buffer
             return False, f"Would exceed {holding_type} allocation limit"
@@ -499,7 +525,8 @@ class PortfolioManager:
             return [dict(row) for row in cur.fetchall()]
 
     def process_signal(self, signal_id: str, current_price: float) -> Dict:
-        """Process a signal and execute the trade if valid."""
+        """Process a signal and execute the trade if valid.
+        Swing signals are routed through options; long-term signals buy stock."""
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("SELECT * FROM portfolio_signals WHERE signal_id = %s", (signal_id,))
             signal = cur.fetchone()
@@ -510,34 +537,86 @@ class PortfolioManager:
             if signal['status'] != 'pending':
                 return {'success': False, 'error': f"Signal already {signal['status']}"}
 
-            # Calculate position size
             portfolio = self.get_portfolio_value()
             total_value = portfolio['total_value']
+            ticker = signal['ticker']
 
-            # Determine quantity based on position sizing rules
-            max_position_value = total_value * self.config['max_position_pct']
-            quantity = int(max_position_value / current_price)
+            # --- SWING SIGNALS: Trade via options ---
+            if signal['holding_type'] == 'swing' and signal['suggested_action'] == 'buy':
+                max_options_budget = total_value * self.config['max_options_pct']
+                direction = 'bullish' if 'bullish' in signal.get('signal_type', '') else 'bearish'
 
-            if quantity < 1:
-                cur.execute("""
-                    UPDATE portfolio_signals
-                    SET status = 'rejected', rejection_reason = 'Position too expensive', processed_at = NOW()
-                    WHERE signal_id = %s
-                """, (signal_id,))
-                self.conn.commit()
-                return {'success': False, 'error': 'Position too expensive for current portfolio size'}
+                option = self.select_option_contract(ticker, direction, max_options_budget)
 
-            # Execute the trade
-            result = self.execute_trade(
-                action=signal['suggested_action'],
-                ticker=signal['ticker'],
-                quantity=quantity,
-                price=current_price,
-                holding_type=signal['holding_type'],
-                asset_type=signal['asset_type'] or 'stock',
-                signal_source=signal['signal_type'],
-                signal_details=signal['source_data']
-            )
+                if option:
+                    # Execute options trade
+                    result = self.execute_trade(
+                        action='buy_to_open',
+                        ticker=ticker,
+                        quantity=option['contracts'],
+                        price=option['premium'],
+                        holding_type='swing',
+                        asset_type='option',
+                        option_type=option['option_type'],
+                        strike_price=option['strike_price'],
+                        expiration_date=option['expiration_date'],
+                        signal_source=signal['signal_type'],
+                        signal_details={
+                            **(signal['source_data'] if isinstance(signal['source_data'], dict) else {}),
+                            'entry_volume_ratio': signal['source_data'].get('volume_ratio') if isinstance(signal['source_data'], dict) else None,
+                            'entry_direction': direction,
+                            'option_dte': option['dte'],
+                        }
+                    )
+                else:
+                    # Fallback: buy stock if no liquid options
+                    logger.info(f"No liquid options for {ticker}, falling back to stock")
+                    max_position_value = total_value * self.config['max_position_pct']
+                    quantity = int(max_position_value / current_price)
+                    if quantity < 1:
+                        cur.execute("""
+                            UPDATE portfolio_signals
+                            SET status = 'rejected', rejection_reason = 'No liquid options and stock too expensive', processed_at = NOW()
+                            WHERE signal_id = %s
+                        """, (signal_id,))
+                        self.conn.commit()
+                        return {'success': False, 'error': 'No liquid options and stock too expensive'}
+
+                    result = self.execute_trade(
+                        action=signal['suggested_action'],
+                        ticker=ticker,
+                        quantity=quantity,
+                        price=current_price,
+                        holding_type='swing',
+                        asset_type='stock',
+                        signal_source=signal['signal_type'],
+                        signal_details=signal['source_data']
+                    )
+
+            # --- LONG-TERM / SELL SIGNALS: Trade stock directly ---
+            else:
+                max_position_value = total_value * self.config['max_position_pct']
+                quantity = int(max_position_value / current_price)
+
+                if quantity < 1:
+                    cur.execute("""
+                        UPDATE portfolio_signals
+                        SET status = 'rejected', rejection_reason = 'Position too expensive', processed_at = NOW()
+                        WHERE signal_id = %s
+                    """, (signal_id,))
+                    self.conn.commit()
+                    return {'success': False, 'error': 'Position too expensive for current portfolio size'}
+
+                result = self.execute_trade(
+                    action=signal['suggested_action'],
+                    ticker=ticker,
+                    quantity=quantity,
+                    price=current_price,
+                    holding_type=signal['holding_type'],
+                    asset_type=signal.get('asset_type') or 'stock',
+                    signal_source=signal['signal_type'],
+                    signal_details=signal['source_data']
+                )
 
             if result['success']:
                 cur.execute("""
@@ -554,6 +633,241 @@ class PortfolioManager:
 
             self.conn.commit()
             return result
+
+    def get_swing_holdings_with_sell_signals(self, trend_signals: List[Dict]) -> List[Dict]:
+        """
+        Cross-reference current swing holdings with bearish trend break signals.
+        Returns holdings that should be sold due to bearish signals.
+        """
+        swing_holdings = self.get_holdings(holding_type='swing')
+        holdings_to_sell = []
+
+        # Build bearish signal lookup by ticker
+        bearish_tickers = {}
+        for signal in trend_signals:
+            if 'bearish' in signal.get('signal_type', '').lower():
+                bearish_tickers[signal['ticker']] = signal
+
+        for holding in swing_holdings:
+            ticker = holding['ticker']
+            if ticker in bearish_tickers:
+                holdings_to_sell.append({
+                    'holding': holding,
+                    'signal': bearish_tickers[ticker],
+                    'reason': f"Bearish trend break (strength: {bearish_tickers[ticker].get('signal_strength', 0):.0%})",
+                })
+
+        return holdings_to_sell
+
+    def select_option_contract(self, ticker: str, direction: str, budget: float) -> Optional[Dict]:
+        """
+        Select the best options contract for a swing trade.
+
+        Args:
+            ticker: Stock symbol
+            direction: 'bullish' or 'bearish'
+            budget: Max dollar amount to spend
+
+        Returns:
+            Dict with option_type, strike_price, expiration_date, premium, contracts
+            or None if no suitable contract found.
+        """
+        try:
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from options_pricing import get_options_within_days
+
+            target_dte = self.config.get('swing_option_target_dte', 30)
+            max_dte = self.config.get('swing_option_max_dte', 45)
+
+            # Fetch option chains
+            calls_df, puts_df = get_options_within_days(ticker, max_days=max_dte)
+
+            # Select calls for bullish, puts for bearish
+            if direction == 'bullish':
+                option_type = 'call'
+                df = calls_df
+            else:
+                option_type = 'put'
+                df = puts_df
+
+            if df.empty:
+                logger.warning(f"No {option_type} options available for {ticker}")
+                return None
+
+            # Filter for liquidity: volume > 0 and openInterest > 100
+            if 'volume' in df.columns and 'openInterest' in df.columns:
+                df = df[
+                    (df['volume'].fillna(0) > 0) &
+                    (df['openInterest'].fillna(0) > 100)
+                ]
+
+            if df.empty:
+                logger.warning(f"No liquid {option_type} options for {ticker}")
+                return None
+
+            # Filter for ATM or slightly OTM (within 5% of current price)
+            import yfinance as yf
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period='1d')
+            if hist.empty:
+                return None
+            current_price = float(hist['Close'].iloc[-1])
+
+            if direction == 'bullish':
+                # Calls: strike near or slightly above current price
+                df = df[(df['strike'] >= current_price * 0.97) & (df['strike'] <= current_price * 1.05)]
+            else:
+                # Puts: strike near or slightly below current price
+                df = df[(df['strike'] >= current_price * 0.95) & (df['strike'] <= current_price * 1.03)]
+
+            if df.empty:
+                logger.warning(f"No ATM/OTM {option_type} options for {ticker} near ${current_price:.2f}")
+                return None
+
+            # Prefer expiry closest to target DTE
+            from datetime import datetime as dt
+            today = date.today()
+            df = df.copy()
+            df['dte'] = df['expiry'].apply(lambda x: (dt.strptime(x, '%Y-%m-%d').date() - today).days)
+            df['dte_diff'] = (df['dte'] - target_dte).abs()
+            df = df.sort_values('dte_diff')
+
+            # Pick the best contract (closest to target DTE, best liquidity)
+            best = df.iloc[0]
+            premium = float(best['lastPrice']) if best['lastPrice'] > 0 else float(best.get('ask', 0))
+
+            if premium <= 0:
+                logger.warning(f"No valid premium for {ticker} {option_type}")
+                return None
+
+            # Calculate contracts within budget (each contract = 100 shares)
+            cost_per_contract = premium * 100
+            contracts = int(budget / cost_per_contract)
+
+            if contracts < 1:
+                logger.warning(f"{ticker} {option_type} too expensive: ${cost_per_contract:.2f}/contract, budget ${budget:.2f}")
+                return None
+
+            expiry_date = dt.strptime(best['expiry'], '%Y-%m-%d').date()
+
+            logger.info(
+                f"Selected {ticker} {option_type} ${best['strike']:.2f} exp {best['expiry']} "
+                f"x{contracts} @ ${premium:.2f} (${cost_per_contract * contracts:.2f} total)"
+            )
+
+            return {
+                'option_type': option_type,
+                'strike_price': float(best['strike']),
+                'expiration_date': expiry_date,
+                'premium': premium,
+                'contracts': contracts,
+                'total_cost': cost_per_contract * contracts,
+                'dte': int(best['dte']),
+            }
+
+        except Exception as e:
+            logger.warning(f"Failed to select option for {ticker}: {e}")
+            return None
+
+    def evaluate_option_exit(self, holding: Dict, current_price: float) -> Dict:
+        """
+        Evaluate exit strategy for a swing options position.
+
+        Strategy:
+        - Profitable + declining volume: TAKE PROFIT (leave near the top)
+        - Losing + reversal signal: EXIT (accept ~50% loss)
+        - Losing > 50%: HARD STOP LOSS
+        - Otherwise: HOLD
+
+        Args:
+            holding: portfolio_holdings row for the option position
+            current_price: current option premium
+
+        Returns:
+            Dict with action ('take_profit', 'reversal_exit', 'stop_loss', 'hold') and reason
+        """
+        entry_price = float(holding['avg_cost_basis'])
+        pnl_pct = (current_price - entry_price) / entry_price if entry_price > 0 else 0
+        ticker = holding['ticker']
+
+        # Get entry data from signal_details (stored when trade was opened)
+        signal_details = holding.get('entry_signal') or {}
+        if isinstance(signal_details, str):
+            try:
+                signal_details = json.loads(signal_details)
+            except (json.JSONDecodeError, TypeError):
+                signal_details = {}
+
+        entry_direction = signal_details.get('entry_direction', 'bullish')
+        entry_volume_ratio = signal_details.get('entry_volume_ratio')
+
+        # Query latest trend break for the underlying ticker
+        try:
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT direction_after, volume_ratio, magnitude, timestamp
+                    FROM trend_breaks
+                    WHERE ticker = %s AND timeframe IN ('daily', '1hour')
+                    ORDER BY timestamp DESC LIMIT 1
+                """, (ticker,))
+                latest_break = cur.fetchone()
+        except Exception as e:
+            logger.warning(f"Failed to query trend data for {ticker}: {e}")
+            latest_break = None
+
+        # 1. Hard stop-loss: 50% loss floor
+        hard_stop = self.config.get('options_stop_loss_pct', 0.50)
+        if pnl_pct <= -hard_stop:
+            return {
+                'action': 'stop_loss',
+                'reason': f'Hard stop-loss hit ({pnl_pct:.0%} loss, floor -{hard_stop:.0%})',
+                'pnl_pct': pnl_pct,
+            }
+
+        # 2. Losing + reversal signal: exit on direction flip
+        if latest_break and pnl_pct < 0:
+            current_direction = latest_break['direction_after']
+            if entry_direction == 'bullish' and current_direction == 'decreasing':
+                return {
+                    'action': 'reversal_exit',
+                    'reason': f'Reversal detected: entered bullish, now bearish ({pnl_pct:.0%})',
+                    'pnl_pct': pnl_pct,
+                }
+            elif entry_direction == 'bearish' and current_direction == 'increasing':
+                return {
+                    'action': 'reversal_exit',
+                    'reason': f'Reversal detected: entered bearish, now bullish ({pnl_pct:.0%})',
+                    'pnl_pct': pnl_pct,
+                }
+
+        # 3. Profitable + declining volume: take profit near the top
+        if latest_break and pnl_pct > 0 and entry_volume_ratio:
+            current_volume_ratio = float(latest_break.get('volume_ratio', 0))
+            decline_threshold = self.config.get('options_profit_volume_decline_ratio', 0.7)
+
+            if current_volume_ratio < float(entry_volume_ratio) * decline_threshold:
+                return {
+                    'action': 'take_profit',
+                    'reason': (
+                        f'Volume declining: {current_volume_ratio:.2f} vs entry {float(entry_volume_ratio):.2f} '
+                        f'(below {decline_threshold:.0%} threshold), profit {pnl_pct:.0%}'
+                    ),
+                    'pnl_pct': pnl_pct,
+                }
+
+        # 4. Profitable with no volume decline signal — also check if significantly profitable
+        if pnl_pct >= 1.0:  # 100%+ gain — take some profit regardless
+            return {
+                'action': 'take_profit',
+                'reason': f'Large profit ({pnl_pct:.0%}) — securing gains',
+                'pnl_pct': pnl_pct,
+            }
+
+        return {
+            'action': 'hold',
+            'reason': f'No exit signal (P&L: {pnl_pct:.0%})',
+            'pnl_pct': pnl_pct,
+        }
 
     def get_portfolio_summary(self) -> Dict:
         """Get complete portfolio summary for API/frontend."""
@@ -725,21 +1039,96 @@ class PortfolioManager:
                 """)
             return [dict(row) for row in cur.fetchall()]
 
+    def check_multi_timeframe_bearish(self, ticker: str) -> Dict:
+        """
+        Check if bearish signals exist on both daily and hourly timeframes.
+        Returns confirmation status for multi-timeframe exit decisions.
+        """
+        result = {
+            'daily_bearish': False,
+            'hourly_bearish': False,
+            'daily_magnitude': 0,
+            'hourly_magnitude': 0,
+        }
+
+        try:
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # Check daily bearish signals (last 7 days)
+                cur.execute("""
+                    SELECT direction_after, magnitude, volume_ratio, timestamp
+                    FROM trend_breaks
+                    WHERE ticker = %s AND timeframe = 'daily'
+                      AND timestamp >= NOW() - INTERVAL '7 days'
+                    ORDER BY timestamp DESC LIMIT 1
+                """, (ticker,))
+                daily = cur.fetchone()
+                if daily and daily['direction_after'] == 'decreasing':
+                    result['daily_bearish'] = True
+                    result['daily_magnitude'] = float(daily['magnitude'] or 0)
+
+                # Check hourly bearish signals (last 24 hours)
+                cur.execute("""
+                    SELECT direction_after, magnitude, volume_ratio, timestamp
+                    FROM trend_breaks
+                    WHERE ticker = %s AND timeframe = '1hour'
+                      AND timestamp >= NOW() - INTERVAL '24 hours'
+                    ORDER BY timestamp DESC LIMIT 1
+                """, (ticker,))
+                hourly = cur.fetchone()
+                if hourly and hourly['direction_after'] == 'decreasing':
+                    result['hourly_bearish'] = True
+                    result['hourly_magnitude'] = float(hourly['magnitude'] or 0)
+
+        except Exception as e:
+            logger.warning(f"Multi-timeframe check failed for {ticker}: {e}")
+
+        return result
+
+    def trim_position(self, ticker: str, trim_pct: float, current_price: float,
+                      holding_type: str = 'long_term') -> Dict:
+        """
+        Reduce a position by a percentage (e.g., 25% trim on hourly-only bearish).
+        """
+        holding = self.get_holding(ticker, holding_type)
+        if not holding:
+            return {'success': False, 'error': f'No {holding_type} position in {ticker}'}
+
+        quantity = float(holding['quantity'])
+        sell_quantity = int(quantity * trim_pct)
+
+        if sell_quantity < 1:
+            return {'success': False, 'error': f'Position too small to trim ({quantity} shares, {trim_pct:.0%} = {quantity * trim_pct:.1f})'}
+
+        result = self.execute_trade(
+            action='sell',
+            ticker=ticker,
+            quantity=sell_quantity,
+            price=current_price,
+            holding_type=holding_type,
+            signal_source=f'trim_{trim_pct:.0%}_hourly_bearish',
+        )
+
+        return result
+
     def evaluate_covered_call_vs_exit(self, ticker: str, current_price: float,
                                        bearish_probability: float,
+                                       daily_bearish: bool = True,
+                                       hourly_bearish: bool = True,
                                        options_data: Dict = None) -> Dict:
         """
-        Evaluate whether selling a covered call is more profitable than exiting.
+        Evaluate exit strategy with multi-timeframe confirmation.
 
         Returns recommendation:
-        - 'exit': Sell the position
-        - 'covered_call': Write covered call
-        - 'hold': Neither (not enough signal strength)
+        - 'exit': Sell the position (daily+hourly bearish, high probability)
+        - 'covered_call': Write covered call (daily+hourly bearish, moderate probability)
+        - 'trim': Reduce position 25% (only hourly bearish, daily not confirmed)
+        - 'hold': No action
 
-        Logic:
-        - If bearish probability > 90%: Exit (too risky to hold)
-        - If 80-90%: Compare covered call premium vs expected loss
-        - If < 80%: Hold (not enough conviction)
+        Multi-timeframe logic:
+        - Daily+hourly bearish, probability >= 92%: EXIT
+        - Daily+hourly bearish, 80-92%: COVERED CALL
+        - Only hourly bearish (daily not confirmed): TRIM 25%
+        - Neither bearish: HOLD
         """
         holding = self.get_holding(ticker, 'long_term')
         if not holding:
@@ -749,55 +1138,61 @@ class PortfolioManager:
         cost_basis = float(holding['avg_cost_basis'])
         current_value = shares * current_price
         unrealized_pnl = current_value - (shares * cost_basis)
+        exit_threshold = self.config.get('long_term_exit_threshold', 0.92)
+        trim_pct = self.config.get('long_term_trim_pct', 0.25)
 
-        # Strong bearish signal - exit
-        if bearish_probability >= 0.90:
+        # Only hourly bearish (daily not confirmed) — be sticky, trim only
+        if hourly_bearish and not daily_bearish:
             return {
-                'action': 'exit',
-                'reason': f'High bearish probability ({bearish_probability:.0%})',
-                'expected_loss_avoided': unrealized_pnl * 0.10,  # Estimate 10% further drop
+                'action': 'trim',
+                'reason': f'Hourly bearish but daily not confirmed — trim {trim_pct:.0%}',
+                'trim_pct': trim_pct,
             }
 
-        # Moderate bearish signal - evaluate covered call
-        if bearish_probability >= 0.80:
-            # Calculate covered call potential
-            # Use ATM or slightly OTM call (~5% above current price)
-            strike_price = round(current_price * 1.05, 2)
-            contracts = int(shares / 100)
-
-            if contracts < 1:
+        # Both timeframes bearish — evaluate severity
+        if daily_bearish and hourly_bearish:
+            # Strong bearish signal — exit
+            if bearish_probability >= exit_threshold:
                 return {
                     'action': 'exit',
-                    'reason': 'Position too small for covered calls (< 100 shares)',
+                    'reason': f'Daily+hourly bearish ({bearish_probability:.0%} >= {exit_threshold:.0%})',
+                    'expected_loss_avoided': unrealized_pnl * 0.10,
                 }
 
-            # Estimate premium (simplified - would use real options pricing in production)
-            # Typical ATM call premium is 2-5% of stock price for monthly expiration
-            estimated_premium_pct = 0.03  # 3% assumption
-            estimated_premium = current_price * estimated_premium_pct * contracts * 100
+            # Moderate bearish — evaluate covered call
+            if bearish_probability >= 0.80:
+                strike_price = round(current_price * 1.05, 2)
+                contracts = int(shares / 100)
 
-            # Estimate potential loss if we hold (based on bearish probability)
-            expected_decline = (bearish_probability - 0.50) * 0.20  # Scale probability to expected move
-            expected_loss = current_value * expected_decline
+                if contracts < 1:
+                    return {
+                        'action': 'exit',
+                        'reason': 'Position too small for covered calls (< 100 shares)',
+                    }
 
-            if estimated_premium > expected_loss * 0.5:  # Premium covers >50% of expected loss
-                return {
-                    'action': 'covered_call',
-                    'reason': 'Covered call premium exceeds expected downside',
-                    'strike_price': strike_price,
-                    'contracts': contracts,
-                    'estimated_premium': estimated_premium,
-                    'expected_loss': expected_loss,
-                }
-            else:
-                return {
-                    'action': 'exit',
-                    'reason': 'Expected loss exceeds covered call benefit',
-                    'expected_loss': expected_loss,
-                    'estimated_premium': estimated_premium,
-                }
+                estimated_premium_pct = 0.03
+                estimated_premium = current_price * estimated_premium_pct * contracts * 100
+                expected_decline = (bearish_probability - 0.50) * 0.20
+                expected_loss = current_value * expected_decline
 
-        # Low bearish signal - hold
+                if estimated_premium > expected_loss * 0.5:
+                    return {
+                        'action': 'covered_call',
+                        'reason': 'Covered call premium exceeds expected downside',
+                        'strike_price': strike_price,
+                        'contracts': contracts,
+                        'estimated_premium': estimated_premium,
+                        'expected_loss': expected_loss,
+                    }
+                else:
+                    return {
+                        'action': 'exit',
+                        'reason': 'Expected loss exceeds covered call benefit',
+                        'expected_loss': expected_loss,
+                        'estimated_premium': estimated_premium,
+                    }
+
+        # Neither timeframe bearish or below threshold — hold
         return {
             'action': 'hold',
             'reason': f'Bearish probability ({bearish_probability:.0%}) below threshold',

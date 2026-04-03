@@ -5,12 +5,17 @@ Runs at 9:00 AM EST (14:00 UTC) on weekdays.
 Processes trend break signals and executes theoretical trades.
 
 Portfolio Allocation:
-- 65% Long-term investing (hold > 1 month)
-- 35% Swing trading (hold 1-5 days)
+- 50% Long-term stock positions (hold > 1 month)
+- 30% Swing options trading ($10K max per trade, 5 concurrent max)
+- 20% Cash float for new options opportunities
 
 Signal Sources:
-- Trend break reports (daily/hourly) for swing trading
-- 13F institutional sentiment for long-term positions
+- Trend break reports (daily/hourly) for swing options trading
+- 13F institutional sentiment for long-term stock positions
+
+Exit Strategy:
+- Long-term: Multi-timeframe confirmation (daily+hourly must agree for full exit)
+- Swing options: Volume-based profit-taking, reversal-based loss-cutting
 """
 
 from airflow import DAG
@@ -59,11 +64,25 @@ DB_CONFIG = {
 
 # Portfolio configuration
 PORTFOLIO_CONFIG = {
-    'long_term_allocation': 0.65,
-    'swing_allocation': 0.35,
-    'max_position_pct': 0.07,
-    'min_cash_reserve_pct': 0.20,
-    'trend_break_threshold': 0.80,  # 80% probability threshold
+    # Allocation: $50K long-term, $30K swing options, $20K options float
+    'long_term_allocation': 0.50,
+    'swing_allocation': 0.30,
+    'cash_float_pct': 0.20,            # Cash float for new options trades
+    'max_position_pct': 0.07,          # 7% per long-term stock
+    'max_options_pct': 0.10,           # 10% ($10K) per options trade
+    'max_concurrent_options': 5,       # Max 5 options at once
+    # Signal thresholds
+    'trend_break_threshold': 0.80,     # Default signal strength
+    'capital_deployment_threshold': 0.70,  # Relaxed threshold when cash > 20%
+    # Swing options
+    'swing_option_target_dte': 30,
+    'swing_option_max_dte': 45,
+    # Long-term exit (multi-timeframe)
+    'long_term_exit_threshold': 0.92,
+    'long_term_trim_pct': 0.25,
+    # Smart options exit
+    'options_profit_volume_decline_ratio': 0.7,
+    # Daily limits
     'max_swing_trades_per_day': 5,
     'max_long_term_trades_per_day': 5,
 }
@@ -276,9 +295,30 @@ def create_portfolio_signals(**context):
     created_count = 0
 
     try:
+        # Check cash level for capital deployment mode
+        from psycopg2.extras import RealDictCursor
+        with conn.cursor(cursor_factory=RealDictCursor) as check_cur:
+            check_cur.execute("SELECT cash_balance FROM portfolio_account LIMIT 1")
+            account = check_cur.fetchone()
+            cash_balance = float(account['cash_balance']) if account else 0
+            # Rough total value estimate
+            check_cur.execute("SELECT COALESCE(SUM(market_value), 0) as holdings FROM portfolio_holdings")
+            holdings_val = float(check_cur.fetchone()['holdings'])
+            total_value = cash_balance + holdings_val
+            cash_pct = cash_balance / total_value if total_value > 0 else 1.0
+
+        # If cash exceeds the 20% float target, accept weaker signals to deploy capital
+        signal_threshold = PORTFOLIO_CONFIG['trend_break_threshold']
+        if cash_pct > PORTFOLIO_CONFIG.get('cash_float_pct', 0.20):
+            signal_threshold = PORTFOLIO_CONFIG.get('capital_deployment_threshold', 0.70)
+            logger.info(f"Capital deployment mode: cash at {cash_pct:.1%}, relaxing threshold to {signal_threshold}")
+
         with conn.cursor() as cur:
             # Separate signals by holding type and apply per-type limits
-            swing_signals = [s for s in trend_signals if s.get('holding_type') == 'swing']
+            # Filter swing signals by threshold (may be relaxed in deployment mode)
+            swing_signals = [s for s in trend_signals
+                            if s.get('holding_type') == 'swing'
+                            and s.get('signal_strength', 0) >= signal_threshold]
             long_term_signals = [s for s in f13_signals if s.get('holding_type') == 'long_term']
 
             swing_signals.sort(key=lambda x: x.get('signal_strength', 0), reverse=True)
@@ -446,6 +486,7 @@ def manage_long_term_positions(**context):
     actions_taken = {
         'exits': [],
         'covered_calls': [],
+        'trims': [],
         'reentries': [],
         'holds': [],
     }
@@ -477,18 +518,28 @@ def manage_long_term_positions(**context):
             if not current_price:
                 continue
 
-            # Check if we have a bearish signal for this holding
-            if ticker in bearish_signals:
-                bearish_signal = bearish_signals[ticker]
+            # Check multi-timeframe bearish status for this holding
+            tf_check = pm.check_multi_timeframe_bearish(ticker)
+            has_bearish = tf_check['daily_bearish'] or tf_check['hourly_bearish']
+
+            # Also check if we have a bearish signal from trend_breaks
+            if ticker in bearish_signals or has_bearish:
+                bearish_signal = bearish_signals.get(ticker, {})
                 bearish_prob = bearish_signal.get('signal_strength', 0)
 
-                logger.info(f"Bearish signal for {ticker}: {bearish_prob:.0%} probability")
+                logger.info(
+                    f"Bearish check for {ticker}: prob={bearish_prob:.0%}, "
+                    f"daily={'YES' if tf_check['daily_bearish'] else 'no'}, "
+                    f"hourly={'YES' if tf_check['hourly_bearish'] else 'no'}"
+                )
 
-                # Evaluate covered call vs exit
+                # Evaluate with multi-timeframe confirmation
                 evaluation = pm.evaluate_covered_call_vs_exit(
                     ticker=ticker,
                     current_price=current_price,
                     bearish_probability=bearish_prob,
+                    daily_bearish=tf_check['daily_bearish'],
+                    hourly_bearish=tf_check['hourly_bearish'],
                 )
 
                 if evaluation['action'] == 'exit':
@@ -539,6 +590,22 @@ def manage_long_term_positions(**context):
                         })
                         logger.info(f"Wrote covered call on {ticker}: {evaluation['contracts']} contracts @ ${evaluation['strike_price']}")
 
+                elif evaluation['action'] == 'trim':
+                    # Trim position (hourly bearish but daily not confirmed)
+                    trim_pct = evaluation.get('trim_pct', 0.25)
+                    result = pm.trim_position(ticker, trim_pct, current_price)
+
+                    if result.get('success'):
+                        actions_taken['trims'].append({
+                            'ticker': ticker,
+                            'price': current_price,
+                            'trim_pct': trim_pct,
+                            'reason': evaluation['reason'],
+                        })
+                        logger.info(f"Trimmed {ticker} by {trim_pct:.0%}: {evaluation['reason']}")
+                    else:
+                        logger.warning(f"Failed to trim {ticker}: {result.get('error')}")
+
                 else:  # hold
                     actions_taken['holds'].append({
                         'ticker': ticker,
@@ -588,6 +655,156 @@ def manage_long_term_positions(**context):
         conn.close()
 
     return actions_taken
+
+
+def manage_swing_positions(**context):
+    """
+    Actively rotate swing positions:
+    - Sell swing holdings that have bearish trend break signals
+    - Free up cash for new options opportunities
+    """
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+
+    ti = context['ti']
+    trend_signals = ti.xcom_pull(key='trend_signals', task_ids='fetch_trend_break_signals') or []
+    prices = ti.xcom_pull(key='prices', task_ids='fetch_current_prices') or {}
+
+    conn = get_db_connection()
+    swing_actions = {'sells': [], 'holds': []}
+
+    try:
+        sys.path.insert(0, '/app/src')
+        from portfolio_manager import PortfolioManager
+
+        pm = PortfolioManager(conn=conn)
+
+        # Find swing holdings with bearish signals
+        holdings_to_sell = pm.get_swing_holdings_with_sell_signals(trend_signals)
+        logger.info(f"Found {len(holdings_to_sell)} swing positions with bearish signals")
+
+        for item in holdings_to_sell:
+            holding = item['holding']
+            ticker = holding['ticker']
+            current_price = prices.get(ticker, float(holding.get('current_price', 0)))
+
+            if not current_price:
+                continue
+
+            # Execute sell
+            result = pm.execute_trade(
+                action='sell' if holding['asset_type'] == 'stock' else 'sell_to_close',
+                ticker=ticker,
+                quantity=float(holding['quantity']),
+                price=current_price,
+                holding_type='swing',
+                asset_type=holding['asset_type'],
+                signal_source='swing_rotation_bearish',
+                signal_details=item['signal'].get('source_data'),
+            )
+
+            if result.get('success'):
+                swing_actions['sells'].append({
+                    'ticker': ticker,
+                    'price': current_price,
+                    'reason': item['reason'],
+                    'asset_type': holding['asset_type'],
+                })
+                logger.info(f"Swing rotation: sold {ticker} ({item['reason']})")
+            else:
+                logger.warning(f"Failed to sell swing {ticker}: {result.get('error')}")
+
+        ti.xcom_push(key='swing_actions', value=swing_actions)
+
+    except Exception as e:
+        logger.error(f"Error managing swing positions: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        conn.close()
+
+    return swing_actions
+
+
+def manage_swing_options(**context):
+    """
+    Smart exit management for swing options positions:
+    - Take profit when volume declines (leave near the top)
+    - Exit on reversal signal (accept ~50% loss)
+    - Hard stop at 50% loss
+    """
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    import yfinance as yf
+
+    ti = context['ti']
+    prices = ti.xcom_pull(key='prices', task_ids='fetch_current_prices') or {}
+
+    conn = get_db_connection()
+    options_actions = {'take_profit': [], 'reversal_exit': [], 'stop_loss': [], 'holds': []}
+
+    try:
+        sys.path.insert(0, '/app/src')
+        from portfolio_manager import PortfolioManager
+
+        pm = PortfolioManager(conn=conn)
+
+        # Get all swing options holdings
+        all_holdings = pm.get_holdings(holding_type='swing')
+        option_holdings = [h for h in all_holdings if h.get('asset_type') == 'option']
+        logger.info(f"Evaluating {len(option_holdings)} swing options for exit signals")
+
+        for holding in option_holdings:
+            ticker = holding['ticker']
+
+            # Get current option price (use stored price or fetch)
+            current_price = float(holding.get('current_price', 0))
+            if not current_price:
+                # Try to estimate from underlying price movement
+                underlying_price = prices.get(ticker)
+                if underlying_price:
+                    current_price = float(holding['avg_cost_basis'])  # Fallback to cost basis
+                else:
+                    continue
+
+            evaluation = pm.evaluate_option_exit(holding, current_price)
+            action = evaluation['action']
+
+            if action in ('take_profit', 'reversal_exit', 'stop_loss'):
+                result = pm.execute_trade(
+                    action='sell_to_close',
+                    ticker=ticker,
+                    quantity=float(holding['quantity']),
+                    price=current_price,
+                    holding_type='swing',
+                    asset_type='option',
+                    signal_source=f'smart_exit_{action}',
+                    signal_details={'reason': evaluation['reason'], 'pnl_pct': evaluation.get('pnl_pct')},
+                )
+
+                if result.get('success'):
+                    options_actions[action].append({
+                        'ticker': ticker,
+                        'price': current_price,
+                        'reason': evaluation['reason'],
+                        'pnl_pct': evaluation.get('pnl_pct', 0),
+                    })
+                    logger.info(f"Options {action}: {ticker} — {evaluation['reason']}")
+                else:
+                    logger.warning(f"Failed options exit for {ticker}: {result.get('error')}")
+            else:
+                options_actions['holds'].append({'ticker': ticker, 'reason': evaluation['reason']})
+
+        ti.xcom_push(key='options_actions', value=options_actions)
+
+    except Exception as e:
+        logger.error(f"Error managing swing options: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        conn.close()
+
+    return options_actions
 
 
 def check_stop_losses(**context):
@@ -681,7 +898,10 @@ def log_summary(**context):
     executed_trades = ti.xcom_pull(key='executed_trades', task_ids='process_signals') or []
     stop_loss_sales = ti.xcom_pull(key='stop_loss_sales', task_ids='check_stop_losses') or []
     long_term_actions = ti.xcom_pull(key='long_term_actions', task_ids='manage_long_term_positions') or {}
+    swing_actions = ti.xcom_pull(key='swing_actions', task_ids='manage_swing_positions') or {}
     snapshot = ti.xcom_pull(key='snapshot', task_ids='create_daily_snapshot') or {}
+
+    swing_sells = swing_actions.get('sells', [])
 
     summary = f"""
 === PORTFOLIO UPDATE SUMMARY ===
@@ -690,11 +910,13 @@ Date: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
 Signals:
   - Created: {signals_created} ({swing_created} swing, {lt_created} long-term)
   - Executed new trades: {len(executed_trades)}
+  - Swing rotations (bearish exits): {len(swing_sells)}
   - Stop-loss sales: {len(stop_loss_sales)}
 
 Long-Term Position Management:
   - Exits (bearish trend break): {len(long_term_actions.get('exits', []))}
   - Covered calls written: {len(long_term_actions.get('covered_calls', []))}
+  - Trims (hourly-only bearish): {len(long_term_actions.get('trims', []))}
   - Re-entries from watchlist: {len(long_term_actions.get('reentries', []))}
   - Positions held: {len(long_term_actions.get('holds', []))}
 
@@ -714,10 +936,20 @@ New Trades Executed:
         for cc in long_term_actions['covered_calls']:
             summary += f"  - {cc['ticker']}: {cc['contracts']} contracts @ ${cc['strike']:.2f} exp {cc['expiration']} (${cc['premium']:.2f} premium)\n"
 
+    if long_term_actions.get('trims'):
+        summary += "\nLong-Term Trims (Hourly-Only Bearish):\n"
+        for trim in long_term_actions['trims']:
+            summary += f"  - TRIM {trim['ticker']}: {trim.get('trim_pct', 25)}% @ ${trim['price']:.2f}\n"
+
     if long_term_actions.get('reentries'):
         summary += "\nWatchlist Re-Entries:\n"
         for re in long_term_actions['reentries']:
             summary += f"  - BUY {re['ticker']} @ ${re['price']:.2f} (signal strength: {re['signal_strength']:.0%})\n"
+
+    if swing_sells:
+        summary += "\nSwing Rotations (Bearish Exits):\n"
+        for sell in swing_sells:
+            summary += f"  - SELL {sell['ticker']} ({sell.get('asset_type', 'option')}) @ ${sell['price']:.2f} ({sell['reason']})\n"
 
     if stop_loss_sales:
         summary += "\nStop-Loss Sales:\n"
@@ -796,6 +1028,20 @@ manage_long_term = PythonOperator(
     dag=dag,
 )
 
+manage_swing = PythonOperator(
+    task_id='manage_swing_positions',
+    python_callable=manage_swing_positions,
+    provide_context=True,
+    dag=dag,
+)
+
+manage_options = PythonOperator(
+    task_id='manage_swing_options',
+    python_callable=manage_swing_options,
+    provide_context=True,
+    dag=dag,
+)
+
 stop_losses = PythonOperator(
     task_id='check_stop_losses',
     python_callable=check_stop_losses,
@@ -818,17 +1064,13 @@ summary = PythonOperator(
 )
 
 # Task flow
-#                         /-> fetch_trend_signals -\                                          /-> process (new swing positions)
-# check_market -> fork ->                           -> fetch_prices -> create_signals -> fork ->  manage_long_term -> stop_losses -> snapshot -> summary
-#                         \-> fetch_13f -----------/                                          \                    /
-#
-# Long-term position management:
-# - Checks existing holdings for bearish trend breaks
-# - Evaluates covered call vs exit strategy
-# - Executes sector rotation or adds to watchlist
-# - Checks watchlist for bullish re-entry signals
+#                         /-> fetch_trend_signals -\                                          /-> process (new swing options)
+# check_market -> fork ->                           -> fetch_prices -> create_signals -> fork -> manage_long_term (multi-TF)
+#                         \-> fetch_13f -----------/                                          \-> manage_swing (active rotation)
+#                                                                                                      |
+#                                                                          [all three] -> stop_losses -> snapshot -> summary
 
 check_market >> [fetch_trend_signals, fetch_13f]
 [fetch_trend_signals, fetch_13f] >> fetch_prices
-fetch_prices >> create_signals >> [process, manage_long_term]
-[process, manage_long_term] >> stop_losses >> snapshot >> summary
+fetch_prices >> create_signals >> [process, manage_long_term, manage_swing, manage_options]
+[process, manage_long_term, manage_swing, manage_options] >> stop_losses >> snapshot >> summary
