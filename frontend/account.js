@@ -44,6 +44,7 @@ const Account = {
             sec.style.display = sec.id === `accountSection-${name}` ? 'block' : 'none';
         });
         if (name === 'performance') this.loadAnalytics();
+        if (name === 'journal' && typeof Journal !== 'undefined') Journal.load();
     },
 
     // ──────────────────────────────────────────────

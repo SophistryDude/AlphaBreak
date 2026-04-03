@@ -1664,6 +1664,7 @@
                     <button class="account-sub-tab" data-subtab="preferences">Preferences</button>
                     <button class="account-sub-tab" data-subtab="linked">Linked Accounts</button>
                     <button class="account-sub-tab" data-subtab="performance">Performance</button>
+                    <button class="account-sub-tab" data-subtab="journal">Trade Journal</button>
                 </div>
 
                 <!-- Profile Section -->
@@ -1785,6 +1786,41 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Trade Journal Section -->
+                <div class="account-section" id="accountSection-journal" style="display:none;">
+                    <!-- View toggle -->
+                    <div class="journal-header-row">
+                        <div class="journal-view-toggle">
+                            <button class="btn btn-sm active" id="journalMyBtn" onclick="Journal.switchView('my')">My Journal</button>
+                            <button class="btn btn-sm btn-ghost" id="journalPublicBtn" onclick="Journal.switchView('public')">Community</button>
+                        </div>
+                        <div class="journal-header-actions">
+                            <button class="btn btn-sm btn-primary" onclick="Journal.importTrades()">Import Trades</button>
+                            <button class="btn btn-sm btn-ghost" onclick="Journal.showNewEntryModal()">New Entry</button>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="journal-filters-bar">
+                        <input type="text" id="journalFilterTicker" class="profile-input" placeholder="Ticker" style="max-width:100px;" onchange="Journal.page=1;Journal.loadEntries()">
+                        <select id="journalFilterDirection" class="profile-input" style="max-width:120px;" onchange="Journal.page=1;Journal.loadEntries()">
+                            <option value="">All Directions</option>
+                            <option value="long">Long</option>
+                            <option value="short">Short</option>
+                        </select>
+                        <select id="journalFilterPnl" class="profile-input" style="max-width:120px;" onchange="Journal.page=1;Journal.loadEntries()">
+                            <option value="">All P&L</option>
+                            <option value="win">Winners</option>
+                            <option value="loss">Losers</option>
+                        </select>
+                    </div>
+
+                    <!-- Entry list -->
+                    <div id="journalEntryList">
+                        <p class="empty-state">Loading journal...</p>
+                    </div>
+                </div>
             </div>
 
         </main>
@@ -1860,6 +1896,7 @@
     <script src="auth.js?v=1"></script>
     <script src="notifications.js?v=1"></script>
     <script src="account.js?v=1"></script>
+    <script src="journal.js?v=1"></script>
     <script src="descriptions.js?v=1"></script>
     <script src="app.js?v=6"></script>
     <script src="dashboard.js?v=5"></script>
