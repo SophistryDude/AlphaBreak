@@ -171,20 +171,134 @@ def fetch_trend_break_signals(**context):
     return signals
 
 
+def check_market_regime(**context):
+    """
+    Check if S&P 500 is in a bullish regime (above 50-day EMA).
+    Gates all long-term entries — no new LT positions in bear markets.
+    """
+    import yfinance as yf
+    import pandas as pd
+
+    try:
+        spy = yf.Ticker('^GSPC')
+        hist = spy.history(period='4mo', auto_adjust=True)
+        if len(hist) < 50:
+            logger.warning("Not enough S&P 500 data for regime check")
+            context['ti'].xcom_push(key='market_bullish', value=True)
+            return True
+
+        close = hist['Close']
+        ema50 = close.ewm(span=50, adjust=False).mean()
+        current = float(close.iloc[-1])
+        ema50_val = float(ema50.iloc[-1])
+        is_bullish = current > ema50_val
+
+        logger.info(f"Market regime: S&P 500 ${current:.0f} {'ABOVE' if is_bullish else 'BELOW'} 50-EMA ${ema50_val:.0f} -> {'BULLISH' if is_bullish else 'BEARISH'}")
+        context['ti'].xcom_push(key='market_bullish', value=is_bullish)
+        return is_bullish
+    except Exception as e:
+        logger.error(f"Market regime check failed: {e}")
+        context['ti'].xcom_push(key='market_bullish', value=True)
+        return True
+
+
+def check_technical_confirmation(ticker):
+    """
+    Check 3 technical confirmations for a long-term entry:
+    1. 14-day EMA above 50-day EMA
+    2. RSI(14) < 70
+    3. No bearish daily trend break in last 7 days
+
+    Returns: (passes: bool, details: dict)
+    """
+    import yfinance as yf
+    import pandas as pd
+
+    try:
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period='4mo', auto_adjust=True)
+        if len(hist) < 55:
+            return False, {'reason': 'insufficient data'}
+
+        close = hist['Close']
+        ema14 = close.ewm(span=14, adjust=False).mean()
+        ema50 = close.ewm(span=50, adjust=False).mean()
+        sma20 = close.rolling(20).mean()
+
+        # RSI(14)
+        delta = close.diff()
+        gain = delta.where(delta > 0, 0).rolling(14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+
+        current_price = float(close.iloc[-1])
+        e14 = float(ema14.iloc[-1])
+        e50 = float(ema50.iloc[-1])
+        r = float(rsi.iloc[-1]) if not pd.isna(rsi.iloc[-1]) else 50
+        s20 = float(sma20.iloc[-1]) if not pd.isna(sma20.iloc[-1]) else current_price
+
+        ema_bullish = e14 > e50
+        rsi_ok = r < 70
+
+        # Check bearish break from DB
+        conn = get_db_connection()
+        recent_bearish = False
+        try:
+            from psycopg2.extras import RealDictCursor
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT COUNT(*) as cnt FROM trend_breaks
+                    WHERE ticker = %s AND timeframe = 'daily'
+                      AND direction_after = 'decreasing'
+                      AND timestamp >= NOW() - INTERVAL '7 days'
+                """, (ticker,))
+                row = cur.fetchone()
+                recent_bearish = (row['cnt'] > 0) if row else False
+        finally:
+            conn.close()
+
+        passes = ema_bullish and rsi_ok and (not recent_bearish)
+
+        details = {
+            'ema14': round(e14, 2),
+            'ema50': round(e50, 2),
+            'ema_bullish': ema_bullish,
+            'rsi': round(r, 1),
+            'rsi_ok': rsi_ok,
+            'recent_bearish_break': recent_bearish,
+            'sma20': round(s20, 2),
+            'current_price': round(current_price, 2),
+            'pullback_target': round(s20, 2),  # For pullback entry mode
+            'passes': passes,
+        }
+
+        return passes, details
+
+    except Exception as e:
+        logger.warning(f"Technical check failed for {ticker}: {e}")
+        return False, {'reason': str(e)}
+
+
 def fetch_13f_signals(**context):
     """
     Fetch 13F institutional sentiment for long-term positions.
-    Derives BUY/STRONG_BUY from institutional_sentiment score.
+    Now includes technical confirmation gate and market regime check.
     """
     import psycopg2
     from psycopg2.extras import RealDictCursor
+    import time
+
+    ti = context['ti']
+    market_bullish = ti.xcom_pull(key='market_bullish', task_ids='check_market_regime')
+    if market_bullish is None:
+        market_bullish = True
 
     conn = get_db_connection()
     signals = []
 
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Get stocks with positive institutional sentiment from most recent quarter
             cur.execute("""
                 SELECT
                     ticker,
@@ -205,8 +319,14 @@ def fetch_13f_signals(**context):
                 LIMIT 20
             """)
 
+            confirmed = 0
+            rejected = 0
+            pullback_watch = 0
+
             for row in cur.fetchall():
                 sentiment = float(row['institutional_sentiment'])
+                ticker = row['ticker']
+
                 if sentiment > 1.0:
                     signal_label = 'strong_buy'
                     signal_strength = 0.9
@@ -214,24 +334,63 @@ def fetch_13f_signals(**context):
                     signal_label = 'buy'
                     signal_strength = 0.75
 
-                signals.append({
-                    'ticker': row['ticker'],
-                    'signal_type': f"13f_{signal_label}",
-                    'suggested_action': 'buy',
-                    'holding_type': 'long_term',
-                    'signal_strength': signal_strength,
-                    'signal_price': None,  # Will fetch current price later
-                    'source_data': {
-                        'institutional_value': float(row['total_market_value']),
-                        'institutional_sentiment': sentiment,
-                        'funds_buying': row['funds_buying'],
-                        'funds_selling': row['funds_selling'],
-                        'net_shares_change': int(row['net_shares_change']) if row['net_shares_change'] else 0,
-                        'report_quarter': row['report_quarter'],
-                    }
-                })
+                source_data = {
+                    'institutional_value': float(row['total_market_value']),
+                    'institutional_sentiment': sentiment,
+                    'funds_buying': row['funds_buying'],
+                    'funds_selling': row['funds_selling'],
+                    'net_shares_change': int(row['net_shares_change']) if row['net_shares_change'] else 0,
+                    'report_quarter': row['report_quarter'],
+                }
 
-        logger.info(f"Found {len(signals)} 13F institutional signals")
+                # Market regime gate
+                if not market_bullish:
+                    logger.info(f"  {ticker}: SKIPPED (market bearish regime)")
+                    rejected += 1
+                    continue
+
+                # Technical confirmation
+                passes, tech_details = check_technical_confirmation(ticker)
+                source_data['technical'] = tech_details
+                time.sleep(0.2)  # Rate limit yfinance
+
+                if passes:
+                    signals.append({
+                        'ticker': ticker,
+                        'signal_type': f"13f_{signal_label}",
+                        'suggested_action': 'buy',
+                        'holding_type': 'long_term',
+                        'signal_strength': signal_strength,
+                        'signal_price': tech_details.get('current_price'),
+                        'source_data': source_data,
+                    })
+                    confirmed += 1
+                    logger.info(f"  {ticker}: CONFIRMED (EMA14={tech_details.get('ema14')} > EMA50={tech_details.get('ema50')}, RSI={tech_details.get('rsi')})")
+                elif tech_details.get('rsi_ok') and not tech_details.get('recent_bearish_break'):
+                    # EMA not bullish but RSI ok and no bearish break -> pullback watchlist
+                    signals.append({
+                        'ticker': ticker,
+                        'signal_type': f"13f_{signal_label}_pullback",
+                        'suggested_action': 'buy',
+                        'holding_type': 'long_term',
+                        'signal_strength': signal_strength * 0.8,  # Reduced strength for pullback
+                        'signal_price': tech_details.get('pullback_target'),
+                        'source_data': {**source_data, 'entry_mode': 'pullback', 'pullback_target': tech_details.get('pullback_target')},
+                    })
+                    pullback_watch += 1
+                    logger.info(f"  {ticker}: PULLBACK WATCH (EMA not bullish, target ${tech_details.get('pullback_target')})")
+                else:
+                    rejected += 1
+                    reasons = []
+                    if not tech_details.get('ema_bullish'):
+                        reasons.append('EMA14<EMA50')
+                    if not tech_details.get('rsi_ok'):
+                        reasons.append(f"RSI={tech_details.get('rsi', '?')}>70")
+                    if tech_details.get('recent_bearish_break'):
+                        reasons.append('bearish break')
+                    logger.info(f"  {ticker}: REJECTED ({', '.join(reasons)})")
+
+        logger.info(f"13F signals: {confirmed} confirmed, {pullback_watch} pullback watch, {rejected} rejected")
         context['ti'].xcom_push(key='13f_signals', value=signals)
 
     except Exception as e:
@@ -641,9 +800,68 @@ def manage_long_term_positions(**context):
             current_price = prices.get(ticker)
 
             if current_price and current_price < float(call['strike_price']):
-                # Call will expire worthless - close it
                 pm.close_covered_call(str(call['call_id']), close_reason='expired_worthless')
                 logger.info(f"Covered call on {ticker} expired worthless (premium kept)")
+
+        # ── TSLY Default Position ──────────────────────────────────────
+        # If long-term holdings don't use the full 50% allocation,
+        # park the remainder in TSLY for yield while waiting for signals.
+        try:
+            import yfinance as yf
+
+            portfolio = pm.get_portfolio_value()
+            total_value = portfolio['total_value']
+            lt_target = total_value * pm.config['long_term_allocation']  # 50%
+            lt_current = portfolio['long_term_value']
+            lt_gap = lt_target - lt_current
+
+            # Check if we already hold TSLY
+            tsly_holding = pm.get_holding('TSLY', 'long_term')
+            tsly_value = float(tsly_holding['market_value']) if tsly_holding else 0
+
+            if lt_gap > 1000:  # At least $1K gap to fill
+                # Buy TSLY to fill the gap
+                stock = yf.Ticker('TSLY')
+                hist = stock.history(period='1d')
+                if not hist.empty:
+                    tsly_price = float(hist['Close'].iloc[-1])
+                    buy_amount = lt_gap
+                    shares = int(buy_amount / tsly_price)
+
+                    if shares >= 1 and portfolio['cash_balance'] >= shares * tsly_price:
+                        result = pm.execute_trade(
+                            action='buy', ticker='TSLY', quantity=shares,
+                            price=tsly_price, holding_type='long_term',
+                            signal_source='tsly_default_yield',
+                        )
+                        if result.get('success'):
+                            actions_taken.setdefault('tsly', []).append({
+                                'action': 'buy', 'shares': shares, 'price': tsly_price,
+                                'value': shares * tsly_price,
+                            })
+                            logger.info(f"TSLY default: bought {shares} shares @ ${tsly_price:.2f} (filling ${lt_gap:.0f} LT gap)")
+
+            elif tsly_holding and lt_current - tsly_value >= lt_target * 0.90:
+                # LT positions (excluding TSLY) are near target — sell TSLY to free capital
+                tsly_qty = float(tsly_holding['quantity'])
+                stock = yf.Ticker('TSLY')
+                hist = stock.history(period='1d')
+                if not hist.empty:
+                    tsly_price = float(hist['Close'].iloc[-1])
+                    result = pm.execute_trade(
+                        action='sell', ticker='TSLY', quantity=tsly_qty,
+                        price=tsly_price, holding_type='long_term',
+                        signal_source='tsly_rebalance_out',
+                    )
+                    if result.get('success'):
+                        actions_taken.setdefault('tsly', []).append({
+                            'action': 'sell', 'shares': tsly_qty, 'price': tsly_price,
+                            'reason': 'LT positions filled, freeing TSLY',
+                        })
+                        logger.info(f"TSLY rebalance: sold {tsly_qty} shares (LT positions filled)")
+
+        except Exception as e:
+            logger.warning(f"TSLY default position management failed: {e}")
 
         ti.xcom_push(key='long_term_actions', value=actions_taken)
 
@@ -1072,6 +1290,13 @@ fetch_trend_signals = PythonOperator(
     dag=dag,
 )
 
+market_regime = PythonOperator(
+    task_id='check_market_regime',
+    python_callable=check_market_regime,
+    provide_context=True,
+    dag=dag,
+)
+
 fetch_13f = PythonOperator(
     task_id='fetch_13f_signals',
     python_callable=fetch_13f_signals,
@@ -1156,7 +1381,8 @@ summary = PythonOperator(
 #                                                                                                      |
 #                                                                          [all three] -> stop_losses -> snapshot -> summary
 
-check_market >> [fetch_trend_signals, fetch_13f]
+check_market >> [fetch_trend_signals, market_regime]
+market_regime >> fetch_13f
 [fetch_trend_signals, fetch_13f] >> fetch_prices
 fetch_prices >> create_signals >> [process, manage_long_term, manage_swing, manage_options]
 [process, manage_long_term, manage_swing, manage_options] >> stop_losses >> snapshot >> notify >> summary
