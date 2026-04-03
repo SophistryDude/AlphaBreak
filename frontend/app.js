@@ -129,6 +129,21 @@ function initializeSidebar() {
         });
     });
 
+    // Username click -> Account tab
+    const userNameLink = document.getElementById('authUserName');
+    if (userNameLink) {
+        userNameLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            sidebarLinks.forEach(l => l.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            document.getElementById('accountTab').classList.add('active');
+            document.getElementById('currentPageTitle').textContent = PAGE_TITLES['account'];
+            state.activeTab = 'account';
+            const ps = document.getElementById('persistentSentiment');
+            if (ps) ps.style.display = 'none';
+        });
+    }
+
     // Keyboard escape to close
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && sidebar.classList.contains('expanded')) {

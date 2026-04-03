@@ -6123,6 +6123,17 @@ a.indicator-chip.bearish:hover {
     font-style: italic;
 }
 
+a.auth-user-name {
+    color: var(--text-primary, #e0e0e0);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+a.auth-user-name:hover {
+    color: var(--accent-primary, #00d4aa);
+}
+
 /* ============================================================
    ACCOUNT PAGE
    ============================================================ */
