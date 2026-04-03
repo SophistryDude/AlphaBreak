@@ -211,8 +211,9 @@ def list_public_entries(db_manager, page=1, per_page=20):
 # ──────────────────────────────────────────────────────────────
 
 def import_trades(db_manager, user_id):
-    """Import sell/close transactions not already in journal."""
-    rows = db_manager.execute_query("""
+    """Import sell/close transactions with matched buy prices and trend break context."""
+    # Get sell transactions not yet in journal
+    sells = db_manager.execute_query("""
         SELECT t.transaction_id, t.ticker, t.action, t.holding_type, t.asset_type,
                t.quantity, t.price, t.total_value, t.realized_pnl, t.realized_pnl_pct,
                t.signal_source, t.signal_details, t.executed_at, t.option_type
@@ -226,24 +227,97 @@ def import_trades(db_manager, user_id):
         LIMIT 50
     """, (user_id,))
 
+    # Get all buy transactions for entry price lookup
+    buys = db_manager.execute_query("""
+        SELECT ticker, action, asset_type, price, signal_source, signal_details, executed_at
+        FROM portfolio_transactions
+        WHERE action IN ('buy', 'buy_to_open')
+        ORDER BY executed_at DESC
+    """)
+
+    # Build lookup: ticker -> most recent buy before each sell
+    buy_lookup = {}
+    for b in (buys or []):
+        ticker = b[0]
+        if ticker not in buy_lookup:
+            buy_lookup[ticker] = []
+        buy_details = b[5] if isinstance(b[5], dict) else (json.loads(b[5]) if b[5] else {})
+        buy_lookup[ticker].append({
+            'price': float(b[3]) if b[3] else None,
+            'signal_source': b[4],
+            'signal_details': buy_details,
+            'executed_at': b[6],
+        })
+
     imported = 0
-    for r in (rows or []):
+    for r in (sells or []):
+        ticker = r[1]
+        exit_price = float(r[6]) if r[6] else None
+        sell_date = r[12]
         direction = 'long' if r[2] == 'sell' else 'short'
-        signal_details = r[11] if isinstance(r[11], dict) else (json.loads(r[11]) if r[11] else {})
+        sell_details = r[11] if isinstance(r[11], dict) else (json.loads(r[11]) if r[11] else {})
+
+        # Find the matching buy (most recent buy for this ticker before the sell)
+        entry_price = None
+        buy_signal_source = None
+        buy_details = {}
+        for buy in buy_lookup.get(ticker, []):
+            if buy['executed_at'] and sell_date and buy['executed_at'] < sell_date:
+                entry_price = buy['price']
+                buy_signal_source = buy['signal_source']
+                buy_details = buy['signal_details'] or {}
+                break
+
+        if entry_price is None:
+            # Fallback: compute from P&L
+            if exit_price and r[9]:  # realized_pnl_pct
+                pnl_pct = float(r[9])
+                if pnl_pct != 0 and abs(1 + pnl_pct) > 0.01:
+                    entry_price = exit_price / (1 + pnl_pct)
+
+        # Look up nearest trend break for this ticker around the trade date
+        break_price = None
+        break_timestamp = None
+        if sell_date:
+            breaks = db_manager.execute_query("""
+                SELECT price_at_break, timestamp, magnitude, volume_ratio
+                FROM trend_breaks
+                WHERE ticker = %s AND timeframe = 'daily'
+                  AND timestamp BETWEEN %s - INTERVAL '7 days' AND %s
+                ORDER BY ABS(EXTRACT(epoch FROM timestamp - %s))
+                LIMIT 1
+            """, (ticker, sell_date, sell_date, sell_date))
+            if breaks and breaks[0]:
+                break_price = float(breaks[0][0]) if breaks[0][0] else None
+                break_timestamp = breaks[0][1].isoformat() if breaks[0][1] else None
+
+        # Merge signal details from buy + sell + trend break
+        merged_details = {**buy_details, **sell_details}
+        if break_price:
+            merged_details['break_price'] = break_price
+        if break_timestamp:
+            merged_details['generated_at'] = break_timestamp
+        if entry_price:
+            merged_details['entry_price'] = entry_price
+        if buy_signal_source:
+            merged_details['buy_signal'] = buy_signal_source
+
+        asset_label = r[4] or 'stock'
+        option_label = f" {r[13]}" if r[13] else ''
 
         result = create_entry(db_manager, user_id, {
             'transaction_id': str(r[0]),
-            'ticker': r[1],
-            'trade_date': r[12].date().isoformat() if r[12] else date.today().isoformat(),
+            'ticker': ticker,
+            'trade_date': sell_date.date().isoformat() if sell_date else date.today().isoformat(),
             'direction': direction,
-            'entry_price': signal_details.get('entry_price') or float(r[6] or 0),
-            'exit_price': float(r[6]) if r[6] else None,
+            'entry_price': entry_price,
+            'exit_price': exit_price,
             'quantity': float(r[5]) if r[5] else None,
             'realized_pnl': float(r[8]) if r[8] else None,
             'realized_pnl_pct': float(r[9]) if r[9] else None,
             'signal_source': r[10],
-            'signal_details': signal_details,
-            'entry_notes': f"Auto-imported: {r[2]} {r[1]} ({r[4]}{' ' + r[13] if r[13] else ''})",
+            'signal_details': merged_details,
+            'entry_notes': f"Entry: {buy_signal_source or 'manual'} @ ${entry_price:.2f}" if entry_price else f"Auto-imported {r[2]} {ticker}",
         })
         if result.get('success'):
             imported += 1
@@ -256,13 +330,16 @@ def import_trades(db_manager, user_id):
 # ──────────────────────────────────────────────────────────────
 
 def compute_ai_score(db_manager, user_id, entry_id):
-    """Compute AI trade score for a journal entry."""
+    """Compute AI trade score for a journal entry using trade data + trend breaks."""
     entry = get_entry(db_manager, user_id, entry_id)
     if not entry:
         return {'success': False, 'error': 'Entry not found'}
 
-    entry_price = entry.get('entry_price') or 0
-    exit_price = entry.get('exit_price')
+    entry_price = float(entry.get('entry_price') or 0)
+    exit_price = float(entry.get('exit_price') or 0)
+    ticker = entry.get('ticker', '')
+    trade_date = entry.get('trade_date')
+
     signal_details = entry.get('signal_details') or {}
     if isinstance(signal_details, str):
         try:
@@ -270,63 +347,112 @@ def compute_ai_score(db_manager, user_id, entry_id):
         except (json.JSONDecodeError, TypeError):
             signal_details = {}
 
-    # Entry score (0-100): closeness to break price
-    break_price = signal_details.get('price_at_break') or signal_details.get('signal_price')
+    # Try to get break price from signal_details, then query trend_breaks
+    break_price = signal_details.get('break_price') or signal_details.get('price_at_break') or signal_details.get('signal_price')
+
+    if not break_price and ticker and trade_date:
+        # Query nearest daily trend break for this ticker around trade date
+        try:
+            td = trade_date if isinstance(trade_date, date) else datetime.fromisoformat(str(trade_date)).date()
+            breaks = db_manager.execute_query("""
+                SELECT price_at_break, timestamp, magnitude, volume_ratio
+                FROM trend_breaks
+                WHERE ticker = %s AND timeframe = 'daily'
+                  AND timestamp BETWEEN %s - INTERVAL '14 days' AND %s + INTERVAL '3 days'
+                ORDER BY ABS(EXTRACT(epoch FROM timestamp - %s::timestamp))
+                LIMIT 1
+            """, (ticker, td, td, td))
+            if breaks and breaks[0] and breaks[0][0]:
+                break_price = float(breaks[0][0])
+                if not signal_details.get('generated_at') and breaks[0][1]:
+                    signal_details['generated_at'] = breaks[0][1].isoformat()
+        except Exception as e:
+            logger.debug(f"Trend break lookup for AI score failed: {e}")
+
+    # --- Entry Score (0-100): how close to the break price ---
     if break_price and entry_price and float(break_price) > 0:
-        pct_diff = abs(float(entry_price) - float(break_price)) / float(break_price)
-        entry_score = max(0, min(100, int(100 - pct_diff * 2000)))
+        pct_diff = abs(entry_price - float(break_price)) / float(break_price)
+        entry_score = max(0, min(100, int(100 - pct_diff * 1500)))
+    elif entry_price and exit_price:
+        # No break price — score based on whether entry was favorable vs exit
+        entry_score = 65 if exit_price > entry_price else 35
     else:
-        entry_score = 50  # No reference price, neutral score
+        entry_score = 50
 
-    # Exit score (0-100): compare to P&L outcome
+    # --- Exit Score (0-100): based on realized P&L quality ---
     exit_score = 50
-    if exit_price and entry_price:
-        pnl_pct = (float(exit_price) - float(entry_price)) / float(entry_price) if float(entry_price) > 0 else 0
-        if pnl_pct > 0.05:
-            exit_score = 90
-        elif pnl_pct > 0.02:
-            exit_score = 75
-        elif pnl_pct > 0:
-            exit_score = 60
-        elif pnl_pct > -0.03:
-            exit_score = 45
-        elif pnl_pct > -0.07:
-            exit_score = 30
-        else:
-            exit_score = 15
+    realized_pnl_pct = float(entry.get('realized_pnl_pct') or 0)
 
-    # Timing grade (A-F)
-    timing_grade = 'C'
+    if realized_pnl_pct > 0.50:
+        exit_score = 95
+    elif realized_pnl_pct > 0.20:
+        exit_score = 88
+    elif realized_pnl_pct > 0.10:
+        exit_score = 80
+    elif realized_pnl_pct > 0.05:
+        exit_score = 72
+    elif realized_pnl_pct > 0.02:
+        exit_score = 65
+    elif realized_pnl_pct > 0:
+        exit_score = 58
+    elif realized_pnl_pct > -0.03:
+        exit_score = 45
+    elif realized_pnl_pct > -0.07:
+        exit_score = 32
+    elif realized_pnl_pct > -0.15:
+        exit_score = 20
+    else:
+        exit_score = 10
+
+    # --- Timing Grade (A-F): signal-to-entry delay ---
+    timing_grade = 'B'  # Default to B if no signal timestamp
     generated_at = signal_details.get('generated_at') or signal_details.get('timestamp')
-    if generated_at and entry.get('trade_date'):
+    days_delay = None
+    if generated_at and trade_date:
         try:
             if isinstance(generated_at, str):
                 signal_date = datetime.fromisoformat(generated_at.replace('Z', '+00:00')).date()
             else:
-                signal_date = generated_at
-            trade_d = entry['trade_date'] if isinstance(entry['trade_date'], date) else datetime.fromisoformat(str(entry['trade_date'])).date()
-            days_delay = (trade_d - signal_date).days
-            grades = {0: 'A', 1: 'B', 2: 'C', 3: 'D'}
-            timing_grade = grades.get(days_delay, 'F') if days_delay >= 0 else 'A'
+                signal_date = generated_at.date() if hasattr(generated_at, 'date') else generated_at
+            trade_d = trade_date if isinstance(trade_date, date) else datetime.fromisoformat(str(trade_date)).date()
+            days_delay = abs((trade_d - signal_date).days)
+            grades = {0: 'A', 1: 'A', 2: 'B', 3: 'B', 4: 'C', 5: 'C', 6: 'D', 7: 'D'}
+            timing_grade = grades.get(days_delay, 'F') if days_delay <= 14 else 'F'
         except Exception:
-            timing_grade = 'C'
+            pass
 
-    # Suggestions
+    # --- Suggestions ---
     suggestions = []
-    realized_pnl_pct = entry.get('realized_pnl_pct') or 0
-    if isinstance(realized_pnl_pct, str):
-        realized_pnl_pct = float(realized_pnl_pct)
 
-    if realized_pnl_pct < -0.07:
+    if realized_pnl_pct < -0.40:
+        suggestions.append("Large loss — review position sizing and stop-loss discipline")
+    elif realized_pnl_pct < -0.07:
         suggestions.append("Consider a tighter stop-loss to limit downside")
-    if timing_grade in ('C', 'D', 'F'):
-        suggestions.append("Act faster on signals \u2014 same-day entry captures more of the move")
-    if entry_score < 60:
-        suggestions.append("Wait for price to return closer to the break level before entering")
+
+    if timing_grade in ('D', 'F'):
+        suggestions.append("Act faster on signals — same-day entry captures more of the move")
+
+    if entry_score < 55 and break_price:
+        suggestions.append(f"Entry was far from break price (${float(break_price):.2f}) — wait for better entry")
+
     if exit_score >= 85:
-        suggestions.append("Excellent exit timing \u2014 continue this approach")
-    if realized_pnl_pct > 0.10:
-        suggestions.append("Strong winner \u2014 consider scaling into similar setups")
+        suggestions.append("Excellent exit timing — continue this approach")
+
+    if realized_pnl_pct > 0.50:
+        suggestions.append("Outstanding winner — document what made this setup work")
+    elif realized_pnl_pct > 0.10:
+        suggestions.append("Strong winner — consider scaling into similar setups")
+
+    signal_src = entry.get('signal_source', '')
+    if 'theta_decay' in signal_src:
+        suggestions.append("Theta decay exit — consider shorter DTE or more OTM strikes")
+    if 'reversal' in signal_src:
+        suggestions.append("Reversal exit — the trend broke against you; review entry thesis")
+    if 'take_profit' in signal_src:
+        suggestions.append("Profit taken on volume decline — good discipline on exits")
+    if 'trim' in signal_src:
+        suggestions.append("Position trimmed — multi-timeframe confirmation held the core position")
+
     if not suggestions:
         suggestions.append("Solid trade execution overall")
 
