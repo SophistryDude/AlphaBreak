@@ -200,6 +200,25 @@ def ai_score(entry_id):
 # Auto-Import (Free)
 # ──────────────────────────────────────────────────────────────
 
+@journal_bp.route('/journal/score-all', methods=['POST'])
+@log_request
+@require_jwt
+def score_all():
+    """Generate AI scores for all unscored journal entries."""
+    user = _get_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    from app.services.journal_service import list_entries, compute_ai_score
+    result = list_entries(db_manager, user['id'], page=1, per_page=200)
+    scored = 0
+    for entry in result.get('entries', []):
+        compute_ai_score(db_manager, user['id'], entry['id'])
+        scored += 1
+
+    return jsonify({'success': True, 'scored': scored})
+
+
 @journal_bp.route('/journal/import-trades', methods=['POST'])
 @log_request
 @require_jwt

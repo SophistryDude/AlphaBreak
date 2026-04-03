@@ -308,6 +308,17 @@ const Journal = {
         await apiRequest(`/api/journal/entries/${id}/share`, 'PUT', { is_public: isPublic });
     },
 
+    async scoreAll() {
+        try {
+            const res = await apiRequest('/api/journal/score-all', 'POST');
+            if (res.ok) {
+                const data = await res.json();
+                if (typeof showSnackbar === 'function') showSnackbar(`Scored ${data.scored} trades`, 'success');
+                this.loadEntries();
+            }
+        } catch (e) { /* ignore */ }
+    },
+
     async importTrades() {
         try {
             const res = await apiRequest('/api/journal/import-trades', 'POST');

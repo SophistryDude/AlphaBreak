@@ -369,40 +369,75 @@ def compute_ai_score(db_manager, user_id, entry_id):
         except Exception as e:
             logger.debug(f"Trend break lookup for AI score failed: {e}")
 
-    # --- Entry Score (0-100): how close to the break price ---
+    # Detect if this is an options trade (premium is much smaller than break price)
+    is_options = False
     if break_price and entry_price and float(break_price) > 0:
+        ratio = entry_price / float(break_price)
+        is_options = ratio < 0.15  # Option premiums are typically <15% of stock price
+
+    signal_src = entry.get('signal_source', '')
+
+    # --- Entry Score (0-100) ---
+    if is_options:
+        # For options: score based on premium efficiency and timing
+        # Good entry = low premium relative to stock price (more leverage)
+        premium_pct = entry_price / float(break_price)
+        if premium_pct <= 0.02:
+            entry_score = 92  # Very cheap premium = great entry
+        elif premium_pct <= 0.03:
+            entry_score = 85
+        elif premium_pct <= 0.05:
+            entry_score = 75
+        elif premium_pct <= 0.08:
+            entry_score = 60
+        else:
+            entry_score = 45  # Expensive premium
+    elif break_price and entry_price and float(break_price) > 0:
+        # For stocks: how close to break price
         pct_diff = abs(entry_price - float(break_price)) / float(break_price)
         entry_score = max(0, min(100, int(100 - pct_diff * 1500)))
     elif entry_price and exit_price:
-        # No break price — score based on whether entry was favorable vs exit
         entry_score = 65 if exit_price > entry_price else 35
     else:
         entry_score = 50
 
     # --- Exit Score (0-100): based on realized P&L quality ---
-    exit_score = 50
     realized_pnl_pct = float(entry.get('realized_pnl_pct') or 0)
 
-    if realized_pnl_pct > 0.50:
-        exit_score = 95
-    elif realized_pnl_pct > 0.20:
-        exit_score = 88
-    elif realized_pnl_pct > 0.10:
-        exit_score = 80
-    elif realized_pnl_pct > 0.05:
-        exit_score = 72
-    elif realized_pnl_pct > 0.02:
-        exit_score = 65
-    elif realized_pnl_pct > 0:
-        exit_score = 58
-    elif realized_pnl_pct > -0.03:
-        exit_score = 45
-    elif realized_pnl_pct > -0.07:
-        exit_score = 32
-    elif realized_pnl_pct > -0.15:
-        exit_score = 20
+    if is_options:
+        # Options have bigger swings — calibrate differently
+        if realized_pnl_pct > 1.00:
+            exit_score = 97  # 100%+ gain on options = exceptional
+        elif realized_pnl_pct > 0.50:
+            exit_score = 90
+        elif realized_pnl_pct > 0.20:
+            exit_score = 78
+        elif realized_pnl_pct > 0:
+            exit_score = 62
+        elif realized_pnl_pct > -0.20:
+            exit_score = 42
+        elif realized_pnl_pct > -0.40:
+            exit_score = 25
+        else:
+            exit_score = 12  # Hit or exceeded stop loss
     else:
-        exit_score = 10
+        # Stocks
+        if realized_pnl_pct > 0.15:
+            exit_score = 95
+        elif realized_pnl_pct > 0.10:
+            exit_score = 88
+        elif realized_pnl_pct > 0.05:
+            exit_score = 78
+        elif realized_pnl_pct > 0.02:
+            exit_score = 68
+        elif realized_pnl_pct > 0:
+            exit_score = 58
+        elif realized_pnl_pct > -0.03:
+            exit_score = 42
+        elif realized_pnl_pct > -0.07:
+            exit_score = 28
+        else:
+            exit_score = 12
 
     # --- Timing Grade (A-F): signal-to-entry delay ---
     timing_grade = 'B'  # Default to B if no signal timestamp
