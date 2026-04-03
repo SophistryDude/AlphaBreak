@@ -978,6 +978,85 @@ Portfolio Status:
     logger.info(summary)
 
 
+def send_notifications(**context):
+    """Send email/in-app notifications for all portfolio events from this run."""
+    import psycopg2
+
+    ti = context['ti']
+    executed_trades = ti.xcom_pull(key='executed_trades', task_ids='process_signals') or []
+    stop_loss_sales = ti.xcom_pull(key='stop_loss_sales', task_ids='check_stop_losses') or []
+    long_term_actions = ti.xcom_pull(key='long_term_actions', task_ids='manage_long_term_positions') or {}
+    swing_actions = ti.xcom_pull(key='swing_actions', task_ids='manage_swing_positions') or {}
+    options_actions = ti.xcom_pull(key='options_actions', task_ids='manage_swing_options') or {}
+    snapshot = ti.xcom_pull(key='snapshot', task_ids='create_daily_snapshot') or {}
+    trend_signals = ti.xcom_pull(key='trend_signals', task_ids='fetch_trend_break_signals') or []
+
+    conn = get_db_connection()
+    total_sent = 0
+
+    try:
+        sys.path.insert(0, '/app/flask_app/app/services')
+        from notification_service import (
+            send_trade_signal_notifications, send_portfolio_event_notification,
+            send_earnings_warnings, send_daily_summary
+        )
+
+        # Trade signals
+        total_sent += send_trade_signal_notifications(conn, trend_signals)
+
+        # New positions
+        for trade in executed_trades:
+            send_portfolio_event_notification(conn, 'new_position', trade)
+            total_sent += 1
+
+        # Stop-loss sales
+        for sale in stop_loss_sales:
+            send_portfolio_event_notification(conn, 'stop_loss', sale)
+            total_sent += 1
+
+        # Long-term exits
+        for exit_info in long_term_actions.get('exits', []):
+            send_portfolio_event_notification(conn, 'take_profit', exit_info)
+            total_sent += 1
+
+        # Long-term trims
+        for trim_info in long_term_actions.get('trims', []):
+            send_portfolio_event_notification(conn, 'trim', trim_info)
+            total_sent += 1
+
+        # Options take-profit / reversal exits
+        for tp in options_actions.get('take_profit', []):
+            send_portfolio_event_notification(conn, 'take_profit', tp)
+            total_sent += 1
+        for rev in options_actions.get('reversal_exit', []):
+            send_portfolio_event_notification(conn, 'reversal_exit', rev)
+            total_sent += 1
+
+        # Swing rotation sells
+        for sell in swing_actions.get('sells', []):
+            send_portfolio_event_notification(conn, 'stop_loss', sell)
+            total_sent += 1
+
+        # Earnings warnings
+        total_sent += send_earnings_warnings(conn)
+
+        # Daily summary
+        if snapshot:
+            send_daily_summary(conn, snapshot)
+            total_sent += 1
+
+        logger.info(f"Sent {total_sent} notifications")
+
+    except Exception as e:
+        logger.error(f"Notification sending failed: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        conn.close()
+
+    return total_sent
+
+
 # Define tasks
 check_market = ShortCircuitOperator(
     task_id='check_market_day',
@@ -1056,6 +1135,13 @@ snapshot = PythonOperator(
     dag=dag,
 )
 
+notify = PythonOperator(
+    task_id='send_notifications',
+    python_callable=send_notifications,
+    provide_context=True,
+    dag=dag,
+)
+
 summary = PythonOperator(
     task_id='log_summary',
     python_callable=log_summary,
@@ -1073,4 +1159,4 @@ summary = PythonOperator(
 check_market >> [fetch_trend_signals, fetch_13f]
 [fetch_trend_signals, fetch_13f] >> fetch_prices
 fetch_prices >> create_signals >> [process, manage_long_term, manage_swing, manage_options]
-[process, manage_long_term, manage_swing, manage_options] >> stop_losses >> snapshot >> summary
+[process, manage_long_term, manage_swing, manage_options] >> stop_losses >> snapshot >> notify >> summary

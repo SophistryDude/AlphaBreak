@@ -240,6 +240,40 @@ def check_all_stop_losses(**context):
     return stop_loss_sales
 
 
+def send_monitor_notifications(**context):
+    """Send notifications for options exits detected by monitor."""
+    import psycopg2
+
+    ti = context['ti']
+    options_actions = ti.xcom_pull(key='options_actions', task_ids='evaluate_options') or {}
+
+    conn = get_db_connection()
+    total_sent = 0
+
+    try:
+        sys.path.insert(0, '/app/flask_app/app/services')
+        from notification_service import send_portfolio_event_notification
+
+        for tp in options_actions.get('take_profit', []):
+            send_portfolio_event_notification(conn, 'take_profit', tp)
+            total_sent += 1
+        for rev in options_actions.get('reversal_exit', []):
+            send_portfolio_event_notification(conn, 'reversal_exit', rev)
+            total_sent += 1
+        for sl in options_actions.get('stop_loss', []):
+            send_portfolio_event_notification(conn, 'stop_loss', sl)
+            total_sent += 1
+
+        if total_sent:
+            logger.info(f"[MONITOR] Sent {total_sent} notifications")
+    except Exception as e:
+        logger.error(f"Monitor notification error: {e}")
+    finally:
+        conn.close()
+
+    return total_sent
+
+
 def log_monitor_summary(**context):
     """Log a brief summary of the monitoring run."""
     ti = context['ti']
@@ -284,6 +318,13 @@ stop_losses = PythonOperator(
     dag=dag,
 )
 
+notify = PythonOperator(
+    task_id='send_monitor_notifications',
+    python_callable=send_monitor_notifications,
+    provide_context=True,
+    dag=dag,
+)
+
 monitor_summary = PythonOperator(
     task_id='log_monitor_summary',
     python_callable=log_monitor_summary,
@@ -291,5 +332,5 @@ monitor_summary = PythonOperator(
     dag=dag,
 )
 
-# Flow: check_hours -> fetch_prices -> evaluate -> stop_losses -> summary
-check_hours >> fetch_prices >> evaluate >> stop_losses >> monitor_summary
+# Flow: check_hours -> fetch_prices -> evaluate -> stop_losses -> notify -> summary
+check_hours >> fetch_prices >> evaluate >> stop_losses >> notify >> monitor_summary

@@ -57,6 +57,11 @@ class Config:
     # Forex data source: 'yfinance', 'fred', 'database'
     FOREX_DATA_SOURCE = os.environ.get('FOREX_DATA_SOURCE', 'yfinance')
 
+    # Notifications (AWS SES)
+    SES_FROM_EMAIL = os.environ.get('SES_FROM_EMAIL', 'noreply@alphabreak.vip')
+    SES_REGION = os.environ.get('AWS_SES_REGION', 'us-east-1')
+    NOTIFICATIONS_ENABLED = os.environ.get('NOTIFICATIONS_ENABLED', 'true').lower() == 'true'
+
 
 class DevelopmentConfig(Config):
     """Development configuration"""

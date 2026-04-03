@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof Auth !== 'undefined') {
         Auth.init();
     }
+    // Initialize notifications (after auth)
+    if (typeof Notifications !== 'undefined') {
+        Notifications.init();
+    }
     initializeSidebar();
     initializeForms();
     checkApiHealth();

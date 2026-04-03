@@ -79,15 +79,15 @@ const Portfolio = {
 
         // Long-term holdings
         this.setText('portfolioLongTermValue', this.formatCurrency(portfolio.long_term_value || 0));
-        this.setText('portfolioLongTermPct', `${((portfolio.long_term_pct || 0) * 100).toFixed(1)}% (Target: 75%)`);
+        this.setText('portfolioLongTermPct', `${((portfolio.long_term_pct || 0) * 100).toFixed(1)}% (Target: 50%)`);
 
         // Swing positions
         this.setText('portfolioSwingValue', this.formatCurrency(portfolio.swing_value || 0));
-        this.setText('portfolioSwingPct', `${((portfolio.swing_pct || 0) * 100).toFixed(1)}% (Target: 25%)`);
+        this.setText('portfolioSwingPct', `${((portfolio.swing_pct || 0) * 100).toFixed(1)}% (Target: 30%)`);
     },
 
     async renderPerformanceChart() {
-        const days = parseInt(document.getElementById('portfolioChartRange')?.value || 30);
+        const days = parseInt(document.getElementById('portfolioChartRange')?.value || 90);
 
         try {
             const response = await apiRequest(`/api/portfolio/performance?days=${days}`);
