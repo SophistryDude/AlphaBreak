@@ -6402,6 +6402,68 @@ a.auth-user-name:hover {
 }
 
 /* ============================================================
+   MODAL OVERLAY (shared by journal, notifications, etc)
+   ============================================================ */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.modal-content {
+    background: var(--bg-card, #1e1e2f);
+    border: 1px solid var(--border-color, #2a2a4a);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color, #2a2a4a);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-primary, #e0e0e0);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted, #888);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--text-primary, #e0e0e0);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+/* ============================================================
    TRADE JOURNAL
    ============================================================ */
 

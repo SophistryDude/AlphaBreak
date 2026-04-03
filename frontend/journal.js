@@ -83,11 +83,7 @@ const Journal = {
         if (!list) return;
 
         if (!this.entries.length) {
-            list.innerHTML = `<div class="empty-state">
-                <p>No journal entries yet.</p>
-                <button class="btn btn-primary" onclick="Journal.importTrades()">Import Trades</button>
-                <button class="btn btn-ghost" onclick="Journal.showNewEntryModal()">New Entry</button>
-            </div>`;
+            list.innerHTML = '<p class="empty-state">No journal entries yet. Use the buttons above to import trades or create a new entry.</p>';
             return;
         }
 
