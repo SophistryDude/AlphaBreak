@@ -102,6 +102,7 @@
                     </button>
                 </div>
 
+                <div id="sentimentCollapsible">
                 <!-- Description Box -->
                 <div class="widget-description info" id="widgetMarketSentiment-description">
                     <div class="description-icon">
@@ -116,8 +117,6 @@
                     </div>
                     <button class="description-close" data-widget-id="widgetMarketSentiment" title="Close this tip">&times;</button>
                 </div>
-
-                <div id="sentimentCollapsible">
                     <div class="widget-body market-sentiment-body">
                         <div class="market-sentiment-hero">
                             <div class="sentiment-display" id="marketSentimentDisplay">
@@ -149,6 +148,7 @@
                     <div class="widget-card" id="widgetSectorSentiment">
                         <div class="widget-header">
                             <h3 class="widget-title">Sector Sentiment</h3>
+                            <div class="header-spacer"></div>
                             <div class="timeframe-selector" id="sectorTimeframeSelector">
                                 <label class="timeframe-option">
                                     <input type="radio" name="sectorTimeframe" value="hourly">
@@ -166,31 +166,33 @@
                             <select id="sectorSelector" class="sector-select">
                                 <option value="all">All Sectors</option>
                             </select>
+                            <button class="widget-collapse-btn" data-target="sectorCollapsible" title="Collapse/Expand">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
                         </div>
-
-                        <!-- Description Box -->
-                        <div class="widget-description info" id="widgetSectorSentiment-description">
-                            <div class="description-icon">
-                                <svg class="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                </svg>
+                        <div class="widget-collapsible" id="sectorCollapsible">
+                            <div class="widget-description info" id="widgetSectorSentiment-description">
+                                <div class="description-icon">
+                                    <svg class="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                </div>
+                                <div class="description-content">
+                                    <strong>Sector Rotation Analysis:</strong> Track sentiment across all 11 market sectors to identify rotation trends. <strong>Green sectors</strong> show bullish momentum, <strong>red sectors</strong> are bearish. Use the timeframe selector to switch between hourly, daily, and weekly views. Click on "All Sectors" dropdown to focus on a specific sector's chart and see detailed performance over time.
+                                </div>
+                                <button class="description-close" data-widget-id="widgetSectorSentiment" title="Close this tip">&times;</button>
                             </div>
-                            <div class="description-content">
-                                <strong>Sector Rotation Analysis:</strong> Track sentiment across all 11 market sectors to identify rotation trends. <strong>Green sectors</strong> show bullish momentum, <strong>red sectors</strong> are bearish. Use the timeframe selector to switch between hourly, daily, and weekly views. Click on "All Sectors" dropdown to focus on a specific sector's chart and see detailed performance over time.
+                            <div class="widget-body">
+                                <div class="sector-grid" id="sectorGrid"></div>
+                                <div class="sector-chart-wrapper" id="sectorChartContainer" style="display:none;">
+                                    <canvas id="sectorChart"></canvas>
+                                </div>
                             </div>
-                            <button class="description-close" data-widget-id="widgetSectorSentiment" title="Close this tip">&times;</button>
-                        </div>
-
-                        <div class="widget-body">
-                            <div class="sector-grid" id="sectorGrid"></div>
-                            <div class="sector-chart-wrapper" id="sectorChartContainer" style="display:none;">
-                                <canvas id="sectorChart"></canvas>
+                            <div class="widget-footer">
+                                <span class="widget-updated" id="sectorSentimentUpdated"></span>
                             </div>
-                        </div>
-                        <div class="widget-footer">
-                            <span class="widget-updated" id="sectorSentimentUpdated"></span>
                         </div>
                     </div>
 
@@ -198,47 +200,50 @@
                     <div class="widget-card" id="widgetIndexSentiment">
                         <div class="widget-header">
                             <h3 class="widget-title">VIX &amp; Index Sentiment</h3>
+                            <div class="header-spacer"></div>
+                            <button class="widget-collapse-btn" data-target="indexCollapsible" title="Collapse/Expand">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
                         </div>
-
-                        <!-- Description Box -->
-                        <div class="widget-description tip" id="widgetIndexSentiment-description">
-                            <div class="description-icon">
-                                <svg class="icon-tip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path>
-                                </svg>
+                        <div class="widget-collapsible" id="indexCollapsible">
+                            <div class="widget-description tip" id="widgetIndexSentiment-description">
+                                <div class="description-icon">
+                                    <svg class="icon-tip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                                        <path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                                    </svg>
+                                </div>
+                                <div class="description-content">
+                                    <strong>VIX & Market Fear Gauge:</strong> The VIX measures expected market volatility. <strong>VIX below 15</strong> indicates calm markets (bullish), <strong>15-25</strong> is normal, <strong>above 25</strong> signals fear and uncertainty (bearish). The index sentiment cards show SPY, QQQ, and DIA momentum. Inverse ETFs (SQQQ, SPXU, SDOW) move opposite to indices - use them to confirm bearish trends or as hedge indicators.
+                                </div>
+                                <button class="description-close" data-widget-id="widgetIndexSentiment" title="Close this tip">&times;</button>
                             </div>
-                            <div class="description-content">
-                                <strong>VIX & Market Fear Gauge:</strong> The VIX measures expected market volatility. <strong>VIX below 15</strong> indicates calm markets (bullish), <strong>15-25</strong> is normal, <strong>above 25</strong> signals fear and uncertainty (bearish). The index sentiment cards show SPY, QQQ, and DIA momentum. Inverse ETFs (SQQQ, SPXU, SDOW) move opposite to indices - use them to confirm bearish trends or as hedge indicators.
-                            </div>
-                            <button class="description-close" data-widget-id="widgetIndexSentiment" title="Close this tip">&times;</button>
-                        </div>
-
-                        <div class="widget-body">
-                            <div class="vix-display-new" id="vixDisplay">
-                                <div class="vix-main-row">
-                                    <div class="vix-info">
-                                        <div class="vix-market-type" id="vixFearLabel">Loading...</div>
-                                        <div class="vix-number-row">
-                                            <span class="vix-label">VIX:</span>
-                                            <span class="vix-value-small" id="vixValue">--</span>
+                            <div class="widget-body">
+                                <div class="vix-display-new" id="vixDisplay">
+                                    <div class="vix-main-row">
+                                        <div class="vix-info">
+                                            <div class="vix-market-type" id="vixFearLabel">Loading...</div>
+                                            <div class="vix-number-row">
+                                                <span class="vix-label">VIX:</span>
+                                                <span class="vix-value-small" id="vixValue">--</span>
+                                            </div>
+                                        </div>
+                                        <div class="vix-chart-container">
+                                            <canvas id="vixSparkline" width="100" height="40"></canvas>
                                         </div>
                                     </div>
-                                    <div class="vix-chart-container">
-                                        <canvas id="vixSparkline" width="100" height="40"></canvas>
-                                    </div>
+                                    <div class="vix-description" id="vixDescription"></div>
                                 </div>
-                                <div class="vix-description" id="vixDescription"></div>
+                                <div class="index-sentiment-grid" id="indexSentimentGrid"></div>
+                                <div class="inverse-etf-section" id="inverseEtfSection">
+                                    <h4>Inverse ETF Signal</h4>
+                                    <div class="inverse-etf-sentiment" id="inverseEtfSentiment"></div>
+                                    <p class="widget-blurb">Inverse ETFs (SQQQ, SPXU, SDOW) move opposite to their benchmark indices. When these show bullish signals while indices show bearish, it confirms downward momentum. Use as a hedge indicator or to validate trend reversals.</p>
+                                </div>
                             </div>
-                            <div class="index-sentiment-grid" id="indexSentimentGrid"></div>
-                            <div class="inverse-etf-section" id="inverseEtfSection">
-                                <h4>Inverse ETF Signal</h4>
-                                <div class="inverse-etf-sentiment" id="inverseEtfSentiment"></div>
-                                <p class="widget-blurb">Inverse ETFs (SQQQ, SPXU, SDOW) move opposite to their benchmark indices. When these show bullish signals while indices show bearish, it confirms downward momentum. Use as a hedge indicator or to validate trend reversals.</p>
+                            <div class="widget-footer">
+                                <span class="widget-updated" id="indexSentimentUpdated"></span>
                             </div>
-                        </div>
-                        <div class="widget-footer">
-                            <span class="widget-updated" id="indexSentimentUpdated"></span>
                         </div>
                     </div>
 
@@ -247,36 +252,39 @@
                         <div class="widget-header">
                             <h3 class="widget-title">Commodities &amp; Crypto</h3>
                             <p class="widget-header-blurb">Commodities typically move inverse to USD strength. When DXY rises, gold/silver often fall as they're priced in dollars. Crypto correlates loosely with risk-on sentiment.</p>
+                            <div class="header-spacer"></div>
                             <div class="asset-tabs" id="assetTabs">
                                 <button class="asset-tab active" data-asset="GC=F">Gold</button>
                                 <button class="asset-tab" data-asset="SI=F">Silver</button>
                                 <button class="asset-tab" data-asset="ETH-USD">ETH</button>
                                 <button class="asset-tab" data-asset="BTC-USD">BTC</button>
                             </div>
+                            <button class="widget-collapse-btn" data-target="commodityCollapsible" title="Collapse/Expand">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
                         </div>
-
-                        <!-- Description Box -->
-                        <div class="widget-description tip" id="widgetCommoditiesCrypto-description">
-                            <div class="description-icon">
-                                <svg class="icon-tip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path>
-                                </svg>
+                        <div class="widget-collapsible" id="commodityCollapsible">
+                            <div class="widget-description tip" id="widgetCommoditiesCrypto-description">
+                                <div class="description-icon">
+                                    <svg class="icon-tip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                                        <path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                                    </svg>
+                                </div>
+                                <div class="description-content">
+                                    <strong>Commodities & Crypto Correlation:</strong> Gold and silver typically move <strong>inverse to the US Dollar</strong> - when DXY (Dollar Index) rises, precious metals often fall since they're priced in dollars. Click tabs to switch between Gold (GC=F), Silver (SI=F), Ethereum, and Bitcoin. Crypto often correlates with risk-on sentiment - rising when stocks rally, falling during fear.
+                                </div>
+                                <button class="description-close" data-widget-id="widgetCommoditiesCrypto" title="Close this tip">&times;</button>
                             </div>
-                            <div class="description-content">
-                                <strong>Commodities & Crypto Correlation:</strong> Gold and silver typically move <strong>inverse to the US Dollar</strong> - when DXY (Dollar Index) rises, precious metals often fall since they're priced in dollars. Click tabs to switch between Gold (GC=F), Silver (SI=F), Ethereum, and Bitcoin. Crypto often correlates with risk-on sentiment - rising when stocks rally, falling during fear.
+                            <div class="widget-body">
+                                <div class="asset-summary-grid" id="assetSummaryGrid"></div>
+                                <div class="widget-chart-container widget-chart-large">
+                                    <canvas id="commodityCryptoChart"></canvas>
+                                </div>
                             </div>
-                            <button class="description-close" data-widget-id="widgetCommoditiesCrypto" title="Close this tip">&times;</button>
-                        </div>
-
-                        <div class="widget-body">
-                            <div class="asset-summary-grid" id="assetSummaryGrid"></div>
-                            <div class="widget-chart-container widget-chart-large">
-                                <canvas id="commodityCryptoChart"></canvas>
+                            <div class="widget-footer">
+                                <span class="widget-updated" id="commodityCryptoUpdated"></span>
                             </div>
-                        </div>
-                        <div class="widget-footer">
-                            <span class="widget-updated" id="commodityCryptoUpdated"></span>
                         </div>
                     </div>
                 </div>
@@ -284,12 +292,19 @@
 
             <!-- Reports Tab -->
             <div class="tab-content" id="reportsTab">
-                <div class="card">
+                <div class="widget-card" id="reportsWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Trend Break Reports</h3>
+                        <span class="widget-subtitle">80%+ probability trend breaks with indicators and options data</span>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="reportsWidgetBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="reportsWidgetBody">
                     <!-- Reports Header Row -->
                     <div class="report-header-row">
                         <div class="report-header-left">
-                            <h2>Trend Break Reports</h2>
-                            <p class="description">80%+ probability trend breaks with indicators and options data</p>
 
                             <!-- Description Box -->
                             <div class="widget-description info" id="reportsTab-description">
@@ -365,14 +380,22 @@
                             </tbody>
                         </table>
                     </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Trend Break Tab -->
             <div class="tab-content" id="trendTab">
-                <div class="card">
-                    <h2>Predict Trend Breaks</h2>
-                    <p class="description">Get AI-powered predictions for potential trend breaks in stock prices.</p>
+                <div class="widget-card" id="trendWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Predict Trend Breaks</h3>
+                        <span class="widget-subtitle">Get AI-powered predictions for potential trend breaks in stock prices.</span>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="trendWidgetBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="trendWidgetBody">
 
                     <!-- Description Box -->
                     <div class="widget-description info" id="trendTab-description">
@@ -469,14 +492,22 @@
                             </div>
                         </div>
                     </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Options Analysis Tab -->
             <div class="tab-content" id="optionsTab">
-                <div class="card">
-                    <h2>Options Analysis</h2>
-                    <p class="description">Analyze options trading opportunities with fair value pricing and Greeks.</p>
+                <div class="widget-card" id="optionsWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Options Analysis</h3>
+                        <span class="widget-subtitle">Analyze options trading opportunities with fair value pricing and Greeks.</span>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="optionsWidgetBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="optionsWidgetBody">
 
                     <!-- Description Box -->
                     <div class="widget-description tip" id="optionsTab-description">
@@ -598,6 +629,7 @@
                             </div>
                         </div>
                     </div>
+                    </div>
                 </div>
             </div>
 
@@ -678,8 +710,8 @@
                                         <button data-period="1d" data-interval="5m">1D</button>
                                         <button data-period="5d" data-interval="15m">5D</button>
                                         <button data-period="1mo" data-interval="1d">1M</button>
-                                        <button data-period="3mo" data-interval="1d" class="active">3M</button>
-                                        <button data-period="6mo" data-interval="1d">6M</button>
+                                        <button data-period="3mo" data-interval="1d">3M</button>
+                                        <button data-period="6mo" data-interval="1d" class="active">6M</button>
                                         <button data-period="1y" data-interval="1d">1Y</button>
                                         <button data-period="5y" data-interval="1wk">5Y</button>
                                     </div>
@@ -739,9 +771,16 @@
 
             <!-- Quarterly Earnings Tab -->
             <div class="tab-content" id="earningsTab">
-                <div class="card">
-                    <h2>Quarterly Earnings Calendar</h2>
-                    <p class="description">Upcoming earnings for top 100 stocks by volume. Add custom tickers to track alongside.</p>
+                <div class="widget-card" id="earningsWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Quarterly Earnings Calendar</h3>
+                        <span class="widget-subtitle">Upcoming earnings for top 100 stocks by volume.</span>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="earningsWidgetBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="earningsWidgetBody">
 
                     <!-- Description Box -->
                     <div class="widget-description tip" id="earningsTab-description">
@@ -789,13 +828,21 @@
                     </div>
 
                 </div>
+                </div>
             </div>
 
             <!-- Trade Execution Tab (Proof of Concept) -->
             <div class="tab-content" id="tradingTab">
-                <div class="card">
-                    <h2>Trade Execution</h2>
-                    <p class="description">Brokerage integration proof of concept. Connect to supported brokerages to execute trades directly from this platform.</p>
+                <div class="widget-card" id="tradingWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Trade Execution</h3>
+                        <span class="widget-subtitle">Brokerage integration proof of concept.</span>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="tradingWidgetBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="tradingWidgetBody">
 
                     <!-- Connection Status Banner -->
                     <div class="trading-status-banner" id="tradingStatusBanner">
@@ -1029,13 +1076,21 @@
                         </div>
                     </div>
                 </div>
+                </div>
             </div>
 
             <!-- Portfolio Tracker Tab -->
             <div class="tab-content" id="portfolioTab">
-                <div class="card">
-                    <h2>Theoretical Portfolio Tracker</h2>
-                    <p class="description">Paper trading portfolio to validate prediction model effectiveness. Starting balance: $100,000 USD.</p>
+                <div class="widget-card" id="portfolioWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Theoretical Portfolio Tracker</h3>
+                        <span class="widget-subtitle">Paper trading portfolio to validate prediction model effectiveness.</span>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="portfolioWidgetBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="portfolioWidgetBody">
 
                     <!-- Portfolio Overview Cards -->
                     <div class="portfolio-overview">
@@ -1231,14 +1286,22 @@
                             </table>
                         </div>
                     </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Long Term Trading Tab -->
             <div class="tab-content" id="longtermTab">
-                <div class="card">
-                    <h2>Long Term Trading</h2>
-                    <p class="description">Institutional holdings from 13F filings, benchmark comparisons, and dividend tracking. Select a stock to see detailed analysis.</p>
+                <div class="widget-card" id="longtermWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Long Term Trading</h3>
+                        <span class="widget-subtitle">Institutional holdings from 13F filings, benchmark comparisons, and dividend tracking.</span>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="longtermWidgetBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="longtermWidgetBody">
 
                     <!-- Ticker Selection -->
                     <div class="longterm-controls">
@@ -1333,26 +1396,40 @@
                         <div class="longterm-saved-grid" id="longtermSavedGrid"></div>
                     </div>
                 </div>
+                </div>
             </div>
 
             <!-- Indicator Guide Tab -->
             <div class="tab-content" id="indicatorsTab">
-                <div class="card">
-                    <h2>Indicator Guide</h2>
-                    <p class="description">Understanding technical indicators and what their signals mean for the market.</p>
-
-                    <!-- Indicator Cards Container -->
+                <div class="widget-card" id="indicatorsWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Indicator Guide</h3>
+                        <span class="widget-subtitle">Understanding technical indicators and what their signals mean for the market.</span>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="indicatorsWidgetBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="indicatorsWidgetBody">
                     <div class="indicator-guide-container" id="indicatorGuideContainer">
                         <p class="indicator-loading">Loading indicator data...</p>
+                    </div>
                     </div>
                 </div>
             </div>
 
             <!-- Forex Correlations Tab -->
             <div class="tab-content" id="forexTab">
-                <div class="card">
-                    <h2 class="centered-title">Forex Analysis</h2>
-                    <p class="description centered-description">Currency pair correlations and trend break analysis. Identifies patterns between forex pairs to inform equity positioning.</p>
+                <div class="widget-card" id="forexWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Forex Analysis</h3>
+                        <span class="widget-subtitle">Currency pair correlations and trend break analysis.</span>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="forexWidgetBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="forexWidgetBody">
 
                     <!-- Description Box -->
                     <div class="widget-description info" id="forexTab-description">
@@ -1648,14 +1725,22 @@
                             </div>
                         </div>
                     </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Performance Stats Tab -->
             <div class="tab-content" id="statsTab">
-                <div class="card">
-                    <h2>Model Performance Statistics</h2>
-                    <p class="description">View historical accuracy and performance metrics.</p>
+                <div class="widget-card" id="statsWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Model Performance Statistics</h3>
+                        <span class="widget-subtitle">View historical accuracy and performance metrics.</span>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="statsWidgetBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="statsWidgetBody">
 
                     <form id="statsForm" class="prediction-form">
                         <div class="form-row">
@@ -1728,6 +1813,7 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>

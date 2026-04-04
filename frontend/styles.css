@@ -209,6 +209,7 @@ body {
     padding: 16px 0;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 16px;
+    position: relative;
 }
 
 .header-left {
@@ -224,13 +225,12 @@ body {
 }
 
 .current-page-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    padding: 6px 14px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 /* AlphaBreak Logo Styling */
@@ -1091,7 +1091,7 @@ select option {
    ═══════════════════════════════════════════════════════════════ */
 
 .widget-market-hero {
-    min-height: 320px;
+    min-height: auto;
 }
 
 .market-sentiment-body {
@@ -6690,16 +6690,56 @@ a.auth-user-name:hover {
 }
 
 /* Header spacer (flex grow between title+badge and timeframe) */
-.header-spacer { flex: 1; }
+.header-spacer { flex: 1; min-width: 20px; }
+
+/* Override widget-header for market sentiment to prevent wrapping */
+#widgetMarketSentiment > .widget-header {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow: hidden;
+}
+
+/* Collapse: class-based hide — works for all collapsible sections */
+.hidden {
+    display: none !important;
+}
+
+/* Generic widget collapse button (same style as sentiment) */
+.widget-collapse-btn {
+    background: var(--bg-elevated); border: 1px solid var(--border-color);
+    cursor: pointer; color: var(--text-secondary);
+    padding: 6px 8px; border-radius: 4px; display: flex; align-items: center;
+    transition: color 0.2s, background 0.2s; flex-shrink: 0;
+}
+.widget-collapse-btn:hover { color: var(--text-primary); background: var(--bg-surface-hover); }
+.widget-collapse-btn.collapsed svg { transform: rotate(-90deg); }
+.widget-collapse-btn svg { transition: transform 0.2s; }
+
+/* Widget subtitle (replaces old p.description inside cards) */
+.widget-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 400px;
+}
+@media (max-width: 768px) {
+    .widget-subtitle { display: none; }
+}
 
 /* Sentiment collapse button */
 .sentiment-collapse-btn {
-    background: none; border: none; cursor: pointer; color: var(--text-muted);
-    padding: 4px; border-radius: 4px; display: flex; align-items: center;
-    transition: transform 0.2s, color 0.2s; margin-left: 8px;
+    background: var(--bg-elevated); border: 1px solid var(--border-color);
+    cursor: pointer; color: var(--text-secondary);
+    padding: 6px 8px; border-radius: 4px; display: flex; align-items: center;
+    transition: transform 0.2s, color 0.2s, background 0.2s;
+    margin-left: auto; flex-shrink: 0;
 }
-.sentiment-collapse-btn:hover { color: var(--text-primary); }
-.sentiment-collapse-btn.collapsed { transform: rotate(-90deg); }
+.sentiment-collapse-btn:hover { color: var(--text-primary); background: var(--bg-surface-hover); }
+.sentiment-collapse-btn.collapsed svg { transform: rotate(-90deg); }
+.sentiment-collapse-btn svg { transition: transform 0.2s; }
 
 /* Danger button */
 .btn-danger {

@@ -47,27 +47,43 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeForms();
     checkApiHealth();
     setDefaultDates();
-    initSentimentCollapse();
+    initWidgetCollapse();
 });
 
-// Sentiment widget collapse
-function initSentimentCollapse() {
-    const btn = document.getElementById('sentimentCollapseBtn');
-    const body = document.getElementById('sentimentCollapsible');
+// Widget collapse — works for all widgets with collapse buttons
+function initWidgetCollapse() {
+    // Market Sentiment (special ID)
+    _initCollapse('sentimentCollapseBtn', 'sentimentCollapsible', 'sentimentCollapsed');
+
+    // All generic widget collapse buttons
+    document.querySelectorAll('.widget-collapse-btn').forEach(btn => {
+        const targetId = btn.dataset.target;
+        if (!targetId) return;
+        _initCollapse(btn, targetId, 'widgetCollapsed_' + targetId);
+    });
+}
+
+function _initCollapse(btnOrId, bodyId, storageKey) {
+    const btn = typeof btnOrId === 'string' ? document.getElementById(btnOrId) : btnOrId;
+    const body = document.getElementById(bodyId);
     if (!btn || !body) return;
 
-    // Restore saved state
-    const collapsed = localStorage.getItem('sentimentCollapsed') === 'true';
-    if (collapsed) {
-        body.style.display = 'none';
-        btn.classList.add('collapsed');
+    function setCollapsed(collapsed) {
+        if (collapsed) {
+            body.classList.add('hidden');
+            btn.classList.add('collapsed');
+        } else {
+            body.classList.remove('hidden');
+            btn.classList.remove('collapsed');
+        }
+        localStorage.setItem(storageKey, String(collapsed));
     }
 
+    const saved = localStorage.getItem(storageKey) === 'true';
+    setCollapsed(saved);
+
     btn.addEventListener('click', () => {
-        const isCollapsed = body.style.display === 'none';
-        body.style.display = isCollapsed ? '' : 'none';
-        btn.classList.toggle('collapsed', !isCollapsed);
-        localStorage.setItem('sentimentCollapsed', !isCollapsed);
+        setCollapsed(!body.classList.contains('hidden'));
     });
 }
 
