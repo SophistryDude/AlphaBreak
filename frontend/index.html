@@ -28,8 +28,8 @@
             </div>
             <nav class="sidebar-nav" id="sidebarNav">
                 <ul class="sidebar-menu">
-                    <li><a href="#" class="sidebar-link active" data-tab="sentiment">Sentiment Analysis</a></li>
-                    <li><a href="#" class="sidebar-link sidebar-title" data-tab="watchlist">Analyze</a></li>
+                    <li><a href="#" class="sidebar-link sidebar-title active" data-tab="watchlist">Security Analysis</a></li>
+                    <li><a href="#" class="sidebar-link" data-tab="sentiment">Sentiment Analysis</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="earnings">Quarterly Earnings</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="reports">Trend Break Reports</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="options">Options Analysis</a></li>
@@ -55,7 +55,7 @@
                     </div>
                 </div>
                 <div class="header-right">
-                    <span class="current-page-title" id="currentPageTitle">Sentiment Analysis</span>
+                    <span class="current-page-title" id="currentPageTitle">Security Analysis</span>
                     <!-- API status moved to footer -->
                     <!-- Auth buttons (when not logged in) -->
                     <div class="auth-actions" id="authActions">
@@ -141,8 +141,8 @@
 
         <!-- Main Content Area -->
         <main class="main-content">
-            <!-- Sentiment Analysis Tab (Default) -->
-            <div class="tab-content active" id="sentimentTab">
+            <!-- Sentiment Analysis Tab -->
+            <div class="tab-content" id="sentimentTab">
                 <div class="dashboard-grid">
                     <!-- Sector Sentiment -->
                     <div class="widget-card" id="widgetSectorSentiment">
@@ -634,14 +634,14 @@
             </div>
 
             <!-- Analyze Tab -->
-            <div class="tab-content" id="watchlistTab">
+            <div class="tab-content active" id="watchlistTab">
 
                 <!-- Search Bar -->
                 <div class="analyze-search-container">
                     <div class="analyze-search-wrapper">
                         <input type="text" id="analyzeTickerInput" class="analyze-search-input"
                             placeholder="Search ticker or company name (e.g., AAPL, Apple)"
-                            autocomplete="off">
+                            autocomplete="nope" name="ticker-search" data-form-type="other">
                         <button id="analyzeSearchBtn" class="btn btn-primary">Analyze</button>
                     </div>
                     <div id="analyzeAutocomplete" class="analyze-autocomplete"></div>
@@ -697,6 +697,21 @@
                         <div class="analyze-quick-stats" id="analyzeQuickStats"></div>
                     </div>
 
+                    <!-- AI Analysis Brief -->
+                    <div class="card analyze-section analyze-ai-brief" id="analyzeAiBrief">
+                        <div class="ai-brief-header">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                <path d="M12 2a4 4 0 014 4v1a4 4 0 01-8 0V6a4 4 0 014-4z"></path>
+                                <path d="M6 10v2a6 6 0 0012 0v-2"></path>
+                                <path d="M12 18v4M8 22h8"></path>
+                            </svg>
+                            <h3>AI Analysis</h3>
+                        </div>
+                        <div class="ai-brief-body" id="analyzeAiBriefBody">
+                            <p class="muted">Generating analysis...</p>
+                        </div>
+                    </div>
+
                     <!-- Two-column layout -->
                     <div class="analyze-grid">
 
@@ -726,14 +741,22 @@
 
                             <!-- Technical Indicators -->
                             <div class="card analyze-section">
-                                <h3>Technical Indicators</h3>
+                                <div class="section-header-row">
+                                    <h3>Technical Indicators</h3>
+                                    <button class="guide-toggle-btn" data-guide="indicatorsGuide">?</button>
+                                </div>
+                                <div class="section-guide hidden" id="indicatorsGuide"></div>
                                 <div class="analyze-trend-break" id="analyzeTrendBreak"></div>
                                 <div class="analyze-indicators-grid" id="analyzeIndicators"></div>
                             </div>
 
                             <!-- Earnings -->
                             <div class="card analyze-section">
-                                <h3>Earnings</h3>
+                                <div class="section-header-row">
+                                    <h3>Earnings</h3>
+                                    <button class="guide-toggle-btn" data-guide="earningsGuide">?</button>
+                                </div>
+                                <div class="section-guide hidden" id="earningsGuide"></div>
                                 <div id="analyzeEarnings" class="analyze-earnings"></div>
                             </div>
                         </div>
@@ -743,25 +766,41 @@
 
                             <!-- Key Statistics -->
                             <div class="card analyze-section">
-                                <h3>Key Statistics</h3>
+                                <div class="section-header-row">
+                                    <h3>Key Statistics</h3>
+                                    <button class="guide-toggle-btn" data-guide="statsGuide">?</button>
+                                </div>
+                                <div class="section-guide hidden" id="statsGuide"></div>
                                 <div class="analyze-stats-grid" id="analyzeStats"></div>
                             </div>
 
                             <!-- Analyst Consensus -->
                             <div class="card analyze-section">
-                                <h3>Analyst Consensus</h3>
+                                <div class="section-header-row">
+                                    <h3>Analyst Consensus</h3>
+                                    <button class="guide-toggle-btn" data-guide="analystGuide">?</button>
+                                </div>
+                                <div class="section-guide hidden" id="analystGuide"></div>
                                 <div id="analyzeAnalyst" class="analyze-analyst"></div>
                             </div>
 
                             <!-- Options Summary -->
                             <div class="card analyze-section">
-                                <h3>Options Summary</h3>
+                                <div class="section-header-row">
+                                    <h3>Options Summary</h3>
+                                    <button class="guide-toggle-btn" data-guide="optionsGuide">?</button>
+                                </div>
+                                <div class="section-guide hidden" id="optionsGuide"></div>
                                 <div id="analyzeOptions" class="analyze-options"></div>
                             </div>
 
                             <!-- Institutional Ownership -->
                             <div class="card analyze-section">
-                                <h3>Institutional Ownership</h3>
+                                <div class="section-header-row">
+                                    <h3>Institutional Ownership</h3>
+                                    <button class="guide-toggle-btn" data-guide="institutionalGuide">?</button>
+                                </div>
+                                <div class="section-guide hidden" id="institutionalGuide"></div>
                                 <div id="analyzeInstitutional" class="analyze-institutional"></div>
                             </div>
                         </div>
@@ -2007,7 +2046,7 @@
                         <span class="status-text">Checking API...</span>
                     </div>
                 </div>
-                <p class="disclaimer">For informational purposes only. Not financial advice.</p>
+                <p class="disclaimer">For informational purposes only. Not financial advice. | <a href="mailto:contact@alphabreak.vip" class="footer-link">Contact Us</a></p>
             </footer>
         </div>
     </div>

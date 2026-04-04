@@ -23,7 +23,7 @@ analyze_bp = Blueprint('analyze', __name__)
 # ──────────────────────────────────────────────────────────────────────────────
 
 _cache = {}
-CACHE_TTL = 60  # 1 minute
+CACHE_TTL = 300  # 5 minutes
 
 TICKER_PATTERN = re.compile(r'^[A-Z]{1,5}(-[A-Z])?$')
 

@@ -9,7 +9,7 @@ const CONFIG = {
 // State management
 const state = {
     apiHealthy: false,
-    activeTab: 'sentiment',
+    activeTab: 'watchlist',
 };
 
 // Page titles for sidebar navigation
@@ -20,7 +20,7 @@ const PAGE_TITLES = {
     options: 'Options Analysis',
     trading: 'Trade Execution',
     longterm: 'Long Term Trading Watchlist',
-    watchlist: 'Analyze',
+    watchlist: 'Security Analysis',
     trend: 'Trend Prediction',
     indicators: 'Indicator Guide',
     portfolio: 'Portfolio Tracker',

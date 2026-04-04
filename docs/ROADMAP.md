@@ -245,6 +245,7 @@ Not committed to a tier or timeline. Will be prioritized based on user demand an
 ## Customer Acquisition
 
 ### Pre-Launch (Current)
+- [ ] **Contact Page** — Professional contact form (name, email, subject, message), FAQ section, support email, social links, office hours. Mirror institutional fintech contact pages (Bloomberg, Refinitiv style).
 - [ ] **Landing Page** — Value proposition, feature screenshots, email capture for waitlist
 - [ ] **SEO Content** — Blog posts targeting: "best stock analysis tools", "Bloomberg alternative", "free options analysis", "AI trade scoring"
 - [ ] **Social Proof** — Backtest results (854K trades, 98.5% win rate) as marketing content
