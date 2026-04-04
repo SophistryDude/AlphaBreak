@@ -197,11 +197,11 @@ const AlphaCharts = (() => {
             _drawTrendline(inst, line);
         }
 
-        // Draw horizontal support/resistance levels
-        for (const level of supportLevels.slice(0, 3)) {
+        // Draw horizontal support/resistance levels (top 2 only to reduce clutter)
+        for (const level of supportLevels.slice(0, 2)) {
             _drawHorizontalLevel(inst, level, 'support');
         }
-        for (const level of resistanceLevels.slice(0, 3)) {
+        for (const level of resistanceLevels.slice(0, 2)) {
             _drawHorizontalLevel(inst, level, 'resistance');
         }
 
@@ -234,15 +234,15 @@ const AlphaCharts = (() => {
 
         lineSeries.setData(points);
 
-        // Add price line showing where trendline is now
-        if (line.current_line_price) {
+        // Only show price line for high-confidence trendlines (reduce clutter)
+        if (line.current_line_price && line.confidence >= 70) {
             lineSeries.createPriceLine({
                 price: line.current_line_price,
                 color: color,
                 lineWidth: 1,
                 lineStyle: LightweightCharts.LineStyle.Dotted,
-                axisLabelVisible: true,
-                title: `${line.type === 'support' ? 'S' : 'R'} ${line.confidence}%`,
+                axisLabelVisible: false,
+                title: '',
             });
         }
 
@@ -251,16 +251,15 @@ const AlphaCharts = (() => {
 
     // ── Draw horizontal level ────────────────────────────────────────────
     function _drawHorizontalLevel(inst, level, type) {
-        const color = type === 'support' ? '#26a69a' : '#ef5350';
-        const alpha = Math.min(0.8, 0.3 + level.strength * 0.15);
+        const color = type === 'support' ? 'rgba(38,166,154,0.4)' : 'rgba(239,83,80,0.4)';
 
         inst.candleSeries.createPriceLine({
             price: level.price,
             color: color,
             lineWidth: 1,
             lineStyle: LightweightCharts.LineStyle.Dashed,
-            axisLabelVisible: true,
-            title: `${type === 'support' ? 'S' : 'R'} (${level.touches}x)`,
+            axisLabelVisible: false,
+            title: '',
         });
     }
 

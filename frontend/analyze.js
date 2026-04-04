@@ -822,6 +822,7 @@ const Analyze = (() => {
             }
             renderGrades(grades);
             renderGradesGuide(grades);
+            appendGradesToBrief(grades);
         } catch (e) {
             el.innerHTML = '<p class="muted">Grades unavailable</p>';
         }
@@ -904,6 +905,36 @@ const Analyze = (() => {
         }
         html += '</div>';
         el.innerHTML = html;
+    }
+
+    function appendGradesToBrief(grades) {
+        const el = document.getElementById('analyzeAiBriefBody');
+        if (!el || !grades?.overall_grade) return;
+
+        const p = el.querySelector('p');
+        if (!p) return;
+
+        const grade = grades.overall_grade;
+        const cls = _gradeClass(grade);
+
+        // Add grade to the brief
+        let extra = ` Quant grade: <strong class="${cls}">${grade}</strong> (${grades.sector}).`;
+
+        // Check for divergence between trend break and quant grade
+        const tb = data?.trend_break;
+        if (tb?.probability != null) {
+            const tbHigh = tb.probability > 0.80;
+            const gradeGood = grades.overall_score >= 60; // B- or better
+            const gradeBad = grades.overall_score < 45; // D or worse
+
+            if (tbHigh && gradeBad) {
+                extra += ' <em style="color:var(--warning-color)">Note: High trend break probability with weak fundamentals often signals a momentum-driven move that may not sustain. Manage risk tightly.</em>';
+            } else if (!tbHigh && gradeGood) {
+                extra += ' <em style="color:var(--text-muted)">Strong fundamentals with low trend break probability suggests stability — look for entry on pullbacks.</em>';
+            }
+        }
+
+        p.innerHTML += extra;
     }
 
     function _gradeClass(grade) {
