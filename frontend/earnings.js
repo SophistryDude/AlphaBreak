@@ -242,11 +242,14 @@ const Earnings = {
                             <h4>CBOE Options Activity</h4>
                             <div class="cboe-metrics" id="cboeMetrics"><p>Loading CBOE data...</p></div>
                         </div>
-                        <!-- Candlestick Chart -->
+                        <!-- Candlestick Chart + Volume -->
                         <div class="earnings-chart-container">
                             <h4>3-Month Daily Chart</h4>
                             <div class="chart-wrapper">
                                 <canvas id="earningsCandlestickChart"></canvas>
+                            </div>
+                            <div class="volume-wrapper" style="height:50px;margin-top:-4px;">
+                                <canvas id="earningsVolumeChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -273,6 +276,7 @@ const Earnings = {
             const data = await response.json();
             this.renderCBOE(data.cboe_activity);
             this.renderDetailChart(data.daily_chart);
+            this.renderDetailVolume(data.daily_chart);
             this.renderNews(data.news);
         } catch (error) {
             document.getElementById('cboeMetrics').innerHTML = '<p>Failed to load details: ' + error.message + '</p>';
@@ -295,6 +299,10 @@ const Earnings = {
             this.charts.earningsCandlestickChart.destroy();
             delete this.charts.earningsCandlestickChart;
         }
+        if (this.charts.earningsVolumeChart) {
+            this.charts.earningsVolumeChart.destroy();
+            delete this.charts.earningsVolumeChart;
+        }
     },
 
     // ──────────────────────────────────────────────────────────
@@ -314,29 +322,71 @@ const Earnings = {
             ? (cboe.pc_ratio > 1 ? 'bearish' : cboe.pc_ratio < 0.7 ? 'bullish' : 'neutral')
             : 'neutral';
 
+        // P/C Ratio tooltip
+        let pcrTooltip = '';
+        if (cboe.pc_ratio !== null) {
+            if (cboe.pc_ratio > 1.3) pcrTooltip = 'Very high P/C ratio — extreme bearish sentiment. More puts than calls being traded. Contrarian traders may see this as a potential bottom signal.';
+            else if (cboe.pc_ratio > 1.0) pcrTooltip = 'Elevated P/C ratio — bearish sentiment. More puts than calls. Traders are hedging or betting on downside.';
+            else if (cboe.pc_ratio > 0.7) pcrTooltip = 'Balanced P/C ratio — neutral sentiment. Neither bulls nor bears dominate the options market.';
+            else if (cboe.pc_ratio > 0.5) pcrTooltip = 'Low P/C ratio — bullish sentiment. More calls than puts being traded. Traders expect upside.';
+            else pcrTooltip = 'Very low P/C ratio — extreme bullish sentiment. Contrarian traders may see excessive optimism as a warning sign.';
+        }
+
+        // Put/Call volume analysis
+        let volumeAnalysis = '';
+        if (cboe.call_volume && cboe.put_volume) {
+            const totalVol = cboe.call_volume + cboe.put_volume;
+            const callPct = ((cboe.call_volume / totalVol) * 100).toFixed(0);
+            const putPct = ((cboe.put_volume / totalVol) * 100).toFixed(0);
+            const dominant = cboe.call_volume > cboe.put_volume ? 'call' : 'put';
+            const ratio = dominant === 'call'
+                ? (cboe.call_volume / cboe.put_volume).toFixed(1)
+                : (cboe.put_volume / cboe.call_volume).toFixed(1);
+
+            volumeAnalysis = '<div class="cboe-analysis">' +
+                '<div class="cboe-analysis-header">Options Flow Analysis</div>' +
+                '<div class="cboe-vol-bar">' +
+                    '<div class="cboe-vol-call" style="width:' + callPct + '%">' +
+                        '<span>Calls ' + callPct + '%</span>' +
+                    '</div>' +
+                    '<div class="cboe-vol-put" style="width:' + putPct + '%">' +
+                        '<span>Puts ' + putPct + '%</span>' +
+                    '</div>' +
+                '</div>' +
+                '<p class="cboe-analysis-text">' +
+                    (dominant === 'call'
+                        ? '<span class="positive">Call-heavy flow</span> — ' + ratio + 'x more call volume than puts. Traders are positioning for upside. '
+                        : '<span class="negative">Put-heavy flow</span> — ' + ratio + 'x more put volume than calls. Traders are hedging or betting on downside. ') +
+                    'Total options volume: ' + this.formatNumber(totalVol) + '. ' +
+                    (totalVol > 50000 ? 'High activity suggests strong conviction.' : 'Moderate activity levels.') +
+                '</p>' +
+            '</div>';
+        }
+
         container.innerHTML =
             '<div class="cboe-grid">' +
-                '<div class="cboe-metric">' +
+                '<div class="cboe-metric has-tooltip" data-tooltip="' + pcrTooltip.replace(/"/g, '&quot;') + '">' +
                     '<div class="cboe-metric-label">P/C Ratio</div>' +
                     '<div class="cboe-metric-value ' + pcrClass + '">' + (cboe.pc_ratio !== null ? cboe.pc_ratio.toFixed(2) : 'N/A') + '</div>' +
                 '</div>' +
-                '<div class="cboe-metric">' +
+                '<div class="cboe-metric" title="Total call (bullish) options contracts traded. High call volume suggests traders expect the stock to rise.">' +
                     '<div class="cboe-metric-label">Call Volume</div>' +
                     '<div class="cboe-metric-value">' + this.formatNumber(cboe.call_volume) + '</div>' +
                 '</div>' +
-                '<div class="cboe-metric">' +
+                '<div class="cboe-metric" title="Total put (bearish) options contracts traded. High put volume suggests hedging or downside bets.">' +
                     '<div class="cboe-metric-label">Put Volume</div>' +
                     '<div class="cboe-metric-value">' + this.formatNumber(cboe.put_volume) + '</div>' +
                 '</div>' +
-                '<div class="cboe-metric">' +
+                '<div class="cboe-metric" title="Total Open Interest — the number of outstanding options contracts. Rising OI with rising price = strong trend.">' +
                     '<div class="cboe-metric-label">Total OI</div>' +
                     '<div class="cboe-metric-value">' + this.formatNumber(cboe.total_oi) + '</div>' +
                 '</div>' +
-                '<div class="cboe-metric">' +
+                '<div class="cboe-metric" title="Nearest options expiration date. Options activity concentrates near expiration — watch for increased volatility.">' +
                     '<div class="cboe-metric-label">Expiration</div>' +
                     '<div class="cboe-metric-value">' + cboe.expiration + '</div>' +
                 '</div>' +
-            '</div>';
+            '</div>' +
+            volumeAnalysis;
     },
 
     // ──────────────────────────────────────────────────────────
@@ -458,6 +508,50 @@ const Earnings = {
                     },
                 },
                 interaction: { intersect: false, mode: 'index' },
+            },
+        });
+    },
+
+    // ──────────────────────────────────────────────────────────
+    // VOLUME CHART FOR EARNINGS DETAIL
+    // ──────────────────────────────────────────────────────────
+
+    renderDetailVolume(chartInfo) {
+        const ctx = document.getElementById('earningsVolumeChart');
+        if (!ctx || !chartInfo || !chartInfo.data || chartInfo.data.length === 0) return;
+
+        if (this.charts.earningsVolumeChart) {
+            this.charts.earningsVolumeChart.destroy();
+        }
+
+        const chartData = chartInfo.data;
+        const timestamps = chartData.map(d => luxon.DateTime.fromISO(d.date).toMillis());
+        const volumes = chartData.map(d => d.volume || 0);
+        const colors = chartData.map((d, i) => {
+            if (i === 0) return 'rgba(92, 101, 120, 0.4)';
+            return d.close >= chartData[i - 1].close
+                ? 'rgba(38, 166, 154, 0.4)'
+                : 'rgba(239, 83, 80, 0.4)';
+        });
+
+        this.charts.earningsVolumeChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: timestamps,
+                datasets: [{
+                    data: volumes,
+                    backgroundColor: colors,
+                    borderWidth: 0,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: {
+                    x: { display: false },
+                    y: { display: false, beginAtZero: true },
+                },
             },
         });
     },

@@ -6747,6 +6747,34 @@ a.auth-user-name:hover {
 }
 .btn-danger:hover { background: var(--danger-bright); }
 
+/* CBOE Options Flow Analysis */
+.cboe-analysis {
+    margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);
+}
+.cboe-analysis-header {
+    font-size: 12px; font-weight: 600; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+}
+.cboe-vol-bar {
+    display: flex; height: 24px; border-radius: 4px; overflow: hidden;
+    font-size: 11px; font-weight: 600;
+}
+.cboe-vol-call {
+    background: rgba(38, 166, 154, 0.3); color: var(--success-color);
+    display: flex; align-items: center; justify-content: center;
+    min-width: 50px;
+}
+.cboe-vol-put {
+    background: rgba(239, 83, 80, 0.3); color: var(--danger-color);
+    display: flex; align-items: center; justify-content: center;
+    min-width: 50px;
+}
+.cboe-analysis-text {
+    font-size: 13px; color: var(--text-secondary); margin-top: 8px; line-height: 1.5;
+}
+.cboe-analysis-text .positive { color: var(--success-color); font-weight: 600; }
+.cboe-analysis-text .negative { color: var(--danger-color); font-weight: 600; }
+
 /* Footer link */
 .footer-link {
     color: var(--primary-color); text-decoration: none;
