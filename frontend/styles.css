@@ -7193,6 +7193,80 @@ body.chart-fullscreen-active { overflow: hidden; }
 
 .muted { color: var(--text-muted); font-size: 13px; }
 
+/* Quant Grades */
+.grades-overall {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border-color);
+}
+.grades-overall-badge {
+    width: 48px; height: 48px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 800; flex-shrink: 0;
+}
+.grades-overall-info { display: flex; flex-direction: column; gap: 2px; }
+.grades-overall-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.grades-overall-sector { font-size: 11px; color: var(--text-muted); }
+.grades-overall-rank { font-size: 11px; color: var(--text-secondary); }
+
+.grades-factors { display: flex; flex-direction: column; gap: 6px; }
+.grades-factor-row {
+    display: flex; align-items: center; gap: 8px; font-size: 12px;
+}
+.grades-factor-name {
+    min-width: 85px; color: var(--text-muted); font-weight: 500;
+}
+.grades-factor-bar {
+    flex: 1; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;
+}
+.grades-factor-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.grades-factor-grade {
+    min-width: 28px; text-align: center; font-weight: 700; font-size: 13px;
+}
+.grades-exclusive {
+    font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;
+    background: var(--primary-muted); color: var(--primary-color);
+    vertical-align: middle; margin-left: 2px;
+}
+
+/* Grade colors */
+.grade-a { color: #26a69a; }
+.grade-a.grades-overall-badge { background: rgba(38, 166, 154, 0.15); color: #26a69a; }
+.grade-a.grades-factor-fill { background: #26a69a; }
+
+.grade-b { color: #4caf50; }
+.grade-b.grades-overall-badge { background: rgba(76, 175, 80, 0.15); color: #4caf50; }
+.grade-b.grades-factor-fill { background: #4caf50; }
+
+.grade-c { color: #f0b90b; }
+.grade-c.grades-overall-badge { background: rgba(240, 185, 11, 0.15); color: #f0b90b; }
+.grade-c.grades-factor-fill { background: #f0b90b; }
+
+.grade-d { color: #ff9800; }
+.grade-d.grades-overall-badge { background: rgba(255, 152, 0, 0.15); color: #ff9800; }
+.grade-d.grades-factor-fill { background: #ff9800; }
+
+.grade-f { color: #ef5350; }
+.grade-f.grades-overall-badge { background: rgba(239, 83, 80, 0.15); color: #ef5350; }
+.grade-f.grades-factor-fill { background: #ef5350; }
+
+/* Peer ranking */
+.grades-peers { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-color); }
+.grades-peers-title {
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+}
+.grades-peer-row {
+    display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 11px;
+}
+.grades-peer-row.current { font-weight: 700; }
+.grades-peer-row.current .grades-peer-ticker { color: var(--primary-color); }
+.grades-peer-ticker { min-width: 45px; color: var(--text-secondary); }
+.grades-peer-bar-bg {
+    flex: 1; height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden;
+}
+.grades-peer-bar-fill { height: 100%; background: var(--primary-color); border-radius: 2px; }
+.grades-peer-score { min-width: 28px; text-align: right; color: var(--text-muted); }
+
 /* AI Analysis Brief */
 .analyze-ai-brief {
     background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(41, 98, 255, 0.05) 100%);

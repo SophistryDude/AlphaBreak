@@ -291,6 +291,39 @@ def _fetch_trendlines(ticker, period, interval, db_manager):
     return detect_trendlines(ticker, period, interval, db_manager)
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# GET /api/analyze/<ticker>/grades
+# ──────────────────────────────────────────────────────────────────────────────
+
+@analyze_bp.route('/analyze/<ticker>/grades', methods=['GET'])
+@log_request
+@require_api_key
+def analyze_grades(ticker):
+    """Compute quant letter grades (A+ through F) across 6 factors."""
+    try:
+        ticker = _validate_ticker(ticker)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+    try:
+        db = _get_db_manager()
+        cache_key = f'analyze_grades_{ticker}'
+        result = _get_cached(
+            cache_key,
+            lambda: _fetch_grades(ticker, db),
+            ttl=CACHE_TTL,
+        )
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.error(f"Grades error for {ticker}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+def _fetch_grades(ticker, db_manager):
+    from app.services.quant_grades_service import compute_quant_grades
+    return compute_quant_grades(ticker, db_manager)
+
+
 def _fetch_patterns(ticker, period):
     from app.services.pattern_service import detect_patterns
     return detect_patterns(ticker, period)

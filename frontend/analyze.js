@@ -183,6 +183,7 @@ const Analyze = (() => {
             renderInstitutional(data.institutional);
             renderGuides(data);
             initGuideToggles();
+            loadGrades(ticker);
 
             document.getElementById('analyzeLoading').style.display = 'none';
             document.getElementById('analyzeContent').style.display = 'block';
@@ -799,6 +800,115 @@ const Analyze = (() => {
         } catch (e) {
             console.error('Compare load failed:', e);
         }
+    }
+
+    // ── Quant Grades ─────────────────────────────────────────────────────
+    async function loadGrades(ticker) {
+        const el = document.getElementById('analyzeGrades');
+        if (!el) return;
+        el.innerHTML = '<p class="muted">Loading grades...</p>';
+
+        try {
+            const resp = await apiRequest(`/api/analyze/${ticker}/grades`);
+            const grades = await resp.json();
+            if (grades.error) {
+                el.innerHTML = `<p class="muted">${grades.error}</p>`;
+                return;
+            }
+            renderGrades(grades);
+            renderGradesGuide(grades);
+        } catch (e) {
+            el.innerHTML = '<p class="muted">Grades unavailable</p>';
+        }
+    }
+
+    function renderGrades(g) {
+        const el = document.getElementById('analyzeGrades');
+        if (!el) return;
+
+        const factors = g.factors || {};
+        const factorOrder = ['value', 'growth', 'profitability', 'momentum', 'revisions', 'ai_score'];
+
+        // Overall grade badge
+        const overallCls = _gradeClass(g.overall_grade);
+        let html = `
+            <div class="grades-overall">
+                <div class="grades-overall-badge ${overallCls}">${g.overall_grade}</div>
+                <div class="grades-overall-info">
+                    <span class="grades-overall-label">Overall Quant Score</span>
+                    <span class="grades-overall-sector">${g.sector || ''}</span>
+                    ${g.peer_rank ? `<span class="grades-overall-rank">#${g.peer_rank.rank} of ${g.peer_rank.total} peers (top ${g.peer_rank.percentile}%)</span>` : ''}
+                </div>
+            </div>
+        `;
+
+        // Factor bars
+        html += '<div class="grades-factors">';
+        for (const key of factorOrder) {
+            const f = factors[key];
+            if (!f) continue;
+            const cls = _gradeClass(f.grade);
+            const exclusive = f.exclusive ? ' <span class="grades-exclusive">AI</span>' : '';
+            html += `
+                <div class="grades-factor-row">
+                    <span class="grades-factor-name">${f.factor}${exclusive}</span>
+                    <div class="grades-factor-bar">
+                        <div class="grades-factor-fill ${cls}" style="width:${Math.min(100, f.score)}%"></div>
+                    </div>
+                    <span class="grades-factor-grade ${cls}">${f.grade}</span>
+                </div>
+            `;
+        }
+        html += '</div>';
+
+        // Peer ranking mini table
+        if (g.peer_rank?.peers?.length > 0) {
+            html += '<div class="grades-peers">';
+            html += '<div class="grades-peers-title">Sector Ranking</div>';
+            for (const p of g.peer_rank.peers) {
+                const isCurrent = p.ticker === g.ticker;
+                html += `<div class="grades-peer-row ${isCurrent ? 'current' : ''}">
+                    <span class="grades-peer-ticker">${p.ticker}</span>
+                    <div class="grades-peer-bar-bg"><div class="grades-peer-bar-fill" style="width:${Math.min(100, p.score)}%"></div></div>
+                    <span class="grades-peer-score">${p.score}</span>
+                </div>`;
+            }
+            html += '</div>';
+        }
+
+        el.innerHTML = html;
+    }
+
+    function renderGradesGuide(g) {
+        const el = document.getElementById('gradesGuide');
+        if (!el) return;
+        const f = g.factors || {};
+
+        let html = '<div class="guide-content">';
+        html += '<p><strong>Quant Grades</strong> score this stock across 6 factors vs sector peers. Each factor gets A+ through F based on percentile rank.</p>';
+        html += '<ul>';
+        html += '<li><strong>Value</strong> — P/E, P/S, P/B, EV/EBITDA, PEG (lower = better value)</li>';
+        html += '<li><strong>Growth</strong> — Revenue growth, earnings growth, forward EPS growth</li>';
+        html += '<li><strong>Profitability</strong> — ROE, profit margin, operating margin, gross margin</li>';
+        html += '<li><strong>Momentum</strong> — Price position in 52-week range, 3-month return</li>';
+        html += '<li><strong>Revisions</strong> — Forward EPS vs trailing EPS (positive = analysts raising estimates)</li>';
+        html += '<li><strong>AI Score</strong> — <em>AlphaBreak exclusive.</em> Trend break probability + regime alignment. No competitor has this.</li>';
+        html += '</ul>';
+        if (g.peer_rank) {
+            html += `<p>Ranked <strong>#${g.peer_rank.rank} of ${g.peer_rank.total}</strong> stocks in ${g.sector} sector.</p>`;
+        }
+        html += '</div>';
+        el.innerHTML = html;
+    }
+
+    function _gradeClass(grade) {
+        if (!grade) return '';
+        const g = grade.charAt(0);
+        if (g === 'A') return 'grade-a';
+        if (g === 'B') return 'grade-b';
+        if (g === 'C') return 'grade-c';
+        if (g === 'D') return 'grade-d';
+        return 'grade-f';
     }
 
     // ── Formatting helpers ───────────────────────────────────────────────
