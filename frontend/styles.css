@@ -7214,6 +7214,87 @@ body.chart-fullscreen-active { overflow: hidden; }
 
 .muted { color: var(--text-muted); font-size: 13px; }
 
+/* AI Dashboard */
+.ai-dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+@media (max-width: 900px) { .ai-dash-grid { grid-template-columns: 1fr; } }
+
+/* Regime hero */
+.ai-regime-hero { padding: 16px; }
+.ai-regime-card {
+    padding: 20px; border-radius: 8px; display: flex; gap: 24px;
+    align-items: center; flex-wrap: wrap;
+}
+.ai-regime-main { display: flex; flex-direction: column; gap: 2px; }
+.ai-regime-label { font-size: 28px; font-weight: 800; letter-spacing: 1px; }
+.ai-regime-conf { font-size: 13px; color: var(--text-muted); }
+.ai-regime-spy { display: flex; flex-direction: column; gap: 2px; text-align: center; }
+.ai-regime-spy-label { font-size: 11px; color: var(--text-muted); }
+.ai-regime-spy-price { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.ai-regime-desc { flex: 1; min-width: 200px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+/* Model stats */
+.ai-stats-cards {
+    display: flex; gap: 12px; padding: 16px; flex-wrap: wrap;
+}
+.ai-stat-card {
+    flex: 1; min-width: 130px; padding: 14px; background: var(--bg-surface);
+    border-radius: 8px; text-align: center; display: flex; flex-direction: column; gap: 2px;
+}
+.ai-stat-value { font-size: 22px; font-weight: 800; color: var(--text-primary); }
+.ai-stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.ai-stat-sub { font-size: 11px; color: var(--text-muted); }
+
+/* Signals list */
+.ai-signals-list { display: flex; flex-direction: column; gap: 2px; }
+.ai-signal-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 0;
+    border-bottom: 1px solid var(--border-color); font-size: 13px; cursor: pointer;
+}
+.ai-signal-row:hover { background: var(--bg-surface-hover); margin: 0 -8px; padding: 8px; border-radius: 4px; }
+.ai-signal-row:last-child { border-bottom: none; }
+.ai-signal-ticker { font-weight: 700; color: var(--text-primary); min-width: 50px; }
+.ai-signal-prob { font-weight: 700; min-width: 40px; }
+.ai-signal-prob.prob-high { color: var(--success-bright); }
+.ai-signal-prob.prob-mid { color: var(--warning-color); }
+.ai-signal-prob.prob-low { color: var(--text-muted); }
+.ai-signal-dir { min-width: 80px; font-weight: 600; }
+.ai-signal-price { color: var(--text-secondary); min-width: 65px; }
+.ai-signal-alert {
+    font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+    background: rgba(239,83,80,0.15); color: var(--danger-color); animation: pulse 2s infinite;
+}
+
+/* Sector regime grid */
+.ai-sector-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.ai-sector-cell {
+    padding: 10px 12px; background: var(--bg-surface); border-radius: 6px;
+}
+.ai-sector-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.ai-sector-regime { font-size: 14px; font-weight: 800; }
+.ai-sector-conf { font-size: 11px; color: var(--text-muted); }
+
+/* History table */
+.ai-history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ai-history-table th {
+    text-align: left; padding: 6px 8px; color: var(--text-muted); font-size: 11px;
+    text-transform: uppercase; border-bottom: 1px solid var(--border-color);
+}
+.ai-history-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+
+/* Screener */
+.ai-screener-search { display: flex; gap: 8px; }
+.ai-screener-result { padding: 12px; background: var(--bg-surface); border-radius: 8px; }
+.ai-screener-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.ai-screener-badge {
+    width: 40px; height: 40px; border-radius: 8px; display: flex;
+    align-items: center; justify-content: center; font-size: 16px; font-weight: 800;
+}
+.ai-screener-factors { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-screener-factor {
+    display: flex; justify-content: space-between; gap: 8px;
+    padding: 4px 10px; background: var(--bg-elevated); border-radius: 4px; font-size: 12px; min-width: 120px;
+}
+
 /* Quant Grades */
 .grades-overall {
     display: flex; align-items: center; gap: 12px; margin-bottom: 14px;

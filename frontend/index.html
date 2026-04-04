@@ -30,6 +30,7 @@
             <nav class="sidebar-nav" id="sidebarNav">
                 <ul class="sidebar-menu">
                     <li><a href="#" class="sidebar-link sidebar-title active" data-tab="watchlist">Security Analysis</a></li>
+                    <li><a href="#" class="sidebar-link sidebar-title" data-tab="aidashboard">AI Dashboard</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="sentiment">Sentiment Analysis</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="earnings">Quarterly Earnings</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="reports">Trend Break Reports</a></li>
@@ -142,6 +143,114 @@
 
         <!-- Main Content Area -->
         <main class="main-content">
+            <!-- AI Dashboard Tab -->
+            <div class="tab-content" id="aidashboardTab">
+
+                <!-- Market Regime Hero -->
+                <div class="widget-card" id="aiRegimeWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Market Regime</h3>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="aiRegimeBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="aiRegimeBody">
+                        <div class="ai-regime-hero" id="aiRegimeHero">
+                            <p class="muted">Loading market regime...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Model Stats -->
+                <div class="widget-card" id="aiStatsWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Model Performance</h3>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="aiStatsBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="aiStatsBody">
+                        <div class="ai-stats-grid" id="aiStatsGrid">
+                            <p class="muted">Loading model stats...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Two column: Signals + Sectors -->
+                <div class="ai-dash-grid">
+
+                    <!-- Top Signals -->
+                    <div class="widget-card" id="aiSignalsWidget">
+                        <div class="widget-header">
+                            <h3 class="widget-title">Top AI Signals</h3>
+                            <span class="widget-subtitle">Highest-conviction trend breaks (80%+)</span>
+                            <div class="header-spacer"></div>
+                            <button class="widget-collapse-btn" data-target="aiSignalsBody" title="Collapse/Expand">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
+                        </div>
+                        <div class="widget-collapsible" id="aiSignalsBody">
+                            <div id="aiSignalsList" style="padding:12px 16px;">
+                                <p class="muted">Loading signals...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sector Regimes -->
+                    <div class="widget-card" id="aiSectorsWidget">
+                        <div class="widget-header">
+                            <h3 class="widget-title">Sector Regime Map</h3>
+                            <div class="header-spacer"></div>
+                            <button class="widget-collapse-btn" data-target="aiSectorsBody" title="Collapse/Expand">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
+                        </div>
+                        <div class="widget-collapsible" id="aiSectorsBody">
+                            <div id="aiSectorGrid" style="padding:12px 16px;">
+                                <p class="muted">Loading sector regimes...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Signal History -->
+                <div class="widget-card" id="aiHistoryWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">Signal History (7 Days)</h3>
+                        <span class="widget-subtitle">What the model predicted vs what happened</span>
+                        <div class="header-spacer"></div>
+                        <button class="widget-collapse-btn" data-target="aiHistoryBody" title="Collapse/Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="widget-collapsible" id="aiHistoryBody">
+                        <div id="aiHistoryList" style="padding:12px 16px;">
+                            <p class="muted">Loading signal history...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Screener (Pro Teaser) -->
+                <div class="widget-card" id="aiScreenerWidget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">AI Screener</h3>
+                        <span class="widget-subtitle">Deep AI analysis for any ticker</span>
+                        <div class="header-spacer"></div>
+                    </div>
+                    <div style="padding:16px;">
+                        <div class="ai-screener-search">
+                            <input type="text" id="aiScreenerInput" class="analyze-search-input"
+                                placeholder="Enter ticker for full AI score (e.g., NVDA)"
+                                autocomplete="nope" name="ai-screener" data-form-type="other">
+                            <button id="aiScreenerBtn" class="btn btn-primary">Score</button>
+                        </div>
+                        <div id="aiScreenerResult" style="margin-top:12px;"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Sentiment Analysis Tab -->
             <div class="tab-content" id="sentimentTab">
                 <div class="dashboard-grid">
@@ -2198,6 +2307,7 @@
     <script src="charts.js?v=1"></script>
     <script src="analyze.js?v=3"></script>
     <script src="educational.js?v=1"></script>
+    <script src="aidashboard.js?v=1"></script>
     <script src="earnings.js?v=4"></script>
     <script src="longterm.js?v=3"></script>
     <script src="indicators.js?v=1"></script>

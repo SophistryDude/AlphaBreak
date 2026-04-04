@@ -319,6 +319,34 @@ def analyze_grades(ticker):
         return jsonify({'error': str(e)}), 500
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# GET /api/analyze/ai-dashboard
+# ──────────────────────────────────────────────────────────────────────────────
+
+@analyze_bp.route('/analyze/ai-dashboard', methods=['GET'])
+@log_request
+@require_api_key
+def ai_dashboard():
+    """Get full AI Dashboard data: market regime, top signals, model stats, sector regimes."""
+    try:
+        db = _get_db_manager()
+        cache_key = 'ai_dashboard'
+        result = _get_cached(
+            cache_key,
+            lambda: _fetch_ai_dashboard(db),
+            ttl=120,  # 2 min cache (more dynamic than ticker data)
+        )
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.error(f"AI Dashboard error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+def _fetch_ai_dashboard(db_manager):
+    from app.services.ai_dashboard_service import get_ai_dashboard
+    return get_ai_dashboard(db_manager)
+
+
 def _fetch_grades(ticker, db_manager):
     from app.services.quant_grades_service import compute_quant_grades
     return compute_quant_grades(ticker, db_manager)

@@ -21,6 +21,7 @@ const PAGE_TITLES = {
     trading: 'Trade Execution',
     longterm: 'Long Term Trading Watchlist',
     watchlist: 'Security Analysis',
+    aidashboard: 'AI Dashboard',
     trend: 'Trend Prediction',
     indicators: 'Indicator Guide',
     portfolio: 'Portfolio Tracker',
