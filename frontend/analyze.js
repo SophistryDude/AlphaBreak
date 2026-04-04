@@ -76,7 +76,8 @@ const Analyze = (() => {
         }
         searchTimeout = setTimeout(async () => {
             try {
-                const results = await apiRequest(`/api/analyze/search?q=${encodeURIComponent(query)}`);
+                const resp = await apiRequest(`/api/analyze/search?q=${encodeURIComponent(query)}`);
+                const results = await resp.json();
                 if (!results || !results.length) {
                     container.innerHTML = '';
                     return;
@@ -112,7 +113,8 @@ const Analyze = (() => {
         document.getElementById('analyzeContent').style.display = 'none';
 
         try {
-            data = await apiRequest(`/api/analyze/${ticker}`);
+            const response = await apiRequest(`/api/analyze/${ticker}`);
+            data = await response.json();
             if (!data || data.error) throw new Error(data?.error || 'No data');
 
             renderHeader(data.header);
@@ -422,9 +424,10 @@ const Analyze = (() => {
     // ── Chart ────────────────────────────────────────────────────────────
     async function loadChart(ticker, period, interval) {
         try {
-            const chartData = await apiRequest(
+            const chartResp = await apiRequest(
                 `/api/analyze/${ticker}/chart?period=${period}&interval=${interval}`
             );
+            const chartData = await chartResp.json();
             if (!chartData || !chartData.data || chartData.data.length === 0) return;
 
             renderPriceChart(chartData);
@@ -440,60 +443,147 @@ const Analyze = (() => {
 
         if (priceChart) priceChart.destroy();
 
-        const labels = chartData.data.map(d => d.timestamp);
-        const ohlc = chartData.data.map(d => ({
-            x: d.timestamp,
-            o: d.open,
-            h: d.high,
-            l: d.low,
-            c: d.close,
-        }));
+        const overlays = chartData.overlays || {};
+        const hasCandlestick = typeof Chart.controllers !== 'undefined'
+            && (Chart.controllers.candlestick || Chart.registry?.controllers?.get('candlestick'));
 
-        // Use line chart if candlestick plugin not available
-        const closes = chartData.data.map(d => d.close);
-        const isPositive = closes[closes.length - 1] >= closes[0];
+        // Build datasets
+        const datasets = [];
+
+        if (hasCandlestick) {
+            // Japanese candlestick chart
+            datasets.push({
+                label: 'Price',
+                data: chartData.data.map(d => ({
+                    x: new Date(d.timestamp).getTime(),
+                    o: d.open, h: d.high, l: d.low, c: d.close,
+                })),
+                type: 'candlestick',
+                color: {
+                    up: 'rgba(38, 166, 154, 1)',
+                    down: 'rgba(239, 83, 80, 1)',
+                    unchanged: 'rgba(92, 101, 120, 1)',
+                },
+                borderColor: {
+                    up: 'rgba(38, 166, 154, 1)',
+                    down: 'rgba(239, 83, 80, 1)',
+                    unchanged: 'rgba(92, 101, 120, 1)',
+                },
+            });
+        } else {
+            // Fallback: line chart
+            const closes = chartData.data.map(d => d.close);
+            const isPositive = closes[closes.length - 1] >= closes[0];
+            datasets.push({
+                label: 'Price',
+                data: closes,
+                borderColor: isPositive ? 'rgba(38, 166, 154, 1)' : 'rgba(239, 83, 80, 1)',
+                backgroundColor: isPositive ? 'rgba(38, 166, 154, 0.08)' : 'rgba(239, 83, 80, 0.08)',
+                fill: true, tension: 0.1, pointRadius: 0, borderWidth: 1.5,
+            });
+        }
+
+        // 10-period SMA (2-week MA)
+        if (overlays.sma_10) {
+            datasets.push({
+                label: 'SMA 10 (2wk)',
+                data: overlays.sma_10,
+                type: 'line',
+                borderColor: 'rgba(255, 183, 77, 0.9)',
+                borderWidth: 1.5,
+                pointRadius: 0,
+                fill: false,
+                tension: 0.2,
+            });
+        }
+
+        // 50-period SMA (50-week MA)
+        if (overlays.sma_50) {
+            datasets.push({
+                label: 'SMA 50',
+                data: overlays.sma_50,
+                type: 'line',
+                borderColor: 'rgba(126, 87, 194, 0.9)',
+                borderWidth: 1.5,
+                pointRadius: 0,
+                fill: false,
+                tension: 0.2,
+            });
+        }
+
+        // Bollinger Bands
+        if (overlays.bb_upper) {
+            datasets.push({
+                label: 'BB Upper',
+                data: overlays.bb_upper,
+                type: 'line',
+                borderColor: 'rgba(100, 181, 246, 0.5)',
+                borderWidth: 1,
+                borderDash: [4, 4],
+                pointRadius: 0,
+                fill: false,
+                tension: 0.2,
+            });
+            datasets.push({
+                label: 'BB Lower',
+                data: overlays.bb_lower,
+                type: 'line',
+                borderColor: 'rgba(100, 181, 246, 0.5)',
+                borderWidth: 1,
+                borderDash: [4, 4],
+                pointRadius: 0,
+                fill: '-1',  // Fill between upper and lower
+                backgroundColor: 'rgba(100, 181, 246, 0.05)',
+                tension: 0.2,
+            });
+        }
+
+        const labels = chartData.data.map(d => d.timestamp);
 
         priceChart = new Chart(ctx, {
-            type: 'line',
+            type: hasCandlestick ? 'candlestick' : 'line',
             data: {
                 labels,
-                datasets: [{
-                    data: closes,
-                    borderColor: isPositive ? 'rgba(38, 166, 154, 1)' : 'rgba(239, 83, 80, 1)',
-                    backgroundColor: isPositive
-                        ? 'rgba(38, 166, 154, 0.08)'
-                        : 'rgba(239, 83, 80, 0.08)',
-                    fill: true,
-                    tension: 0.1,
-                    pointRadius: 0,
-                    borderWidth: 1.5,
-                }],
+                datasets,
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { intersect: false, mode: 'index' },
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: '#8b95a5',
+                            boxWidth: 12, boxHeight: 2,
+                            font: { size: 11 },
+                            filter: item => item.text !== 'Price',
+                        },
+                    },
                     tooltip: {
                         callbacks: {
-                            label: ctx => `$${ctx.raw.toFixed(2)}`,
+                            label: function(ctx) {
+                                if (ctx.raw && ctx.raw.o !== undefined) {
+                                    return `O: $${ctx.raw.o.toFixed(2)}  H: $${ctx.raw.h.toFixed(2)}  L: $${ctx.raw.l.toFixed(2)}  C: $${ctx.raw.c.toFixed(2)}`;
+                                }
+                                return ctx.raw != null ? `${ctx.dataset.label}: $${Number(ctx.raw).toFixed(2)}` : '';
+                            },
                         },
                     },
                 },
                 scales: {
                     x: {
+                        type: hasCandlestick ? 'timeseries' : 'category',
                         display: true,
                         grid: { color: 'rgba(42, 46, 57, 0.5)' },
                         ticks: {
                             color: '#5c6578',
                             maxTicksLimit: 8,
                             maxRotation: 0,
-                            callback: function(val) {
-                                const label = this.getLabelForValue(val);
-                                return label ? label.split('T')[0] : '';
-                            },
+                            source: 'auto',
                         },
+                        time: hasCandlestick ? { unit: 'day' } : undefined,
                     },
                     y: {
                         display: true,
@@ -501,7 +591,7 @@ const Analyze = (() => {
                         grid: { color: 'rgba(42, 46, 57, 0.5)' },
                         ticks: {
                             color: '#5c6578',
-                            callback: v => '$' + v.toFixed(2),
+                            callback: v => '$' + Number(v).toFixed(2),
                         },
                     },
                 },

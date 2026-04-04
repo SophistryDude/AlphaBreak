@@ -29,12 +29,12 @@
             <nav class="sidebar-nav" id="sidebarNav">
                 <ul class="sidebar-menu">
                     <li><a href="#" class="sidebar-link active" data-tab="sentiment">Sentiment Analysis</a></li>
+                    <li><a href="#" class="sidebar-link sidebar-title" data-tab="watchlist">Analyze</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="earnings">Quarterly Earnings</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="reports">Trend Break Reports</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="options">Options Analysis</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="trading">Trade Execution</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="longterm">Long Term Trading Watchlist</a></li>
-                    <li><a href="#" class="sidebar-link" data-tab="watchlist">Analyze</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="trend">Trend Prediction</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="indicators">Indicator Guide</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="portfolio">Portfolio Tracker</a></li>
@@ -51,55 +51,32 @@
                 <div class="header-left">
                     <div class="logo">
                         <h1 class="logo-text"><span class="logo-alpha">Alpha</span><span class="logo-break">Break</span></h1>
-                        <p class="tagline">AI-Powered Stock & Options Analysis</p>
+                        <p class="tagline">AI-Driven Trend and Sentiment Analysis</p>
                     </div>
                 </div>
                 <div class="header-right">
                     <span class="current-page-title" id="currentPageTitle">Sentiment Analysis</span>
-                    <div class="api-status" id="apiStatus">
-                        <span class="status-indicator"></span>
-                        <span class="status-text">Checking API...</span>
-                    </div>
+                    <!-- API status moved to footer -->
                     <!-- Auth buttons (when not logged in) -->
                     <div class="auth-actions" id="authActions">
                         <button class="btn btn-sm btn-ghost" id="authSignInBtn">Sign In</button>
                         <button class="btn btn-sm btn-primary" id="authSignUpBtn">Sign Up</button>
                     </div>
-                    <!-- Notification bell (when logged in) -->
-                    <div class="notification-bell" id="notificationBell" style="display: none;">
-                        <button class="btn-icon" id="notificationBellBtn" title="Notifications">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                            </svg>
-                            <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
-                        </button>
-                        <div class="notification-panel" id="notificationPanel" style="display: none;">
-                            <div class="notification-panel-header">
-                                <h3>Notifications</h3>
-                                <button class="btn-link" id="markAllReadBtn">Mark all read</button>
-                            </div>
-                            <div class="notification-panel-body" id="notificationList">
-                                <p class="notification-empty">No notifications</p>
-                            </div>
-                            <div class="notification-panel-footer">
-                                <button class="btn-link" id="notificationSettingsBtn">Notification Settings</button>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- User menu (when logged in) -->
+                    <!-- Notification bell moved to profile/account page -->
+                    <!-- User menu (when logged in) — sign out moved to profile page -->
                     <div class="auth-user-menu" id="authUserMenu" style="display: none;">
                         <a href="#" class="auth-user-name" id="authUserName" data-tab="account"></a>
-                        <button class="btn btn-sm btn-ghost" id="authSignOutBtn">Sign Out</button>
                     </div>
                 </div>
             </header>
 
-        <!-- Persistent Market Sentiment Widget -->
+        <!-- Persistent Market Sentiment Widget (Collapsible) -->
         <section class="persistent-sentiment" id="persistentSentiment">
             <div class="widget-card widget-card-wide widget-market-hero" id="widgetMarketSentiment">
                 <div class="widget-header">
                     <h3 class="widget-title">Market Sentiment</h3>
+                    <span class="widget-badge" id="marketSentimentBadge">Loading...</span>
+                    <div class="header-spacer"></div>
                     <div class="timeframe-selector" id="timeframeSelector">
                         <label class="timeframe-option">
                             <input type="radio" name="chartTimeframe" value="daily" checked>
@@ -118,7 +95,11 @@
                             <span>10 Min</span>
                         </label>
                     </div>
-                    <span class="widget-badge" id="marketSentimentBadge">Loading...</span>
+                    <button class="sentiment-collapse-btn" id="sentimentCollapseBtn" title="Collapse/Expand">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
                 </div>
 
                 <!-- Description Box -->
@@ -136,23 +117,25 @@
                     <button class="description-close" data-widget-id="widgetMarketSentiment" title="Close this tip">&times;</button>
                 </div>
 
-                <div class="widget-body market-sentiment-body">
-                    <div class="market-sentiment-hero">
-                        <div class="sentiment-display" id="marketSentimentDisplay">
-                            <div class="sentiment-label" id="marketSentimentLabel">--</div>
-                            <div class="sentiment-confidence" id="marketSentimentConfidence"></div>
+                <div id="sentimentCollapsible">
+                    <div class="widget-body market-sentiment-body">
+                        <div class="market-sentiment-hero">
+                            <div class="sentiment-display" id="marketSentimentDisplay">
+                                <div class="sentiment-label" id="marketSentimentLabel">--</div>
+                                <div class="sentiment-confidence" id="marketSentimentConfidence"></div>
+                            </div>
+                            <div class="widget-indicators" id="marketSentimentIndicators"></div>
+                            <div class="widget-context" id="marketSentimentContext"></div>
                         </div>
-                        <div class="widget-indicators" id="marketSentimentIndicators"></div>
-                        <div class="widget-context" id="marketSentimentContext"></div>
-                    </div>
-                    <div class="market-sentiment-chart">
-                        <div class="widget-chart-container widget-chart-large">
-                            <canvas id="marketSentimentChart"></canvas>
+                        <div class="market-sentiment-chart">
+                            <div class="widget-chart-container widget-chart-large">
+                                <canvas id="marketSentimentChart"></canvas>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="widget-footer">
-                    <span class="widget-updated" id="marketSentimentUpdated"></span>
+                    <div class="widget-footer">
+                        <span class="widget-updated" id="marketSentimentUpdated"></span>
+                    </div>
                 </div>
             </div>
         </section>
@@ -1781,6 +1764,10 @@
                         </div>
                         <span class="premium-badge" id="profilePremiumBadge" style="display:none;">Premium</span>
                     </div>
+                    <div class="account-card" style="margin-top: 16px;">
+                        <h3>Account Actions</h3>
+                        <button class="btn btn-danger" id="authSignOutBtn" style="margin-top: 8px;">Sign Out</button>
+                    </div>
                 </div>
 
                 <!-- Security Section -->
@@ -1927,7 +1914,13 @@
 
             <!-- Footer -->
             <footer class="footer">
-                <p><span class="footer-logo"><span class="logo-alpha">Alpha</span><span class="logo-break">Break</span></span> v1.0 | Powered by XGBoost & TimescaleDB</p>
+                <div class="footer-row">
+                    <p><span class="footer-logo"><span class="logo-alpha">Alpha</span><span class="logo-break">Break</span></span> v3.0 | Powered by XGBoost & TimescaleDB</p>
+                    <div class="api-status" id="apiStatus">
+                        <span class="status-indicator"></span>
+                        <span class="status-text">Checking API...</span>
+                    </div>
+                </div>
                 <p class="disclaimer">For informational purposes only. Not financial advice.</p>
             </footer>
         </div>

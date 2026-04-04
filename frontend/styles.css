@@ -6669,6 +6669,51 @@ a.auth-user-name:hover {
    Analyze Tab
    ═══════════════════════════════════════════════════════════════ */
 
+/* Sidebar title style for Analyze */
+.sidebar-link.sidebar-title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    border-left: 3px solid var(--primary-color);
+    padding-left: 13px;
+}
+.sidebar-link.sidebar-title:hover {
+    color: var(--primary-color);
+    background: var(--primary-muted);
+}
+.sidebar-link.sidebar-title.active {
+    background: var(--primary-muted);
+    color: var(--primary-color);
+    border-left-color: var(--primary-color);
+}
+
+/* Header spacer (flex grow between title+badge and timeframe) */
+.header-spacer { flex: 1; }
+
+/* Sentiment collapse button */
+.sentiment-collapse-btn {
+    background: none; border: none; cursor: pointer; color: var(--text-muted);
+    padding: 4px; border-radius: 4px; display: flex; align-items: center;
+    transition: transform 0.2s, color 0.2s; margin-left: 8px;
+}
+.sentiment-collapse-btn:hover { color: var(--text-primary); }
+.sentiment-collapse-btn.collapsed { transform: rotate(-90deg); }
+
+/* Danger button */
+.btn-danger {
+    background: var(--danger-color); color: #fff; border: none;
+    padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;
+}
+.btn-danger:hover { background: var(--danger-bright); }
+
+/* Footer row */
+.footer-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+}
+
 /* Search */
 .analyze-search-container { position: relative; margin-bottom: 16px; }
 .analyze-search-wrapper { display: flex; gap: 8px; }

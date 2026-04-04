@@ -47,7 +47,29 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeForms();
     checkApiHealth();
     setDefaultDates();
+    initSentimentCollapse();
 });
+
+// Sentiment widget collapse
+function initSentimentCollapse() {
+    const btn = document.getElementById('sentimentCollapseBtn');
+    const body = document.getElementById('sentimentCollapsible');
+    if (!btn || !body) return;
+
+    // Restore saved state
+    const collapsed = localStorage.getItem('sentimentCollapsed') === 'true';
+    if (collapsed) {
+        body.style.display = 'none';
+        btn.classList.add('collapsed');
+    }
+
+    btn.addEventListener('click', () => {
+        const isCollapsed = body.style.display === 'none';
+        body.style.display = isCollapsed ? '' : 'none';
+        btn.classList.toggle('collapsed', !isCollapsed);
+        localStorage.setItem('sentimentCollapsed', !isCollapsed);
+    });
+}
 
 // Sidebar and hamburger menu management
 function initializeSidebar() {

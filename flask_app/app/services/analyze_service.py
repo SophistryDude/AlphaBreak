@@ -274,10 +274,15 @@ def fetch_enhanced_chart(ticker: str, interval: str = '1d', period: str = '3mo')
     peaks = _detect_peaks(closes, chart_data)
     troughs = _detect_troughs(closes, chart_data)
 
+    # Moving averages and Bollinger Bands computed on close prices
+    close_series = pd.Series(closes)
+    overlays = _compute_chart_overlays(close_series)
+
     return {
         'data': chart_data,
         'peaks': peaks,
         'troughs': troughs,
+        'overlays': overlays,
         'period': period,
         'interval': interval,
     }
@@ -310,6 +315,51 @@ def search_tickers(query: str) -> List[Dict]:
 # ──────────────────────────────────────────────────────────────────────────────
 # Internal helpers
 # ──────────────────────────────────────────────────────────────────────────────
+
+def _compute_chart_overlays(close_series: pd.Series) -> Dict:
+    """
+    Compute moving averages and Bollinger Bands for chart overlay.
+
+    Returns dict with arrays (same length as close_series, None-padded):
+    - sma_10: 10-period SMA (approx 2-week on daily)
+    - sma_50: 50-period SMA (approx 50-week on weekly, 50-day on daily)
+    - bb_upper: Bollinger upper band (20-period SMA + 2 std dev)
+    - bb_middle: Bollinger middle band (20-period SMA)
+    - bb_lower: Bollinger lower band (20-period SMA - 2 std dev)
+    """
+    n = len(close_series)
+
+    def _to_list(series):
+        return [None if pd.isna(v) else round(float(v), 4) for v in series]
+
+    result = {}
+
+    # 10-period SMA (approx 2 trading weeks on daily charts)
+    if n >= 10:
+        result['sma_10'] = _to_list(close_series.rolling(10).mean())
+    else:
+        result['sma_10'] = [None] * n
+
+    # 50-period SMA
+    if n >= 50:
+        result['sma_50'] = _to_list(close_series.rolling(50).mean())
+    else:
+        result['sma_50'] = [None] * n
+
+    # Bollinger Bands (20-period, 2 std dev)
+    if n >= 20:
+        bb_mid = close_series.rolling(20).mean()
+        bb_std = close_series.rolling(20).std()
+        result['bb_middle'] = _to_list(bb_mid)
+        result['bb_upper'] = _to_list(bb_mid + 2 * bb_std)
+        result['bb_lower'] = _to_list(bb_mid - 2 * bb_std)
+    else:
+        result['bb_middle'] = [None] * n
+        result['bb_upper'] = [None] * n
+        result['bb_lower'] = [None] * n
+
+    return result
+
 
 def _safe_val(val):
     """Convert to Python float/int safely, None for NaN/None."""
