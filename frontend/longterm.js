@@ -440,91 +440,18 @@ const LongTerm = {
         const section = document.getElementById('longtermCandlestickSection');
         if (section) section.style.display = 'block';
 
-        this.destroyChart('candlestick');
+        if (!dailyChart || !dailyChart.data || dailyChart.data.length === 0) return;
+        if (typeof AlphaCharts === 'undefined') return;
 
-        const canvas = document.getElementById('longtermCandlestickChart');
-        if (!canvas || !dailyChart || !dailyChart.data || dailyChart.data.length === 0) return;
-
-        const { DateTime } = luxon;
-        const rawData = dailyChart.data;
-
-        const candlestickData = rawData.map(d => ({
-            x: DateTime.fromISO(d.date).toMillis(),
-            o: d.open,
-            h: d.high,
-            l: d.low,
-            c: d.close,
+        const chartData = dailyChart.data.map(d => ({
+            timestamp: d.date,
+            open: d.open, high: d.high, low: d.low, close: d.close,
+            volume: d.volume || 0,
         }));
 
-        const datasets = [{
-            label: this.selectedTicker || 'Price',
-            data: candlestickData,
-        }];
-
-        // Add resistance line from peaks
-        if (dailyChart.peaks && dailyChart.peaks.length > 0) {
-            const lastPeak = dailyChart.peaks[dailyChart.peaks.length - 1];
-            datasets.push({
-                label: `R $${lastPeak.price.toFixed(2)}`,
-                data: candlestickData.map(d => ({ x: d.x, y: lastPeak.price })),
-                type: 'line',
-                borderColor: '#ef5350',
-                borderWidth: 1,
-                borderDash: [4, 4],
-                pointRadius: 0,
-                fill: false,
-            });
-        }
-
-        // Add support line from troughs
-        if (dailyChart.troughs && dailyChart.troughs.length > 0) {
-            const lastTrough = dailyChart.troughs[dailyChart.troughs.length - 1];
-            datasets.push({
-                label: `S $${lastTrough.price.toFixed(2)}`,
-                data: candlestickData.map(d => ({ x: d.x, y: lastTrough.price })),
-                type: 'line',
-                borderColor: '#26a69a',
-                borderWidth: 1,
-                borderDash: [4, 4],
-                pointRadius: 0,
-                fill: false,
-            });
-        }
-
-        this.charts['candlestick'] = new Chart(canvas.getContext('2d'), {
-            type: 'candlestick',
-            data: { datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        labels: { color: '#8b95a5', font: { size: 10 } },
-                    },
-                    tooltip: {
-                        backgroundColor: '#1c2030',
-                        titleColor: '#e2e8f0',
-                        bodyColor: '#8b95a5',
-                        borderColor: '#2a2e39',
-                        borderWidth: 1,
-                    },
-                },
-                scales: {
-                    x: {
-                        type: 'timeseries',
-                        time: { unit: 'day' },
-                        grid: { color: '#2a2e3960' },
-                        ticks: { color: '#8b95a5', maxTicksLimit: 10, font: { size: 10 } },
-                    },
-                    y: {
-                        position: 'right',
-                        grid: { color: '#2a2e3960' },
-                        ticks: { color: '#8b95a5', font: { size: 10 } },
-                    },
-                },
-            },
-        });
+        AlphaCharts.destroy('longtermLwChart');
+        AlphaCharts.create('longtermLwChart', { height: 300, volumeHeight: 45 });
+        AlphaCharts.setData('longtermLwChart', chartData);
     },
 
     // ── Fund Detail Panel ───────────────────────────────────────────────

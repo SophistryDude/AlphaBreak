@@ -720,28 +720,31 @@ const Analyze = (() => {
         currentChartInterval = interval;
 
         try {
-            // Fetch chart data + trendlines + patterns in parallel
-            const fetches = [
-                apiRequest(`/api/analyze/${ticker}/chart?period=${period}&interval=${interval}`),
-                apiRequest(`/api/analyze/${ticker}/trendlines?period=${period}&interval=${interval}`),
-            ];
-            if (document.getElementById('togglePatterns')?.checked) {
-                fetches.push(apiRequest(`/api/analyze/${ticker}/patterns?period=${period}`));
-            }
-
-            const responses = await Promise.all(fetches);
-            const chartData = await responses[0].json();
-            let trendData = null;
-            let patternData = null;
-            try { trendData = await responses[1].json(); } catch (e) {}
-            if (responses[2]) { try { patternData = await responses[2].json(); } catch (e) {} }
+            // Fetch chart data first (critical), trendlines + patterns as best-effort
+            const chartResp = await apiRequest(`/api/analyze/${ticker}/chart?period=${period}&interval=${interval}`);
+            const chartData = await chartResp.json();
 
             if (!chartData || !chartData.data || chartData.data.length === 0) return;
 
-            // Create or update chart
-            if (!AlphaCharts.instances['analyzeChartContainer']) {
-                AlphaCharts.create('analyzeChartContainer', { height: 400, volumeHeight: 60 });
-            }
+            // Fetch trendlines + patterns in background (non-blocking)
+            let trendData = null;
+            let patternData = null;
+            try {
+                const extras = await Promise.all([
+                    apiRequest(`/api/analyze/${ticker}/trendlines?period=${period}&interval=${interval}`)
+                        .then(r => r.json()).catch(() => null),
+                    document.getElementById('togglePatterns')?.checked
+                        ? apiRequest(`/api/analyze/${ticker}/patterns?period=${period}`)
+                            .then(r => r.json()).catch(() => null)
+                        : Promise.resolve(null),
+                ]);
+                trendData = extras[0];
+                patternData = extras[1];
+            } catch (e) { /* non-critical */ }
+
+            // Always destroy and recreate — time format changes between daily/intraday
+            AlphaCharts.destroy('analyzeChartContainer');
+            AlphaCharts.create('analyzeChartContainer', { height: 400, volumeHeight: 60 });
 
             // Filter overlays based on toggle state
             const overlays = chartData.overlays || {};

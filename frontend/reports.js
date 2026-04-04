@@ -296,7 +296,7 @@ const Reports = {
                     </div>
                 </div>
                 <div class="report-chart-wrapper">
-                    <canvas id="reportChart_${ticker}"></canvas>
+                    <div id="reportLwChart_${ticker}" class="lw-chart-container" style="min-height:250px;"></div>
                 </div>
             </div>
             <div class="detail-grid-4col">
@@ -438,114 +438,33 @@ const Reports = {
     // ── Chart Loading ─────────────────────────────────────────────────
 
     async loadReportChart(ticker, interval) {
-        const canvas = document.getElementById(`reportChart_${ticker}`);
-        if (!canvas) return;
+        const containerId = `reportLwChart_${ticker}`;
+        const container = document.getElementById(containerId);
+        if (!container) return;
 
         try {
             const response = await apiRequest(`/api/reports/ticker/${ticker}/chart?interval=${interval}`);
             if (!response.ok) throw new Error(`API error: ${response.status}`);
             const chartInfo = await response.json();
-            this.renderReportChart(ticker, chartInfo, interval);
+
+            const rawData = chartInfo.data || [];
+            if (rawData.length === 0) return;
+
+            // Convert to AlphaCharts format
+            const chartData = rawData.map(d => ({
+                timestamp: d.timestamp,
+                open: d.open, high: d.high, low: d.low, close: d.close,
+                volume: d.volume || 0,
+            }));
+
+            // Destroy and recreate (interval may change between daily/intraday)
+            AlphaCharts.destroy(containerId);
+            AlphaCharts.create(containerId, { height: 220, volumeHeight: 35 });
+            AlphaCharts.setData(containerId, chartData);
+
         } catch (err) {
             console.error(`Report chart load failed for ${ticker}:`, err);
         }
-    },
-
-    renderReportChart(ticker, chartInfo, interval) {
-        const canvas = document.getElementById(`reportChart_${ticker}`);
-        if (!canvas) return;
-
-        // Destroy existing chart
-        if (this.charts[ticker]) {
-            this.charts[ticker].destroy();
-            delete this.charts[ticker];
-        }
-
-        const rawData = chartInfo.data || [];
-        if (rawData.length === 0) return;
-
-        const { DateTime } = luxon;
-
-        const candlestickData = rawData.map(d => ({
-            x: DateTime.fromISO(d.timestamp).toMillis(),
-            o: d.open,
-            h: d.high,
-            l: d.low,
-            c: d.close,
-        }));
-
-        const datasets = [{
-            label: `${ticker} OHLC`,
-            data: candlestickData,
-        }];
-
-        // Add resistance lines from peaks
-        if (chartInfo.peaks && chartInfo.peaks.length > 0) {
-            const lastPeak = chartInfo.peaks[chartInfo.peaks.length - 1];
-            datasets.push({
-                label: `Resistance ($${lastPeak.price.toFixed(2)})`,
-                data: candlestickData.map(d => ({ x: d.x, y: lastPeak.price })),
-                type: 'line',
-                borderColor: '#ef5350',
-                borderWidth: 1,
-                borderDash: [4, 4],
-                pointRadius: 0,
-                fill: false,
-            });
-        }
-
-        // Add support lines from troughs
-        if (chartInfo.troughs && chartInfo.troughs.length > 0) {
-            const lastTrough = chartInfo.troughs[chartInfo.troughs.length - 1];
-            datasets.push({
-                label: `Support ($${lastTrough.price.toFixed(2)})`,
-                data: candlestickData.map(d => ({ x: d.x, y: lastTrough.price })),
-                type: 'line',
-                borderColor: '#26a69a',
-                borderWidth: 1,
-                borderDash: [4, 4],
-                pointRadius: 0,
-                fill: false,
-            });
-        }
-
-        // Determine time unit
-        const timeUnit = interval === '1d' ? 'day' : interval === '1h' ? 'hour' : 'minute';
-
-        this.charts[ticker] = new Chart(canvas.getContext('2d'), {
-            type: 'candlestick',
-            data: { datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        labels: { color: '#8b95a5', font: { size: 10 } },
-                    },
-                    tooltip: {
-                        backgroundColor: '#1c2030',
-                        titleColor: '#e2e8f0',
-                        bodyColor: '#8b95a5',
-                        borderColor: '#2a2e39',
-                        borderWidth: 1,
-                    },
-                },
-                scales: {
-                    x: {
-                        type: 'timeseries',
-                        time: { unit: timeUnit },
-                        grid: { color: '#2a2e3960' },
-                        ticks: { color: '#8b95a5', maxTicksLimit: 8 },
-                    },
-                    y: {
-                        position: 'right',
-                        grid: { color: '#2a2e3960' },
-                        ticks: { color: '#8b95a5' },
-                    },
-                },
-            },
-        });
     },
 
     // ── Daily Overview ────────────────────────────────────────────────

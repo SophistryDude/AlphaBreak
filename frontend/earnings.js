@@ -242,15 +242,10 @@ const Earnings = {
                             <h4>CBOE Options Activity</h4>
                             <div class="cboe-metrics" id="cboeMetrics"><p>Loading CBOE data...</p></div>
                         </div>
-                        <!-- Candlestick Chart + Volume -->
+                        <!-- Candlestick Chart + Volume (Lightweight Charts) -->
                         <div class="earnings-chart-container">
                             <h4>3-Month Daily Chart</h4>
-                            <div class="chart-wrapper">
-                                <canvas id="earningsCandlestickChart"></canvas>
-                            </div>
-                            <div class="volume-wrapper" style="height:50px;margin-top:-4px;">
-                                <canvas id="earningsVolumeChart"></canvas>
-                            </div>
+                            <div id="earningsLwChart" class="lw-chart-container" style="min-height:300px;"></div>
                         </div>
                     </div>
                     <!-- News Section -->
@@ -275,8 +270,7 @@ const Earnings = {
 
             const data = await response.json();
             this.renderCBOE(data.cboe_activity);
-            this.renderDetailChart(data.daily_chart);
-            this.renderDetailVolume(data.daily_chart);
+            this.renderLwChart(data.daily_chart);
             this.renderNews(data.news);
         } catch (error) {
             document.getElementById('cboeMetrics').innerHTML = '<p>Failed to load details: ' + error.message + '</p>';
@@ -295,13 +289,14 @@ const Earnings = {
 
         this.expandedTicker = null;
 
+        // Destroy Lightweight Chart instance
+        if (typeof AlphaCharts !== 'undefined') {
+            AlphaCharts.destroy('earningsLwChart');
+        }
+        // Legacy cleanup
         if (this.charts.earningsCandlestickChart) {
             this.charts.earningsCandlestickChart.destroy();
             delete this.charts.earningsCandlestickChart;
-        }
-        if (this.charts.earningsVolumeChart) {
-            this.charts.earningsVolumeChart.destroy();
-            delete this.charts.earningsVolumeChart;
         }
     },
 
@@ -390,9 +385,24 @@ const Earnings = {
     },
 
     // ──────────────────────────────────────────────────────────
-    // CANDLESTICK CHART FOR EARNINGS DETAIL
+    // LIGHTWEIGHT CHART FOR EARNINGS DETAIL
     // ──────────────────────────────────────────────────────────
 
+    renderLwChart(chartInfo) {
+        if (!chartInfo || !chartInfo.data || chartInfo.data.length === 0) return;
+        if (typeof AlphaCharts === 'undefined') return;
+
+        const chartData = chartInfo.data.map(d => ({
+            timestamp: d.date,
+            open: d.open, high: d.high, low: d.low, close: d.close,
+            volume: d.volume || 0,
+        }));
+
+        AlphaCharts.create('earningsLwChart', { height: 250, volumeHeight: 40 });
+        AlphaCharts.setData('earningsLwChart', chartData);
+    },
+
+    // Legacy renderDetailChart kept for fallback
     renderDetailChart(chartInfo) {
         const canvasId = 'earningsCandlestickChart';
         const ctx = document.getElementById(canvasId);

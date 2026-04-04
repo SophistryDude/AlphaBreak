@@ -434,15 +434,25 @@ const AlphaCharts = (() => {
 
     // ── Time conversion ──────────────────────────────────────────────────
     function _toTime(timestamp) {
-        // Lightweight Charts expects UTC seconds or { year, month, day }
+        // Lightweight Charts expects { year, month, day } for daily bars
+        // or UTC seconds for intraday
         if (typeof timestamp === 'string') {
-            // ISO date string — extract date part for daily bars
-            if (timestamp.length === 10 || timestamp.includes('T00:00:00')) {
-                const parts = timestamp.substring(0, 10).split('-');
-                return { year: parseInt(parts[0]), month: parseInt(parts[1]), day: parseInt(parts[2]) };
+            // Extract date part (first 10 chars) — works for:
+            // "2025-10-03", "2025-10-03T00:00:00", "2025-10-03T00:00:00-04:00"
+            const datePart = timestamp.substring(0, 10);
+            const parts = datePart.split('-');
+            if (parts.length === 3 && parts[0].length === 4) {
+                const y = parseInt(parts[0]);
+                const m = parseInt(parts[1]);
+                const d = parseInt(parts[2]);
+                // Check if this is intraday (has a non-midnight time)
+                const timePart = timestamp.substring(11, 19);
+                if (!timePart || timePart === '00:00:00' || timePart === '') {
+                    return { year: y, month: m, day: d };
+                }
+                // Intraday — use UTC seconds
+                return Math.floor(new Date(timestamp).getTime() / 1000);
             }
-            // Intraday — use UTC seconds
-            return Math.floor(new Date(timestamp).getTime() / 1000);
         }
         if (typeof timestamp === 'number') return timestamp;
         return Math.floor(new Date(timestamp).getTime() / 1000);

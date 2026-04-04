@@ -548,7 +548,7 @@ def _confidence_to_color(confidence: float, line_type: str) -> Dict:
         if confidence >= 80:
             return {'r': 38, 'g': 166, 'b': 154, 'a': alpha, 'hex': '#26a69a'}
         elif confidence >= 60:
-            return {'r': 76, 'g': 175, 'b': 160, 'a': alpha, 'hex': '#4cafao'}
+            return {'r': 76, 'g': 175, 'b': 160, 'a': alpha, 'hex': '#4cafa0'}
         else:
             return {'r': 120, 'g': 160, 'b': 155, 'a': alpha * 0.7, 'hex': '#78a09b'}
     else:
