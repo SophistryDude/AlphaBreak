@@ -744,9 +744,26 @@
                                             <input type="checkbox" id="toggleBB" checked>
                                             <span>BB</span>
                                         </label>
+                                        <label class="chart-toggle" title="Compare with SPY, VIX">
+                                            <input type="checkbox" id="toggleCompare">
+                                            <span>Compare</span>
+                                        </label>
+                                        <label class="chart-toggle" title="Candlestick patterns">
+                                            <input type="checkbox" id="togglePatterns" checked>
+                                            <span>Patterns</span>
+                                        </label>
+                                        <button class="chart-fullscreen-btn" id="chartFullscreenBtn" title="Full Screen">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                                <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"></path>
+                                            </svg>
+                                        </button>
                                     </div>
                                 </div>
                                 <div id="analyzeChartContainer" class="lw-chart-container"></div>
+                                <!-- Pattern markers legend -->
+                                <div id="patternMarkers" class="pattern-markers-bar" style="display:none;"></div>
+                                <!-- Seasonality heatmap -->
+                                <div id="seasonalityContainer" class="seasonality-container" style="display:none;"></div>
                             </div>
 
                             <!-- Technical Indicators -->

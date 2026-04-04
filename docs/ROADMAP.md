@@ -116,8 +116,22 @@ Pro is the revenue engine. These features justify the price by replacing 2-3 sep
 - [ ] **Market Maker Move** — Implied earnings move from ATM straddle pricing
 
 ### Charting — Enhanced
-- [ ] **Drawing Tools** — Fibonacci retracements, trendlines, channels, annotations
+*Phase 1 complete: TradingView Lightweight Charts, auto-detected trendlines, candlestick patterns, seasonality, symbol comparison, fullscreen.*
+
+**Phase 2 — Drawing Tools + Multi-Chart:**
+- [ ] **AI-Assisted Drawing Tools** — Fibonacci (auto-placed at detected swings), trendlines (pre-drawn suggestions the user can adjust), channels, pitchforks. AI suggests "draw here" based on pivot detection.
+- [ ] **Multi-Chart Layout** — 2-4 charts side-by-side with synced crosshairs. Compare same ticker across timeframes or different tickers.
 - [ ] **Multi-Timeframe Analysis** — Overlay indicators from daily + hourly + 15min on single view
+
+**Phase 3 — 100+ Indicators with Regime Weighting:**
+- [ ] **Indicator Library** — RSI, MACD, Stochastic, Bollinger, Ichimoku, VWAP, OBV, Williams %R, Keltner, ATR, Parabolic SAR, etc. (100+ via ta-lib or custom)
+- [ ] **Regime-Aware Weighting** — In BULL regime, weight momentum indicators higher. In RANGE, weight mean-reversion. In HIGH_VOL, weight volatility indicators. Only highlight the top 5 most predictive indicators for the current regime.
+- [ ] **Indicator Search + Add** — Search bar to find and overlay any indicator with customizable parameters
+
+**Phase 4 — Natural-Language Scripting:**
+- [ ] **Smart Alerts** — "If regime = breakout AND RSI < 30, notify me" — parsed by backend AI into alert conditions
+- [ ] **Custom Screeners** — "Show me all stocks with bullish engulfing pattern AND above 200 SMA AND insider buying" — natural language to SQL/filter
+- [ ] **Strategy Builder** — "Backtest buying when trend break > 90% bullish, selling when RSI > 70" — converts to automated strategy
 
 ### Journal — Premium
 - [x] Tags + filters + performance by tag

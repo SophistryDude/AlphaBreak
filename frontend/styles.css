@@ -6967,6 +6967,70 @@ a.auth-user-name:hover {
 /* Regime badge (positioned by JS) */
 .regime-badge { font-family: inherit; }
 
+/* Full-screen chart */
+.chart-fullscreen {
+    position: fixed !important;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 9999; margin: 0; border-radius: 0;
+    max-width: 100vw; max-height: 100vh;
+    overflow: auto;
+}
+.chart-fullscreen .lw-chart-container { height: calc(100vh - 120px) !important; }
+.chart-fullscreen .lw-chart-container > div:first-child { height: calc(100vh - 180px) !important; }
+body.chart-fullscreen-active { overflow: hidden; }
+
+/* Fullscreen button */
+.chart-fullscreen-btn {
+    background: var(--bg-elevated); border: 1px solid var(--border-color);
+    cursor: pointer; color: var(--text-muted); padding: 4px 6px; border-radius: 4px;
+    display: flex; align-items: center; transition: all 0.15s;
+}
+.chart-fullscreen-btn:hover { color: var(--text-primary); background: var(--bg-surface-hover); }
+
+/* Pattern markers bar */
+.pattern-markers-bar {
+    display: flex; gap: 6px; padding: 8px 12px; flex-wrap: wrap;
+    border-top: 1px solid var(--border-color);
+}
+.pattern-chip {
+    display: flex; align-items: center; gap: 4px; padding: 3px 8px;
+    border-radius: 4px; font-size: 11px; cursor: help;
+    background: var(--bg-surface); border: 1px solid var(--border-color);
+}
+.pattern-chip.positive { border-color: rgba(38,166,154,0.3); color: var(--success-color); }
+.pattern-chip.negative { border-color: rgba(239,83,80,0.3); color: var(--danger-color); }
+.pattern-name { font-weight: 600; }
+.pattern-prob { color: var(--text-muted); }
+
+/* Seasonality heatmap */
+.seasonality-container {
+    padding: 8px 12px; border-top: 1px solid var(--border-color);
+}
+.seasonality-header {
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+}
+.seasonality-grid {
+    display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px;
+}
+.seasonality-cell {
+    padding: 6px 4px; border-radius: 4px; text-align: center;
+    cursor: help; transition: transform 0.1s;
+}
+.seasonality-cell:hover { transform: scale(1.05); }
+.s-month { display: block; font-size: 10px; font-weight: 600; color: var(--text-secondary); }
+.s-return { display: block; font-size: 12px; font-weight: 700; margin: 2px 0; }
+.s-return.strong-bull { color: var(--success-color); }
+.s-return.mild-bull { color: var(--success-bright); }
+.s-return.mild-bear { color: var(--danger-color); }
+.s-return.strong-bear { color: var(--danger-bright); }
+.s-winrate { display: block; font-size: 9px; color: var(--text-muted); }
+
+@media (max-width: 768px) {
+    .seasonality-grid { grid-template-columns: repeat(6, 1fr); }
+    .analyze-chart-toggles { flex-wrap: wrap; }
+}
+
 /* Key stats grid */
 .analyze-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
 .stat-row {

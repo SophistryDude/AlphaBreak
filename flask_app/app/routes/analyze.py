@@ -212,6 +212,67 @@ def analyze_trendlines(ticker):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# GET /api/analyze/<ticker>/patterns
+# ──────────────────────────────────────────────────────────────────────────────
+
+@analyze_bp.route('/analyze/<ticker>/patterns', methods=['GET'])
+@log_request
+@require_api_key
+def analyze_patterns(ticker):
+    """Detect candlestick patterns + seasonality heatmap."""
+    try:
+        ticker = _validate_ticker(ticker)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+    period = request.args.get('period', '6mo')
+
+    try:
+        cache_key = f'analyze_patterns_{ticker}_{period}'
+        result = _get_cached(
+            cache_key,
+            lambda: _fetch_patterns(ticker, period),
+            ttl=CACHE_TTL,
+        )
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.error(f"Pattern error for {ticker}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# GET /api/analyze/<ticker>/compare
+# ──────────────────────────────────────────────────────────────────────────────
+
+@analyze_bp.route('/analyze/<ticker>/compare', methods=['GET'])
+@log_request
+@require_api_key
+def analyze_compare(ticker):
+    """
+    Get comparison data: ticker vs SPY, VIX, sector ETF.
+    Returns normalized % change series for overlay.
+    """
+    try:
+        ticker = _validate_ticker(ticker)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+    period = request.args.get('period', '6mo')
+
+    try:
+        cache_key = f'analyze_compare_{ticker}_{period}'
+        result = _get_cached(
+            cache_key,
+            lambda: _fetch_compare(ticker, period),
+            ttl=CACHE_TTL,
+        )
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.error(f"Compare error for {ticker}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -228,3 +289,69 @@ def _fetch_chart(ticker, interval, period):
 def _fetch_trendlines(ticker, period, interval, db_manager):
     from app.services.trendline_service import detect_trendlines
     return detect_trendlines(ticker, period, interval, db_manager)
+
+
+def _fetch_patterns(ticker, period):
+    from app.services.pattern_service import detect_patterns
+    return detect_patterns(ticker, period)
+
+
+def _fetch_compare(ticker, period):
+    """Fetch normalized % change series for ticker vs SPY, VIX, sector ETF."""
+    import yfinance as yf
+    import numpy as np
+
+    symbols = [ticker, 'SPY', '^VIX']
+
+    # Try to get sector ETF
+    try:
+        from app.services.report_service import TICKER_SECTOR_MAP, SECTOR_ETFS
+        sector = TICKER_SECTOR_MAP.get(ticker)
+        if sector:
+            etf = SECTOR_ETFS.get(sector)
+            if etf and etf not in symbols:
+                symbols.append(etf)
+    except Exception:
+        pass
+
+    result = {'symbols': []}
+
+    for sym in symbols:
+        try:
+            stock = yf.Ticker(sym)
+            hist = stock.history(period=period, interval='1d')
+            if hist.empty or len(hist) < 5:
+                continue
+
+            hist = hist.reset_index()
+            ts_col = 'Date' if 'Date' in hist.columns else 'Datetime'
+            closes = hist['Close'].values
+            base = closes[0]
+            if base == 0:
+                continue
+
+            pct_changes = ((closes - base) / base * 100).tolist()
+            timestamps = [
+                t.isoformat() if hasattr(t, 'isoformat') else str(t)
+                for t in hist[ts_col]
+            ]
+
+            label = sym
+            if sym == '^VIX':
+                label = 'VIX'
+            elif sym == ticker:
+                label = ticker
+
+            result['symbols'].append({
+                'symbol': sym,
+                'label': label,
+                'data': [
+                    {'timestamp': ts, 'value': round(float(v), 2)}
+                    for ts, v in zip(timestamps, pct_changes)
+                    if not np.isnan(v)
+                ],
+            })
+        except Exception as e:
+            logger.debug(f"Compare fetch failed for {sym}: {e}")
+
+    return result

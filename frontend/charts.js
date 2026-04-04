@@ -457,7 +457,144 @@ const AlphaCharts = (() => {
         inst.volumeChart.applyOptions({ width: rect.width });
     }
 
-    return { create, setData, setTrendlines, destroy, resize, instances };
+    // ── Pattern Markers ───────────────────────────────────────────────────
+    function setPatterns(containerId, patternData) {
+        const inst = instances[containerId];
+        if (!inst || !patternData?.patterns?.length) return;
+
+        // Add markers to candlestick series
+        const markers = patternData.patterns.map(p => ({
+            time: _toTime(p.timestamp),
+            position: p.direction === 'bullish' ? 'belowBar' : p.direction === 'bearish' ? 'aboveBar' : 'inBar',
+            color: p.direction === 'bullish' ? '#26a69a' : p.direction === 'bearish' ? '#ef5350' : '#f0b90b',
+            shape: p.direction === 'bullish' ? 'arrowUp' : p.direction === 'bearish' ? 'arrowDown' : 'circle',
+            text: `${p.pattern} ${p.probability}%`,
+        }));
+
+        // Sort markers by time (required by Lightweight Charts)
+        markers.sort((a, b) => {
+            const ta = typeof a.time === 'object' ? new Date(a.time.year, a.time.month - 1, a.time.day).getTime() : a.time * 1000;
+            const tb = typeof b.time === 'object' ? new Date(b.time.year, b.time.month - 1, b.time.day).getTime() : b.time * 1000;
+            return ta - tb;
+        });
+
+        inst.candleSeries.setMarkers(markers);
+
+        // Render pattern legend bar
+        _renderPatternBar(containerId, patternData.patterns);
+    }
+
+    function _renderPatternBar(containerId, patterns) {
+        const bar = document.getElementById('patternMarkers');
+        if (!bar || !patterns.length) return;
+
+        bar.style.display = 'block';
+        bar.innerHTML = patterns.slice(0, 5).map(p => {
+            const cls = p.direction === 'bullish' ? 'positive' : p.direction === 'bearish' ? 'negative' : '';
+            return `<div class="pattern-chip ${cls}" title="${p.description}">
+                <span class="pattern-name">${p.pattern}</span>
+                <span class="pattern-prob">${p.probability}%</span>
+            </div>`;
+        }).join('');
+    }
+
+    // ── Compare Overlay ──────────────────────────────────────────────────
+    function setCompare(containerId, compareData) {
+        const inst = instances[containerId];
+        if (!inst || !compareData?.symbols?.length) return;
+
+        // Clear existing compare series
+        if (inst.compareSeries) {
+            for (const s of inst.compareSeries) {
+                try { inst.chart.removeSeries(s); } catch (e) {}
+            }
+        }
+        inst.compareSeries = [];
+
+        // Note: comparison uses a separate right price scale (percentage)
+        const colors = ['#2962FF', '#FF6D00', '#AB47BC', '#00BFA5'];
+
+        compareData.symbols.forEach((sym, idx) => {
+            if (sym.symbol === inst.ticker) return; // Skip the main ticker
+
+            const series = inst.chart.addLineSeries({
+                color: colors[idx % colors.length],
+                lineWidth: 1,
+                crosshairMarkerVisible: true,
+                lastValueVisible: true,
+                priceLineVisible: false,
+                title: sym.label,
+                priceScaleId: 'compare',
+                priceFormat: { type: 'custom', formatter: v => v.toFixed(1) + '%' },
+            });
+
+            const data = sym.data.map(d => ({
+                time: _toTime(d.timestamp),
+                value: d.value,
+            }));
+
+            series.setData(data);
+            inst.compareSeries.push(series);
+        });
+
+        // Configure the compare scale
+        inst.chart.priceScale('compare').applyOptions({
+            scaleMargins: { top: 0.1, bottom: 0.1 },
+            borderVisible: false,
+            visible: true,
+        });
+    }
+
+    function clearCompare(containerId) {
+        const inst = instances[containerId];
+        if (!inst?.compareSeries) return;
+        for (const s of inst.compareSeries) {
+            try { inst.chart.removeSeries(s); } catch (e) {}
+        }
+        inst.compareSeries = [];
+    }
+
+    // ── Seasonality Heatmap ──────────────────────────────────────────────
+    function renderSeasonality(containerId, seasonality) {
+        const el = document.getElementById('seasonalityContainer');
+        if (!el || !seasonality?.monthly) return;
+
+        el.style.display = 'block';
+        const months = seasonality.monthly;
+
+        let html = '<div class="seasonality-header">Monthly Seasonality (5yr)</div>';
+        html += '<div class="seasonality-grid">';
+
+        for (const m of months) {
+            const ret = m.avg_return;
+            const cls = ret > 1 ? 'strong-bull' : ret > 0 ? 'mild-bull' : ret > -1 ? 'mild-bear' : 'strong-bear';
+            const bg = ret > 2 ? 'rgba(38,166,154,0.5)' : ret > 0 ? 'rgba(38,166,154,0.2)' : ret > -2 ? 'rgba(239,83,80,0.2)' : 'rgba(239,83,80,0.5)';
+
+            html += `<div class="seasonality-cell" style="background:${bg}" title="${m.name}: avg ${ret > 0 ? '+' : ''}${ret.toFixed(1)}% return, ${m.win_rate.toFixed(0)}% win rate (${m.count} years)">
+                <span class="s-month">${m.name}</span>
+                <span class="s-return ${cls}">${ret > 0 ? '+' : ''}${ret.toFixed(1)}%</span>
+                <span class="s-winrate">${m.win_rate.toFixed(0)}% win</span>
+            </div>`;
+        }
+
+        html += '</div>';
+        el.innerHTML = html;
+    }
+
+    // ── Full Screen ──────────────────────────────────────────────────────
+    function toggleFullscreen(containerId) {
+        const card = document.getElementById(containerId)?.closest('.analyze-chart-card');
+        if (!card) return;
+
+        card.classList.toggle('chart-fullscreen');
+        document.body.classList.toggle('chart-fullscreen-active');
+
+        // Resize after transition
+        setTimeout(() => resize(containerId), 100);
+    }
+
+    return { create, setData, setTrendlines, setPatterns, setCompare, clearCompare,
+             renderSeasonality, toggleFullscreen, destroy, resize, instances };
 })();
 
 // Auto-resize all charts on window resize

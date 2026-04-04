@@ -50,12 +50,29 @@ const Analyze = (() => {
         }
 
         // Toggle checkboxes for overlays — reload chart on toggle
-        ['toggleTrendlines', 'toggleSMA', 'toggleBB'].forEach(id => {
+        ['toggleTrendlines', 'toggleSMA', 'toggleBB', 'togglePatterns'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => {
                 if (currentTicker) loadChart(currentTicker, currentChartPeriod, currentChartInterval);
             });
         });
+
+        // Compare toggle — loads/clears comparison data
+        const compareToggle = document.getElementById('toggleCompare');
+        if (compareToggle) {
+            compareToggle.addEventListener('change', () => {
+                if (!currentTicker) return;
+                if (compareToggle.checked) {
+                    loadCompare(currentTicker, currentChartPeriod);
+                } else {
+                    AlphaCharts.clearCompare('analyzeChartContainer');
+                }
+            });
+        }
+
+        // Fullscreen button
+        const fsBtn = document.getElementById('chartFullscreenBtn');
+        if (fsBtn) fsBtn.addEventListener('click', () => AlphaCharts.toggleFullscreen('analyzeChartContainer'));
 
         // Check URL hash for direct ticker link, or auto-load top trend break
         const hash = window.location.hash;
@@ -703,15 +720,21 @@ const Analyze = (() => {
         currentChartInterval = interval;
 
         try {
-            // Fetch chart data + trendlines in parallel
-            const [chartResp, trendResp] = await Promise.all([
+            // Fetch chart data + trendlines + patterns in parallel
+            const fetches = [
                 apiRequest(`/api/analyze/${ticker}/chart?period=${period}&interval=${interval}`),
                 apiRequest(`/api/analyze/${ticker}/trendlines?period=${period}&interval=${interval}`),
-            ]);
+            ];
+            if (document.getElementById('togglePatterns')?.checked) {
+                fetches.push(apiRequest(`/api/analyze/${ticker}/patterns?period=${period}`));
+            }
 
-            const chartData = await chartResp.json();
+            const responses = await Promise.all(fetches);
+            const chartData = await responses[0].json();
             let trendData = null;
-            try { trendData = await trendResp.json(); } catch (e) {}
+            let patternData = null;
+            try { trendData = await responses[1].json(); } catch (e) {}
+            if (responses[2]) { try { patternData = await responses[2].json(); } catch (e) {} }
 
             if (!chartData || !chartData.data || chartData.data.length === 0) return;
 
@@ -739,8 +762,39 @@ const Analyze = (() => {
                 AlphaCharts.setTrendlines('analyzeChartContainer', trendData);
             }
 
+            // Add candlestick pattern markers if enabled
+            if (document.getElementById('togglePatterns')?.checked && patternData) {
+                AlphaCharts.setPatterns('analyzeChartContainer', patternData);
+                // Render seasonality heatmap
+                if (patternData.seasonality) {
+                    AlphaCharts.renderSeasonality('analyzeChartContainer', patternData.seasonality);
+                }
+            } else {
+                const patternBar = document.getElementById('patternMarkers');
+                if (patternBar) patternBar.style.display = 'none';
+                const seasEl = document.getElementById('seasonalityContainer');
+                if (seasEl) seasEl.style.display = 'none';
+            }
+
+            // Load compare if toggle is on
+            if (document.getElementById('toggleCompare')?.checked) {
+                loadCompare(ticker, period);
+            }
+
         } catch (e) {
             console.error('Chart load failed:', e);
+        }
+    }
+
+    async function loadCompare(ticker, period) {
+        try {
+            const resp = await apiRequest(`/api/analyze/${ticker}/compare?period=${period}`);
+            const data = await resp.json();
+            if (data?.symbols) {
+                AlphaCharts.setCompare('analyzeChartContainer', data);
+            }
+        } catch (e) {
+            console.error('Compare load failed:', e);
         }
     }
 
