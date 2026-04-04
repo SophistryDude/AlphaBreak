@@ -8,6 +8,7 @@ Serves data for the Quarterly Earnings tab:
 """
 
 import re
+from app.utils import error_details
 import time
 import logging
 from flask import Blueprint, jsonify, request, current_app
@@ -77,7 +78,7 @@ def earnings_calendar():
         return jsonify(data)
     except Exception as e:
         current_app.logger.error(f"Earnings calendar error: {e}")
-        return jsonify({'error': 'Failed to fetch earnings calendar', 'details': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch earnings calendar', 'details': error_details(e)}), 500
 
 
 @earnings_bp.route('/earnings/ticker/<ticker>', methods=['GET'])
@@ -97,4 +98,4 @@ def earnings_ticker_detail(ticker):
         return jsonify(data)
     except Exception as e:
         current_app.logger.error(f"Earnings ticker detail error for {ticker}: {e}")
-        return jsonify({'error': f'Failed to fetch data for {ticker}', 'details': str(e)}), 500
+        return jsonify({'error': f'Failed to fetch data for {ticker}', 'details': error_details(e)}), 500

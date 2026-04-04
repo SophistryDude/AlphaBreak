@@ -12,6 +12,7 @@ All endpoints use a simple TTL cache to avoid hammering yfinance / DB.
 """
 
 import time
+from app.utils import error_details
 import logging
 from flask import Blueprint, jsonify, current_app
 from app.utils.auth import log_request, require_api_key
@@ -74,7 +75,7 @@ def market_sentiment():
         return jsonify(data)
     except Exception as e:
         current_app.logger.error(f"Market sentiment error: {e}")
-        return jsonify({'error': 'Failed to compute market sentiment', 'details': str(e)}), 500
+        return jsonify({'error': 'Failed to compute market sentiment', 'details': error_details(e)}), 500
 
 
 @dashboard_bp.route('/dashboard/sector-sentiment', methods=['GET'])
@@ -88,7 +89,7 @@ def sector_sentiment():
         return jsonify(data)
     except Exception as e:
         current_app.logger.error(f"Sector sentiment error: {e}")
-        return jsonify({'error': 'Failed to compute sector sentiment', 'details': str(e)}), 500
+        return jsonify({'error': 'Failed to compute sector sentiment', 'details': error_details(e)}), 500
 
 
 @dashboard_bp.route('/dashboard/index-sentiment', methods=['GET'])
@@ -103,7 +104,7 @@ def index_sentiment():
         return jsonify(data)
     except Exception as e:
         current_app.logger.error(f"Index sentiment error: {e}")
-        return jsonify({'error': 'Failed to compute index sentiment', 'details': str(e)}), 500
+        return jsonify({'error': 'Failed to compute index sentiment', 'details': error_details(e)}), 500
 
 
 @dashboard_bp.route('/dashboard/commodities-crypto', methods=['GET'])
@@ -117,4 +118,4 @@ def commodities_crypto():
         return jsonify(data)
     except Exception as e:
         current_app.logger.error(f"Commodities/crypto error: {e}")
-        return jsonify({'error': 'Failed to fetch commodity/crypto data', 'details': str(e)}), 500
+        return jsonify({'error': 'Failed to fetch commodity/crypto data', 'details': error_details(e)}), 500

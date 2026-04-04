@@ -10,6 +10,7 @@ Endpoints for the Long Term Trading tab:
 """
 
 import re
+from app.utils import error_details
 import time
 import logging
 from flask import Blueprint, jsonify, request, current_app
@@ -87,7 +88,7 @@ def longterm_holdings():
         current_app.logger.error(f"Longterm holdings error: {e}")
         return jsonify({
             'error': 'Failed to fetch institutional holdings',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -123,7 +124,7 @@ def longterm_ticker_detail(ticker):
         current_app.logger.error(f"Longterm detail error for {ticker}: {e}")
         return jsonify({
             'error': f'Failed to fetch detail for {ticker}',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -159,7 +160,7 @@ def longterm_ticker_compare(ticker):
         current_app.logger.error(f"Longterm compare error for {ticker}: {e}")
         return jsonify({
             'error': f'Failed to fetch comparison for {ticker}',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -186,7 +187,7 @@ def longterm_sectors():
         current_app.logger.error(f"Longterm sectors error: {e}")
         return jsonify({
             'error': 'Failed to fetch sector summary',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 

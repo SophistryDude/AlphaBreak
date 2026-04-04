@@ -11,7 +11,7 @@ from datetime import timedelta
 
 class Config:
     """Base configuration"""
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    SECRET_KEY = os.environ.get('SECRET_KEY') or os.urandom(32).hex()
 
     # Model paths
     MODEL_DIR = os.environ.get('MODEL_DIR') or 'models'
@@ -38,7 +38,7 @@ class Config:
     SCHEDULER_API_ENABLED = True
 
     # JWT Authentication
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'jwt-dev-secret-change-in-production'
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or os.urandom(32).hex()
     JWT_ACCESS_EXPIRES = 900  # 15 minutes
     JWT_REFRESH_EXPIRES = 604800  # 7 days
     JWT_ALGORITHM = 'HS256'

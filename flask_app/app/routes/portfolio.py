@@ -15,6 +15,7 @@ Endpoints for theoretical portfolio management:
 """
 
 import re
+from app.utils import error_details
 import time
 import logging
 import json
@@ -114,7 +115,7 @@ def portfolio_summary():
         current_app.logger.error(f"Portfolio summary error: {e}")
         return jsonify({
             'error': 'Failed to fetch portfolio summary',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -156,7 +157,7 @@ def portfolio_holdings():
         current_app.logger.error(f"Portfolio holdings error: {e}")
         return jsonify({
             'error': 'Failed to fetch holdings',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -183,7 +184,7 @@ def portfolio_transactions():
         try:
             ticker = _validate_ticker(ticker)
         except ValueError as e:
-            return jsonify({'error': str(e)}), 400
+            return jsonify({'error': error_details(e)}), 400
 
     try:
         pm = _get_portfolio_manager()
@@ -206,7 +207,7 @@ def portfolio_transactions():
         current_app.logger.error(f"Portfolio transactions error: {e}")
         return jsonify({
             'error': 'Failed to fetch transactions',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -258,7 +259,7 @@ def portfolio_performance():
         current_app.logger.error(f"Portfolio performance error: {e}")
         return jsonify({
             'error': 'Failed to fetch performance history',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -308,7 +309,7 @@ def portfolio_trade():
     try:
         ticker = _validate_ticker(data['ticker'])
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': error_details(e)}), 400
 
     # Validate numbers
     try:
@@ -345,7 +346,7 @@ def portfolio_trade():
         return jsonify({
             'success': False,
             'error': 'Failed to execute trade',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -384,7 +385,7 @@ def portfolio_add_signal():
     try:
         ticker = _validate_ticker(data['ticker'])
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': error_details(e)}), 400
 
     try:
         pm = _get_portfolio_manager()
@@ -412,7 +413,7 @@ def portfolio_add_signal():
         return jsonify({
             'success': False,
             'error': 'Failed to add signal',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -445,7 +446,7 @@ def portfolio_signals():
         current_app.logger.error(f"Portfolio signals error: {e}")
         return jsonify({
             'error': 'Failed to fetch signals',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -491,7 +492,7 @@ def portfolio_update_prices():
         return jsonify({
             'success': False,
             'error': 'Failed to update prices',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -522,7 +523,7 @@ def portfolio_snapshot():
         return jsonify({
             'success': False,
             'error': 'Failed to create snapshot',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -550,5 +551,5 @@ def portfolio_stop_losses():
         current_app.logger.error(f"Portfolio stop-losses error: {e}")
         return jsonify({
             'error': 'Failed to check stop-losses',
-            'details': str(e),
+            'details': error_details(e),
         }), 500

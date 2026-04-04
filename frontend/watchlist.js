@@ -231,8 +231,11 @@ const Watchlist = {
             this.startAutoRefresh();
             this.showSnackbar(`${ticker} added to watchlist`, 'success');
 
-            // Sync to server (async, non-blocking)
-            this.addTickerToServer(ticker);
+            // Sync to server — log failures so client/server don't silently desync
+            this.addTickerToServer(ticker).catch(err => {
+                console.error(`Failed to sync add ${ticker} to server:`, err);
+                this.showSnackbar(`${ticker} added locally but failed to sync to server`, 'warning');
+            });
         } catch (err) {
             this.showSnackbar(`Failed to validate ${ticker}`, 'error');
         }
@@ -249,8 +252,11 @@ const Watchlist = {
             this.autoRefreshTimer = null;
         }
 
-        // Sync to server (async, non-blocking)
-        this.removeTickerFromServer(ticker);
+        // Sync to server — log failures so client/server don't silently desync
+        this.removeTickerFromServer(ticker).catch(err => {
+            console.error(`Failed to sync remove ${ticker} from server:`, err);
+            this.showSnackbar(`${ticker} removed locally but failed to sync to server`, 'warning');
+        });
     },
 
     // ── Data Fetching ───────────────────────────────────────────────────

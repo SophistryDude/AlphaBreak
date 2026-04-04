@@ -8,6 +8,7 @@ Endpoints for user watchlist data:
 """
 
 import re
+from app.utils import error_details
 import time
 import logging
 from flask import Blueprint, jsonify, request, current_app
@@ -99,7 +100,7 @@ def watchlist_data():
         try:
             tickers.append(_validate_ticker(str(t)))
         except ValueError as e:
-            validation_errors.append({'ticker': str(t), 'error': str(e)})
+            validation_errors.append({'ticker': str(t), 'error': error_details(e)})
 
     # Deduplicate
     tickers = list(dict.fromkeys(tickers))
@@ -136,7 +137,7 @@ def watchlist_data():
         current_app.logger.error(f"Watchlist batch error: {e}")
         return jsonify({
             'error': 'Failed to fetch watchlist data',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -156,7 +157,7 @@ def watchlist_ticker(ticker):
     try:
         ticker = _validate_ticker(ticker)
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': error_details(e)}), 400
 
     try:
         db = _get_db_manager()
@@ -175,7 +176,7 @@ def watchlist_ticker(ticker):
         current_app.logger.error(f"Watchlist ticker error for {ticker}: {e}")
         return jsonify({
             'error': f'Failed to fetch data for {ticker}',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -198,7 +199,7 @@ def watchlist_ticker_chart(ticker):
     try:
         ticker = _validate_ticker(ticker)
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': error_details(e)}), 400
 
     interval = request.args.get('interval', '1h')
     if interval not in VALID_CHART_INTERVALS:
@@ -221,7 +222,7 @@ def watchlist_ticker_chart(ticker):
         current_app.logger.error(f"Watchlist chart error for {ticker}: {e}")
         return jsonify({
             'error': f'Failed to fetch chart data for {ticker}',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 

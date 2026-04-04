@@ -11,6 +11,7 @@ Endpoints:
 """
 
 from flask import Blueprint, request, jsonify, current_app
+from app.utils import error_details
 from app.utils.validation import validate_request, OPTIONS_SCHEMA
 from app.utils.auth import require_api_key, log_request
 import sys
@@ -174,7 +175,7 @@ def analyze_options():
         return jsonify({
             'error': 'Server configuration error',
             'code': 'IMPORT_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
     except Exception as e:
@@ -182,7 +183,7 @@ def analyze_options():
         return jsonify({
             'error': 'Failed to analyze options',
             'code': 'OPTIONS_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
 
@@ -312,7 +313,7 @@ def calculate_option_price():
         return jsonify({
             'error': 'Failed to calculate option price',
             'code': 'PRICING_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
 
@@ -419,7 +420,7 @@ def get_option_chain(ticker: str):
         return jsonify({
             'error': 'Failed to get option chain',
             'code': 'CHAIN_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
 
@@ -460,5 +461,5 @@ def get_expirations(ticker: str):
         return jsonify({
             'error': 'Failed to get expiration dates',
             'code': 'EXPIRATIONS_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500

@@ -237,13 +237,32 @@ const Auth = {
             });
 
             if (response.status === 401) {
-                // Token expired, try refresh
-                const refreshed = await this.refreshAccessToken();
-                if (!refreshed) {
+                // Token expired, try refresh (only once to avoid infinite loop)
+                if (this._validatingToken) {
                     return false;
                 }
-                // Retry validation
-                return this.validateToken();
+                this._validatingToken = true;
+                try {
+                    const refreshed = await this.refreshAccessToken();
+                    if (!refreshed) {
+                        return false;
+                    }
+                    // Retry validation once after refresh
+                    const retryResponse = await fetch(`${CONFIG.API_BASE_URL}/api/auth/me`, {
+                        headers: { 'Authorization': `Bearer ${this.accessToken}` },
+                    });
+                    if (!retryResponse.ok) {
+                        return false;
+                    }
+                    const retryData = await retryResponse.json();
+                    this.user = retryData.user;
+                    this.isAuthenticated = true;
+                    this.saveToStorage();
+                    this.updateUI();
+                    return true;
+                } finally {
+                    this._validatingToken = false;
+                }
             }
 
             if (!response.ok) {

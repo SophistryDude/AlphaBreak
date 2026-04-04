@@ -10,6 +10,7 @@ Endpoints:
 """
 
 from flask import Blueprint, request, jsonify, current_app
+from app.utils import error_details
 from app.models import model_manager
 from app.utils.validation import validate_request, PREDICTION_SCHEMA, INDICATOR_ANALYSIS_SCHEMA
 from app.utils.auth import require_api_key, log_request
@@ -176,7 +177,7 @@ def predict():
         return jsonify({
             'error': 'Server configuration error - src modules not found',
             'code': 'IMPORT_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
     except Exception as e:
@@ -184,7 +185,7 @@ def predict():
         return jsonify({
             'error': 'Failed to generate prediction',
             'code': 'PREDICTION_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
 
@@ -287,7 +288,7 @@ def analyze_indicators():
         return jsonify({
             'error': 'Failed to analyze indicators',
             'code': 'ANALYSIS_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
 
@@ -369,7 +370,7 @@ def get_indicators(ticker: str):
         return jsonify({
             'error': 'Failed to get indicators',
             'code': 'INDICATOR_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
 
@@ -497,7 +498,7 @@ def get_stock_data(ticker: str):
         return jsonify({
             'error': 'Failed to get stock data',
             'code': 'DATA_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
 
@@ -542,5 +543,5 @@ def list_available_tickers():
         return jsonify({
             'error': 'Failed to list tickers',
             'code': 'DATABASE_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500

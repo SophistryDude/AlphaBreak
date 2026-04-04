@@ -13,6 +13,7 @@ Endpoints:
 """
 
 from flask import Blueprint, request, jsonify, current_app
+from app.utils import error_details
 from app.utils.auth import require_api_key, log_request
 import sys
 import os
@@ -188,7 +189,7 @@ def predict_trend_break():
         return jsonify({
             'error': 'Server configuration error',
             'code': 'IMPORT_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
     except Exception as e:
@@ -196,7 +197,7 @@ def predict_trend_break():
         return jsonify({
             'error': 'Failed to generate prediction',
             'code': 'PREDICTION_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
 
@@ -366,7 +367,7 @@ def predict_options():
         return jsonify({
             'error': 'Server configuration error',
             'code': 'IMPORT_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
     except Exception as e:
@@ -374,7 +375,7 @@ def predict_options():
         return jsonify({
             'error': 'Failed to analyze options',
             'code': 'OPTIONS_ERROR',
-            'details': str(e)
+            'details': error_details(e)
         }), 500
 
 

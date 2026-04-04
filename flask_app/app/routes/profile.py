@@ -5,6 +5,7 @@ User profile management, password changes, preferences, and analytics.
 """
 
 import logging
+from app.utils import error_details
 from flask import Blueprint, g, jsonify, request
 from app.utils.auth import log_request
 from app.utils.jwt_auth import require_jwt
@@ -156,7 +157,7 @@ def analytics_summary():
         return jsonify(summary)
     except Exception as e:
         logger.error(f"Analytics summary error: {e}")
-        return jsonify({'error': 'Failed to compute analytics', 'details': str(e)}), 500
+        return jsonify({'error': 'Failed to compute analytics', 'details': error_details(e)}), 500
 
 
 @profile_bp.route('/user/analytics/equity-curve', methods=['GET'])

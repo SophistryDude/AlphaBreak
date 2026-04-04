@@ -10,6 +10,7 @@ Endpoints for trend break reports:
 """
 
 import time
+from app.utils import error_details
 import logging
 from flask import Blueprint, jsonify, request, current_app
 from app.utils.auth import log_request, require_api_key
@@ -156,7 +157,7 @@ def reports_latest():
         current_app.logger.error(f"Reports latest error: {e}")
         return jsonify({
             'error': 'Failed to generate report',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -239,7 +240,7 @@ def reports_history():
         current_app.logger.error(f"Reports history error: {e}")
         return jsonify({
             'error': 'Failed to fetch report history',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -342,7 +343,7 @@ def reports_by_ticker(ticker):
         current_app.logger.error(f"Reports by ticker error: {e}")
         return jsonify({
             'error': f'Failed to fetch reports for {ticker}',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 
@@ -386,7 +387,7 @@ def reports_ticker_chart(ticker):
         current_app.logger.error(f"Reports chart error for {ticker}: {e}")
         return jsonify({
             'error': f'Failed to fetch chart data for {ticker}',
-            'details': str(e),
+            'details': error_details(e),
         }), 500
 
 

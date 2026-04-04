@@ -13,6 +13,7 @@ Endpoints for forex correlation model and data:
 """
 
 import logging
+from app.utils import error_details
 from flask import Blueprint, jsonify, request, current_app
 from app.utils.auth import log_request, require_api_key
 
@@ -72,7 +73,7 @@ def get_forex_pairs():
 
     except Exception as e:
         logger.error(f"Forex pairs error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': error_details(e)}), 500
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -124,7 +125,7 @@ def get_forex_data(pair):
 
     except Exception as e:
         logger.error(f"Forex data error for {pair}: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': error_details(e)}), 500
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -153,12 +154,14 @@ def get_forex_correlations():
             )
         """
 
+        params = []
         if strength_filter and strength_filter in ('strong', 'mid', 'weak'):
-            query += f" AND pattern_strength = '{strength_filter}'"
+            query += " AND pattern_strength = %s"
+            params.append(strength_filter)
 
         query += " ORDER BY ABS(correlation_all) DESC"
 
-        rows = db.execute_query(query)
+        rows = db.execute_query(query, params if params else None)
 
         correlations = []
         for row in (rows or []):
@@ -204,7 +207,7 @@ def get_forex_correlations():
 
     except Exception as e:
         logger.error(f"Forex correlations error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': error_details(e)}), 500
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -288,7 +291,7 @@ def get_forex_trend_breaks():
 
     except Exception as e:
         logger.error(f"Forex trend breaks error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': error_details(e)}), 500
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -359,7 +362,7 @@ def get_forex_summary():
 
     except Exception as e:
         logger.error(f"Forex summary error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': error_details(e)}), 500
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -454,7 +457,7 @@ def get_forex_usd_chart():
 
     except Exception as e:
         logger.error(f"Forex USD chart error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': error_details(e)}), 500
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -550,4 +553,4 @@ def get_forex_recent_movements():
 
     except Exception as e:
         logger.error(f"Forex recent movements error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': error_details(e)}), 500

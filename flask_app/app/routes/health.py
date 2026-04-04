@@ -10,6 +10,7 @@ Endpoints:
 """
 
 from flask import Blueprint, jsonify, current_app
+from app.utils import error_details
 from app.models import model_manager
 from app.utils.auth import log_request
 import datetime
@@ -90,7 +91,7 @@ def detailed_health():
     except Exception as e:
         components['models'] = {
             'status': 'unhealthy',
-            'error': str(e)
+            'error': error_details(e)
         }
         overall_status = 'degraded'
 
@@ -112,7 +113,7 @@ def detailed_health():
     except Exception as e:
         components['database'] = {
             'status': 'unhealthy',
-            'error': str(e)
+            'error': error_details(e)
         }
         overall_status = 'degraded'
 
@@ -130,7 +131,7 @@ def detailed_health():
     except ImportError as e:
         components['src_modules'] = {
             'status': 'unhealthy',
-            'error': str(e)
+            'error': error_details(e)
         }
         overall_status = 'unhealthy'
 
