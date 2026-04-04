@@ -38,7 +38,7 @@ def create_app(config_name='development'):
     limiter = Limiter(
         app=app,
         key_func=get_remote_address,
-        default_limits=["200 per day", "50 per hour"],
+        default_limits=["5000 per day", "500 per hour"],
         storage_uri=app.config.get('RATELIMIT_STORAGE_URL', 'memory://'),
         default_limits_exempt_when=lambda: False,  # Apply limits by default
     )
@@ -85,6 +85,7 @@ def create_app(config_name='development'):
     from app.routes.notifications import notifications_bp
     from app.routes.profile import profile_bp
     from app.routes.journal import journal_bp
+    from app.routes.analyze import analyze_bp
 
     app.register_blueprint(health_bp, url_prefix='/api')
     app.register_blueprint(predictions_bp, url_prefix='/api')
@@ -102,6 +103,7 @@ def create_app(config_name='development'):
     app.register_blueprint(notifications_bp, url_prefix='/api')
     app.register_blueprint(profile_bp, url_prefix='/api')
     app.register_blueprint(journal_bp, url_prefix='/api')
+    app.register_blueprint(analyze_bp, url_prefix='/api')
 
     # Error handlers
     @app.errorhandler(404)

@@ -34,7 +34,7 @@
                     <li><a href="#" class="sidebar-link" data-tab="options">Options Analysis</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="trading">Trade Execution</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="longterm">Long Term Trading Watchlist</a></li>
-                    <li><a href="#" class="sidebar-link" data-tab="watchlist">Intra-Day Trading Watchlist</a></li>
+                    <li><a href="#" class="sidebar-link" data-tab="watchlist">Analyze</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="trend">Trend Prediction</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="indicators">Indicator Guide</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="portfolio">Portfolio Tracker</a></li>
@@ -565,8 +565,8 @@
                         <div class="result-card">
                             <div class="result-header">
                                 <span class="ticker-badge" id="optionsResultTicker"></span>
-                                <button class="btn btn-sm" id="optionsAddToWatchlist" title="Add to Intra-Day Trading Watchlist">
-                                    <span>+ Watch</span>
+                                <button class="btn btn-sm" id="optionsAddToWatchlist" title="Analyze this ticker">
+                                    <span>Analyze</span>
                                 </button>
                                 <span class="timestamp" id="optionsResultTimestamp"></span>
                             </div>
@@ -618,46 +618,139 @@
                 </div>
             </div>
 
-            <!-- Watchlist Tab -->
+            <!-- Analyze Tab -->
             <div class="tab-content" id="watchlistTab">
-                <div class="card">
-                    <h2>My Watchlist</h2>
-                    <p class="description">Track your favorite securities. Data refreshes every 60 seconds.</p>
 
-                    <!-- Description Box -->
-                    <div class="widget-description tip" id="watchlistTab-description">
-                        <div class="description-icon">
-                            <svg class="icon-tip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                                <path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path>
-                            </svg>
+                <!-- Search Bar -->
+                <div class="analyze-search-container">
+                    <div class="analyze-search-wrapper">
+                        <input type="text" id="analyzeTickerInput" class="analyze-search-input"
+                            placeholder="Search ticker or company name (e.g., AAPL, Apple)"
+                            autocomplete="off">
+                        <button id="analyzeSearchBtn" class="btn btn-primary">Analyze</button>
+                    </div>
+                    <div id="analyzeAutocomplete" class="analyze-autocomplete"></div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="analyzeEmpty" class="analyze-empty">
+                    <div class="analyze-empty-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="M21 21l-4.35-4.35"></path>
+                        </svg>
+                    </div>
+                    <h3>Search for a ticker to begin</h3>
+                    <p>Enter a stock symbol or company name above to see a full analysis.</p>
+                </div>
+
+                <!-- Loading State -->
+                <div id="analyzeLoading" class="analyze-loading" style="display:none;">
+                    <div class="spinner"></div>
+                    <p>Loading analysis...</p>
+                </div>
+
+                <!-- Analysis Content (hidden until ticker is loaded) -->
+                <div id="analyzeContent" style="display:none;">
+
+                    <!-- Header: Price + Company Info -->
+                    <div class="analyze-header card">
+                        <div class="analyze-header-top">
+                            <div class="analyze-header-left">
+                                <span class="analyze-ticker" id="analyzeHeaderTicker"></span>
+                                <span class="analyze-name" id="analyzeHeaderName"></span>
+                                <span class="analyze-sector-badge" id="analyzeHeaderSector"></span>
+                            </div>
+                            <div class="analyze-header-right">
+                                <span class="analyze-price" id="analyzeHeaderPrice"></span>
+                                <span class="analyze-change" id="analyzeHeaderChange"></span>
+                            </div>
                         </div>
-                        <div class="description-content">
-                            <strong>Intraday Watchlist:</strong> Add stocks you're actively monitoring for the day. The watchlist validates tickers before adding them and auto-refreshes every 60 seconds with real-time price data. Your watchlist is saved locally, so it persists between sessions. Click the <strong>+ Watch</strong> button in Options Analysis to quickly add stocks here.
+                        <!-- 52-week range bar -->
+                        <div class="analyze-52week" id="analyze52Week">
+                            <div class="analyze-52week-labels">
+                                <span id="analyze52Low"></span>
+                                <span class="analyze-52week-title">52-Week Range</span>
+                                <span id="analyze52High"></span>
+                            </div>
+                            <div class="analyze-52week-bar">
+                                <div class="analyze-52week-fill" id="analyze52Fill"></div>
+                                <div class="analyze-52week-marker" id="analyze52Marker"></div>
+                            </div>
                         </div>
-                        <button class="description-close" data-widget-id="watchlistTab" title="Close this tip">&times;</button>
+                        <!-- Quick stats row -->
+                        <div class="analyze-quick-stats" id="analyzeQuickStats"></div>
                     </div>
 
-                    <!-- Add Ticker Form -->
-                    <form id="watchlistAddForm" class="watchlist-add-form">
-                        <input
-                            type="text"
-                            id="watchlistTickerInput"
-                            placeholder="Enter ticker (e.g., AAPL)"
-                            maxlength="5"
-                            pattern="[A-Za-z]{1,5}"
-                            required
-                        >
-                        <button type="submit" class="btn btn-primary">Add to Watchlist</button>
-                    </form>
+                    <!-- Two-column layout -->
+                    <div class="analyze-grid">
 
-                    <!-- Empty State -->
-                    <div class="watchlist-empty" id="watchlistEmpty">
-                        <p>Your watchlist is empty. Add a ticker above to start tracking securities.</p>
+                        <!-- Left column: Chart + Indicators -->
+                        <div class="analyze-col-main">
+
+                            <!-- Chart -->
+                            <div class="card analyze-section">
+                                <div class="analyze-chart-controls">
+                                    <div class="analyze-chart-periods" id="analyzeChartPeriods">
+                                        <button data-period="1d" data-interval="5m">1D</button>
+                                        <button data-period="5d" data-interval="15m">5D</button>
+                                        <button data-period="1mo" data-interval="1d">1M</button>
+                                        <button data-period="3mo" data-interval="1d" class="active">3M</button>
+                                        <button data-period="6mo" data-interval="1d">6M</button>
+                                        <button data-period="1y" data-interval="1d">1Y</button>
+                                        <button data-period="5y" data-interval="1wk">5Y</button>
+                                    </div>
+                                </div>
+                                <div class="analyze-chart-wrapper">
+                                    <canvas id="analyzeChart"></canvas>
+                                </div>
+                                <div class="analyze-volume-wrapper">
+                                    <canvas id="analyzeVolume"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Technical Indicators -->
+                            <div class="card analyze-section">
+                                <h3>Technical Indicators</h3>
+                                <div class="analyze-trend-break" id="analyzeTrendBreak"></div>
+                                <div class="analyze-indicators-grid" id="analyzeIndicators"></div>
+                            </div>
+
+                            <!-- Earnings -->
+                            <div class="card analyze-section">
+                                <h3>Earnings</h3>
+                                <div id="analyzeEarnings" class="analyze-earnings"></div>
+                            </div>
+                        </div>
+
+                        <!-- Right column: Stats + Analyst + Options + Institutional -->
+                        <div class="analyze-col-side">
+
+                            <!-- Key Statistics -->
+                            <div class="card analyze-section">
+                                <h3>Key Statistics</h3>
+                                <div class="analyze-stats-grid" id="analyzeStats"></div>
+                            </div>
+
+                            <!-- Analyst Consensus -->
+                            <div class="card analyze-section">
+                                <h3>Analyst Consensus</h3>
+                                <div id="analyzeAnalyst" class="analyze-analyst"></div>
+                            </div>
+
+                            <!-- Options Summary -->
+                            <div class="card analyze-section">
+                                <h3>Options Summary</h3>
+                                <div id="analyzeOptions" class="analyze-options"></div>
+                            </div>
+
+                            <!-- Institutional Ownership -->
+                            <div class="card analyze-section">
+                                <h3>Institutional Ownership</h3>
+                                <div id="analyzeInstitutional" class="analyze-institutional"></div>
+                            </div>
+                        </div>
                     </div>
-
-                    <!-- Watchlist Grid -->
-                    <div class="watchlist-grid" id="watchlistGrid"></div>
                 </div>
             </div>
 
@@ -1815,6 +1908,12 @@
                             <option value="win">Winners</option>
                             <option value="loss">Losers</option>
                         </select>
+                        <select id="journalFilterHoldingType" class="profile-input" style="max-width:140px;" onchange="Journal.page=1;Journal.loadEntries()">
+                            <option value="">All Types</option>
+                            <option value="swing">Swing</option>
+                            <option value="long_term">Long Term</option>
+                            <option value="tsly_yield">TSLY Yield</option>
+                        </select>
                     </div>
 
                     <!-- Entry list -->
@@ -1897,12 +1996,12 @@
     <script src="auth.js?v=1"></script>
     <script src="notifications.js?v=1"></script>
     <script src="account.js?v=1"></script>
-    <script src="journal.js?v=1"></script>
+    <script src="journal.js?v=2"></script>
     <script src="descriptions.js?v=1"></script>
     <script src="app.js?v=6"></script>
     <script src="dashboard.js?v=5"></script>
     <script src="reports.js?v=3"></script>
-    <script src="watchlist.js?v=3"></script>
+    <script src="analyze.js?v=1"></script>
     <script src="earnings.js?v=4"></script>
     <script src="longterm.js?v=3"></script>
     <script src="indicators.js?v=1"></script>

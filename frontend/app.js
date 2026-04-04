@@ -20,7 +20,7 @@ const PAGE_TITLES = {
     options: 'Options Analysis',
     trading: 'Trade Execution',
     longterm: 'Long Term Trading Watchlist',
-    watchlist: 'Intra-Day Trading Watchlist',
+    watchlist: 'Analyze',
     trend: 'Trend Prediction',
     indicators: 'Indicator Guide',
     portfolio: 'Portfolio Tracker',

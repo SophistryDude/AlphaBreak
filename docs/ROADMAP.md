@@ -1,572 +1,406 @@
 # Product Roadmap
 
-**Version**: 2.1
-**Last Updated**: March 15, 2026
-**Planning Horizon**: 12 months (2026)
+**Version**: 4.0
+**Last Updated**: April 3, 2026
+**Domain**: alphabreak.vip
 
 ---
 
 ## Table of Contents
 
-1. [Vision & Strategy](#vision--strategy)
-2. [Current Status](#current-status)
-3. [Q1 2026 (Jan-Mar)](#q1-2026-jan-mar)
-4. [Q2 2026 (Apr-Jun)](#q2-2026-apr-jun)
-5. [Q3 2026 (Jul-Sep)](#q3-2026-jul-sep)
-6. [Q4 2026 (Oct-Dec)](#q4-2026-oct-dec)
-7. [Future Considerations](#future-considerations)
-8. [Recently Completed](#recently-completed)
+1. [Vision](#vision)
+2. [Features — Free Tier](#features--free-tier)
+3. [Features — Pro Tier ($99/mo)](#features--pro-tier-99mo)
+4. [Features — Elite Tier ($299/mo)](#features--elite-tier-299mo)
+5. [Features — API Tier ($499–999/mo)](#features--api-tier-499999mo)
+6. [Features — Future (Unscheduled)](#features--future-unscheduled)
+7. [Customer Acquisition](#customer-acquisition)
+8. [Infrastructure](#infrastructure)
+9. [Recently Completed](#recently-completed)
 
 ---
 
-## Vision & Strategy
+## Vision
 
-### Mission Statement
+Build the single-security analysis platform that bridges the charting/TA world and the fundamental/data world — something no competitor does today. Deliver Bloomberg-grade depth at 1/80th the price, with AI-powered scoring and an integrated trade journal that no one else offers.
 
-Build a comprehensive, AI-powered trading analysis platform that democratizes sophisticated quantitative analysis for retail and professional traders.
+**The market is bifurcated.** You either get great charting (TradingView, thinkorswim) OR great fundamentals (Seeking Alpha, Koyfin). Nobody does both. Nobody integrates options analytics with both. Nobody has AI scoring + journaling + analysis in one workflow.
 
-### Strategic Pillars
+AlphaBreak bridges both sides and adds what nobody has: AI trade scoring, regime-aware analysis, trade thesis → execute → review in one platform.
 
-1. **Data Quality & Coverage**: Expand data sources to include real-time feeds, alternative data, and global markets
-2. **Automation & Intelligence**: Leverage AI/ML to automate trading decisions and portfolio management
-3. **Scalability & Reliability**: Migrate to cloud-native architecture (K8s) for 99.99% uptime
-4. **User Experience**: Develop mobile apps, real-time notifications, and advanced visualizations
-5. **Monetization**: Launch premium tier with real-time data, API access, and platform integrations
-
-### Success Metrics
-
-| Metric | Current | 6 Months | 12 Months |
-|--------|---------|----------|-----------|
-| Model Accuracy | 78% | 80% | 82% |
-| API Response Time | 200-500ms | <200ms | <100ms |
-| Uptime | 99.5% | 99.9% | 99.99% |
-| Daily Active Users | N/A | 100 | 500 |
-| Premium Subscribers | 0 | 10 | 50 |
+**Scale target**: Architecture every feature for hundreds of thousands of concurrent users, millions of daily requests.
 
 ---
 
-## Current Status
+## Features — Free Tier
 
-**Current Version**: 2.0.0 (Released Feb 2, 2026)
+The free tier drives user acquisition. It must be good enough that traders switch from their current tools and tell others.
 
-### Production Features (100% Complete)
+### Market Analysis — ✅ Complete
+- [x] Sentiment analysis (8-indicator composite, 4 timeframes)
+- [x] Sector sentiment (11 GICS sectors)
+- [x] VIX & index sentiment (SPY, QQQ, DIA, Russell 2000)
+- [x] Commodities & crypto widget (Gold, Silver, BTC, ETH)
+- [x] Trend break reports (daily, hourly, 10-min, 80%+ probability)
 
-- ✅ Market sentiment analysis (8 indicators)
-- ✅ Options pricing (Black-Scholes, Binomial Tree)
-- ✅ Trend break detection (ML-based, 78% accuracy)
-- ✅ 13F institutional holdings tracking (20 funds, 8.4M archive rows)
-- ✅ Forex correlation analysis (21 pairs, 54 years data, 123K rows)
-- ✅ Portfolio automation (Airflow, daily updates, 2 DAGs)
-- ✅ User authentication (JWT + bcrypt)
-- ✅ Watchlist management (server-synced)
-- ✅ Web dashboard (9 tabs: Sentiment, Trading, Options, Reports, Watchlist, Earnings, Long-term, Indicators, Forex, Portfolio)
-- ✅ Dark pool data pipeline (621K rows, 101 MB)
-- ✅ CBOE options statistics tracking
+### Analyze Tab (Single-Ticker Deep Dive) — 🚧 In Progress
+*Rename "Intra-Day Trading Watchlist" → "Analyze". This is the core product differentiator.*
 
-### Infrastructure
+- [ ] Ticker search bar with auto-complete
+- [ ] Company overview (market cap, P/E, EPS, 52-week range, sector)
+- [ ] Analyst consensus & price targets (buy/hold/sell distribution, mean/high/low)
+- [ ] Ticker news feed (real-time headlines filtered to security)
+- [ ] Earnings calendar (dates, estimates, surprise history)
+- [ ] Wire existing endpoints (`/api/predict/indicators/<ticker>`, `/api/analyze`) to new UI
+- [ ] Basic price charts with common indicators (RSI, MACD, MA, Bollinger)
 
-- ✅ EC2 deployment (t3.medium)
-- ✅ PostgreSQL 15 + TimescaleDB
-- ✅ Airflow 2.8.1 (LocalExecutor, running since Feb 9, 2026)
-- ✅ Nginx reverse proxy
-- ✅ SSL/HTTPS via Let's Encrypt (Certbot) — HTTP auto-redirects to HTTPS
-- ✅ Domain: alphabreak.vip with www redirect
-- ⚠️ No caching layer (planned Q2)
-- ⚠️ No monitoring (planned Q3)
+### Options Analysis — ✅ Complete
+- [x] Options chain with bid/ask, volume, OI, IV
+- [x] Fair value calculation (Black-Scholes, Binomial Tree)
+- [x] Option chain by expiration
 
----
+### AI & Scoring — 🚧 Partially Built
+- [x] AI trade scoring (entry/exit/timing grades) — built in journal
+- [x] Composite tech + fundamental score — built in journal scoring
+- [x] Regime-aware analysis — trend break + indicator context in scoring
+- [ ] Expose scoring as standalone Analyze tab widget (not just journal)
+- [ ] Signal accuracy tracking dashboard — backtest data exists (854K trades, 98.5% win), needs frontend
 
-## Q1 2026 (Jan-Mar)
+### Portfolio & Journal — ✅ Complete
+- [x] Portfolio tracker (paper trading, $100K)
+- [x] Trade journal (full CRUD, notes, P&L tracking)
+- [x] AI trade scoring on journal entries
+- [x] Auto-import trades from portfolio
+- [x] Community / shared journal (public/private toggle)
+- [x] Watchlist management (server-synced, batch fetch up to 50 tickers)
 
-**Theme**: Documentation, Stability, Performance
-**Status**: ✅ Complete (March 15, 2026)
+### Notifications — ✅ Complete
+- [x] Email alerts via AWS SES (sandbox mode)
+- [x] In-app bell icon with unread count
+- [x] 9 event types (trade signal, stop-loss, take-profit, earnings, etc.)
+- [x] Per-event notification preferences
+- [x] Unsubscribe-all endpoint
 
-### Completed in Q1
+### Data — ✅ Complete
+- [x] Delayed data (15-min via yfinance)
+- [x] Institutional ownership / 13F (20 funds, 8.4M-row archive)
+- [x] Forex correlations (21 pairs, 54 years, 123K rows)
+- [x] Earnings calendar with surprise history
 
-- ✅ **Documentation Overhaul** (Feb 2026)
-  - ARCHITECTURE.md - System architecture guide
-  - DEPLOYMENT.md - Production deployment procedures
-  - CHANGELOG.md - Version history
-  - RELEASE_NOTES.md - Release process templates
-  - ROADMAP.md - Future development plans
-  - Consolidated SETUP_GUIDE.md
-
-- ✅ **SSL/HTTPS** (completed ahead of Q2 schedule)
-  - Let's Encrypt / Certbot certificates installed
-  - Nginx configured for HTTPS on port 443
-  - HTTP (port 80) auto-redirects to HTTPS
-  - www.alphabreak.vip redirects to alphabreak.vip
-
-- ✅ **Dark Pool Data Pipeline** (added Q1)
-  - 621,387 rows of weekly dark pool volume
-  - Ticker-level aggregates for 22,940 symbols
-  - 101 MB dataset
-
-### Deferred to Q2
-
-- ⏸️ **Performance Optimization**
-  - [ ] Optimize database queries (add indexes, analyze query plans)
-  - [ ] Implement connection pooling for API (increase pool size)
-  - [ ] Reduce API response time to <200ms
-  - [ ] Add database query caching (in-memory, 1-5 min TTL)
-
-- ⏸️ **Database Backups**
-  - [ ] Automated daily backups to S3
-  - [ ] Backup retention policy (30 days)
-  - [ ] Test restore procedure
-  - [ ] Document backup/restore process
+### Authentication — ✅ Complete
+- [x] JWT + refresh tokens (bcrypt password hashing)
+- [x] Registration, login, logout
+- [x] User profiles (display name, email, is_premium flag)
+- [x] 1 free trial per premium feature
 
 ---
 
-## Q2 2026 (Apr-Jun) — In Progress
+## Features — Pro Tier ($99/mo)
 
-**Theme**: Kubernetes Migration, Portfolio Overhaul, Monetization Foundation
-**Status**: 🚧 In Progress
+Pro is the revenue engine. These features justify the price by replacing 2-3 separate subscriptions (TradingView + Seeking Alpha + Barchart = $75-135/mo).
 
-### Completed in Q2 (April 2026)
+### Analyze Tab — Advanced Analytics
+- [ ] **Quant Letter Grades (A-F)** — Composite scores for value, growth, profitability, momentum, revisions (Seeking Alpha-style, compared vs sector median)
+- [ ] **Peer Comparison Table** — Side-by-side P/E, EV/EBITDA, ROE, revenue growth vs sector peers (Bloomberg COMP-style)
+- [ ] **Short Interest Data** — Short float %, days to cover, short squeeze risk score
+- [ ] **Dividend Analysis** — Yield, payout ratio, growth rate, ex-dates, safety grade
+- [ ] **Insider Trading Signals** — SEC Form 4 filings, insider buy/sell activity with timeline
+- [ ] **Seasonality Patterns** — Monthly/weekly historical return heatmap (TrendSpider-style)
+- [ ] **Auto-Detected Trendlines** — Algorithmic support/resistance drawn automatically
+- [ ] **News NLP Sentiment Scoring** — FinBERT-scored headlines with sentiment trends per ticker
 
-- ✅ **Kubernetes Migration** — Full containerization on k0s single-node
-  - All services in k0s: Flask API, Airflow, TimescaleDB, Redis
-  - 106 tables (~8GB) migrated from bare-metal to containerized Postgres
-  - 11 Airflow DAGs (KubernetesExecutor), including options monitor
-  - Docker images: trading-api + airflow-trading
-  - HPA auto-scaling, health/readiness probes
+### Options — Enhanced
+- [ ] **Unusual Options Activity** — Volume vs 5-day average, large block trades, sweep detection
+- [ ] **Fair Value (Black-Scholes, Binomial)** — Move from free to Pro with expanded models *(currently free — gate at Pro)*
+- [ ] **Probability of Profit** — IV-based probability calculations for any position
+- [ ] **Market Maker Move** — Implied earnings move from ATM straddle pricing
 
-- ✅ **Portfolio Logic Overhaul**
-  - New allocation: 50% long-term stock / 30% swing options / 20% cash float
-  - Swing trades via ATM options (auto-selected, 30 DTE)
-  - Multi-timeframe exit confirmation (daily+hourly must agree)
-  - Smart options exits: volume-based profit-taking, reversal loss-cutting
-  - Backtest: +10.28% (new) vs -3.76% (old) over Feb-Apr 2026
+### Charting — Enhanced
+- [ ] **Drawing Tools** — Fibonacci retracements, trendlines, channels, annotations
+- [ ] **Multi-Timeframe Analysis** — Overlay indicators from daily + hourly + 15min on single view
 
-- ✅ **40-Year Historical Backtest**
-  - Strategy vs NASDAQ vs TQQQ from 1985-2026
-  - 854,773 trend break trades analyzed: 98.5% win rate, +3.15% avg return
-  - Results stored in backtest_comparison table (10,393 daily rows)
+### Journal — Premium
+- [x] Tags + filters + performance by tag
+- [x] Pre-trade plans
+- [x] Post-trade reviews
+- [x] Pattern recognition
+- [ ] **Automated Annotations** — Auto-tag entries with detected signals, indicators, market conditions at time of trade
+- [ ] **Multi-Timeframe Context** — Attach daily/hourly/15min chart context to each journal entry
+- [ ] **Backtesting Integration** — Link journal entries to historical backtest results
 
-- ✅ **Push Notifications**
-  - Email via AWS SES (sandbox mode) + in-app bell icon
-  - Triggers: trade signals, stop-loss, take-profit, earnings, daily summary
-  - Notification preferences per event type
-  - Unsubscribe-all endpoint
+### Smart Checklists
+- [ ] **Multi-Indicator Scoring Rules** — Configurable conditions (e.g., RSI < 30 AND above 200 SMA AND bullish 13F AND insider buying)
+- [ ] Preset and custom checklist templates
 
-- ✅ **User Profile / Account Page**
-  - Profile settings: edit display name, change password
-  - Performance analytics: Sharpe ratio, max drawdown, equity curve, P&L heatmap
-  - Linked Accounts placeholder (Schwab coming soon)
-  - Username in header links to account page
+### Data — Pro
+- [ ] **Real-Time Data** — Live quotes via Polygon.io (no 15-min delay)
+- [ ] **WebSocket Streaming** — Real-time price updates pushed to client
+- [ ] **Dark Pool Data** — Expose existing 621K-row dataset (backend exists, needs API routes + UI)
 
-- ✅ **Trade Journal (Free + Paid Tiers)**
-  - Free: Manual notes, P&L tracking, AI trade scoring, shared journal, auto-import
-  - Paid: Tags, filters, pre-trade plans, post-trade reviews, pattern detection
-  - 1 free trial per premium feature for free users
-  - 16 API endpoints, full CRUD with premium gating
-
-### Remaining Q2
-
-#### ~~Redis Caching Layer~~ — ✅ Completed (in k0s pod)
-#### ~~API Rate Limiting~~ — ✅ Completed (Flask-Limiter)
-
-### Infrastructure (Priority: 🔴 High)
-**Dependencies**: EC2 instance upgrade or separate Redis instance
-
-- [ ] Install Redis on EC2 or use AWS ElastiCache
-- [ ] Implement caching for frequently accessed data:
-  - Market sentiment (cache 1 min)
-  - Forex data (cache 5 min)
-  - Options chains (cache 15 min during market hours)
-- [ ] Add cache invalidation logic
-- [ ] Monitor cache hit rate
-- **Goal**: Reduce API response time by 50%, decrease database load
-
-#### API Rate Limiting
-**Timeline**: May 2026
-**Effort**: 1 week
-**Dependencies**: Redis (for distributed rate limiting)
-
-- [ ] Install Flask-Limiter
-- [ ] Configure rate limits:
-  - Anonymous users: 100 requests/hour
-  - Authenticated users: 1000 requests/hour
-  - Premium users: Unlimited
-- [ ] Add rate limit headers in responses
-- [ ] Create rate limit exceeded page
-- **Goal**: Prevent API abuse, ensure fair usage
-
-### Features (Priority: 🟡 Medium)
-
-#### Real-Time WebSocket Updates
-**Timeline**: June 2026
-**Effort**: 3 weeks
-**Dependencies**: Redis (for Pub/Sub)
-
-- [ ] Install Flask-SocketIO
-- [ ] Configure Redis as message broker
-- [ ] Implement WebSocket endpoints:
-  - Price updates (every 5 seconds during market hours)
-  - Trade signals (real-time notifications)
-  - Portfolio updates (when holdings change)
-- [ ] Update frontend to consume WebSocket data
-- [ ] Add connection status indicator
-- **Goal**: Real-time user experience without constant polling
-
-#### Push Notifications
-**Timeline**: June 2026
-**Effort**: 2 weeks
-**Dependencies**: WebSocket implementation, user preferences system
-
-- [ ] Implement browser push notifications (Web Push API)
-- [ ] Add user notification preferences:
-  - High-probability trade signals (80%+)
-  - Portfolio alerts (stop-loss triggered, position filled)
-  - Earnings announcements (watchlist tickers)
-- [ ] Create notification management UI
-- [ ] Test cross-browser compatibility
-- **Goal**: Increase user engagement, timely trade alerts
+### Trade Thesis Builder
+- [x] Pre-trade plans (premium-gated)
+- [ ] Structured thesis template: entry criteria, target, stop-loss, time horizon, catalysts, risks
 
 ---
 
-## Q3 2026 (Jul-Sep)
+## Features — Elite Tier ($299/mo)
 
-**Theme**: Monitoring, Advanced Features, Mobile
-**Status**: 📅 Planned
+Elite delivers institutional-grade tools for serious traders and small funds.
 
-### Infrastructure (Priority: 🔴 High)
+### Analyze Tab — Institutional
+- [ ] **Revenue by Segment & Geography** — Business unit and regional revenue breakdowns
+- [ ] **3-Statement Financials with Trends** — Income, balance sheet, cash flow with historical time-series charts
+- [ ] **DuPont Decomposition** — ROE breakdown into margin × turnover × leverage
+- [ ] **Supply Chain Mapping** — Revenue exposure by customer/supplier (Bloomberg SPLC-style)
+- [ ] **IV History & Volatility Surface** — Historical IV, term structure, skew visualization
+- [ ] **Greeks (Full Suite)** — Delta, Gamma, Theta, Vega with real-time updates *(chain is free; full Greeks at Elite)*
 
-#### Prometheus + Grafana Monitoring
-**Timeline**: July 2026
-**Effort**: 2 weeks
-**Dependencies**: None
+### Options — Professional
+- [ ] **IV Crush Modeling** — Predicted post-earnings IV decline for options sizing
+- [ ] **ORATS Historical Data** — Full IV history, earnings IV spikes, Greeks history ($100/mo data cost)
+- [ ] **Options Flow Dashboard** — Aggregated whale alerts, unusual activity across all tickers
 
-- [ ] Deploy Prometheus for metrics collection
-- [ ] Install Grafana for visualization
-- [ ] Configure monitoring for:
-  - System metrics (CPU, RAM, disk, network)
-  - Application metrics (API response time, error rate)
-  - Database metrics (query time, connection pool usage)
-  - Business metrics (DAU, trades executed, model accuracy)
-- [ ] Create Grafana dashboards
-- [ ] Set up alerting (PagerDuty or Slack)
-- **Goal**: Proactive issue detection, performance visibility
+### AI — Advanced
+- [ ] **Earnings Surprise Prediction (ML)** — Predict beats/misses using options IV, analyst revisions, historical patterns
 
-#### Kubernetes Migration (Phase 1)
-**Timeline**: August-September 2026
-**Effort**: 6 weeks
-**Dependencies**: Docker containers, K8s cluster (EKS or local)
-
-- [ ] Containerize all services:
-  - Frontend (Nginx container)
-  - Flask API (Gunicorn container)
-  - PostgreSQL (StatefulSet)
-  - Airflow (Helm chart)
-- [ ] Create Helm charts for deployment
-- [ ] Set up EKS cluster (or Minikube for testing)
-- [ ] Implement CI/CD pipeline (GitHub Actions)
-- [ ] Migrate staging environment first
-- [ ] Migrate production after 2 weeks of testing
-- **Goal**: Horizontal scalability, easier deployment, multi-environment support
-
-### Features (Priority: 🟡 Medium)
-
-#### TradingView Integration
-**Timeline**: July 2026
-**Effort**: 2 weeks
-**Dependencies**: TradingView account, API access
-
-- [ ] Embed TradingView charts in frontend
-- [ ] Add technical indicators overlays
-- [ ] Synchronize chart data with our signals
-- [ ] Add drawing tools for user annotations
-- **Goal**: Professional-grade charting, better user experience
-
-#### Advanced Backtesting Framework
-**Timeline**: August 2026
-**Effort**: 3 weeks
-**Dependencies**: Historical data (1+ year)
-
-- [ ] Design backtesting engine:
-  - Portfolio simulation with realistic fills
-  - Transaction costs (commissions, slippage)
-  - Risk management (stop-loss, position sizing)
-- [ ] Create backtesting UI:
-  - Strategy configuration
-  - Date range selection
-  - Performance metrics (Sharpe, max drawdown, win rate)
-  - Equity curve visualization
-- [ ] Add strategy comparison tool
-- **Goal**: Validate trading strategies before live deployment
-
-#### Mobile App (React Native)
-**Timeline**: September 2026 (MVP)
-**Effort**: 6 weeks
-**Dependencies**: React Native setup, API documentation
-
-- [ ] Set up React Native project
-- [ ] Implement core features:
-  - Login/authentication
-  - Watchlist viewing
-  - Portfolio summary
-  - Trade signal notifications
-- [ ] Design mobile-optimized UI
-- [ ] Test on iOS and Android
-- [ ] Deploy to TestFlight / Google Play (beta)
-- **Goal**: Mobile-first user experience, on-the-go access
+### Backtesting
+- [ ] **Advanced Backtesting Framework** — Expose existing backtest engine (854K trades analyzed) to users
+  - [ ] Strategy configuration UI
+  - [ ] Date range selection
+  - [ ] Performance metrics (Sharpe, max drawdown, win rate)
+  - [ ] Equity curve visualization
+  - [ ] Strategy comparison tool
 
 ---
 
-## Q4 2026 (Oct-Dec)
+## Features — API Tier ($499–999/mo)
 
-**Theme**: Premium Features, Platform Integrations, Scale
-**Status**: 📅 Planned
+Programmatic access for quant teams, hedge funds, and fintech builders.
 
-### Business (Priority: 🔴 High)
+| Tier | Price | Rate Limit | Use Case |
+|------|-------|------------|----------|
+| Starter | $499/mo | 10K requests/day | Individual quant |
+| Growth | $749/mo | 50K requests/day | Small fund / fintech |
+| Enterprise | $999/mo | Unlimited | Institutional / white-label |
 
-#### Premium Subscription Tier
-**Timeline**: October 2026
-**Effort**: 4 weeks
-**Dependencies**: Stripe integration, real-time data subscription
-
-- [ ] Define pricing tiers:
-  - Free: Delayed data (15 min), basic features
-  - Premium ($29/mo): Real-time data, advanced analytics, API access
-  - Pro ($99/mo): Institutional data (ORATS options), trading platform integration
-- [ ] Integrate Stripe for payments
-- [ ] Implement subscription management:
-  - Billing portal
-  - Plan upgrades/downgrades
-  - Trial period (14 days)
-- [ ] Add feature gating in API and frontend
-- **Goal**: Generate revenue, sustainable business model
-
-#### Real-Time Data Feed (Polygon.io)
-**Timeline**: October 2026
-**Effort**: 2 weeks
-**Cost**: $199/mo (Developer tier)
-**Dependencies**: Premium subscription launch
-
-- [ ] Sign up for Polygon.io Developer plan
-- [ ] Integrate Polygon.io API:
-  - Real-time stock quotes (WebSocket)
-  - Options data with historical IV
-  - News and sentiment data
-- [ ] Replace yfinance for premium users
-- [ ] Add data source toggle in settings
-- **Goal**: Professional-grade data for premium users
-
-### Features (Priority: 🟡 Medium)
-
-#### Trading Platform Integration (Schwab API)
-**Timeline**: November 2026
-**Effort**: 4 weeks
-**Dependencies**: Schwab API access (approval process)
-
-- [ ] Apply for Schwab Developer Platform access
-- [ ] Implement OAuth flow for user authentication
-- [ ] Add brokerage account linking
-- [ ] Implement trade execution:
-  - Market orders
-  - Limit orders
-  - Stop-loss orders
-- [ ] Add order status tracking
-- [ ] Implement paper trading mode (simulation)
-- **Goal**: Seamless trade execution, end-to-end workflow
-
-#### Options Historical Data (ORATS)
-**Timeline**: November 2026
-**Effort**: 2 weeks
-**Cost**: $100/mo (Basic plan)
-**Dependencies**: Premium subscription for revenue
-
-- [ ] Subscribe to ORATS data feed
-- [ ] Integrate ORATS API:
-  - Historical implied volatility (IV)
-  - Options Greeks history
-  - Earnings IV spike data
-  - Options volume and open interest
-- [ ] Update options analysis to use ORATS data
-- [ ] Add historical IV charts
-- **Goal**: Better options fair value calculations, historical analysis
-
-#### News Sentiment Analysis
-**Timeline**: December 2026
-**Effort**: 3 weeks
-**Dependencies**: News API subscription (NewsAPI or Alpha Vantage)
-
-- [ ] Integrate news API
-- [ ] Implement NLP sentiment analysis:
-  - FinBERT for financial sentiment
-  - Ticker mention extraction
-  - Headline importance scoring
-- [ ] Add news feed to frontend:
-  - Ticker-specific news
-  - Sentiment-filtered view
-  - Breaking news alerts
-- [ ] Incorporate sentiment into ML models (as feature)
-- **Goal**: Alternative data source for trading signals
-
-### Infrastructure (Priority: 🟡 Medium)
-
-#### Multi-Region Deployment
-**Timeline**: December 2026
-**Effort**: 3 weeks
-**Dependencies**: K8s migration complete, CloudFront CDN
-
-- [ ] Set up CloudFront CDN for static assets
-- [ ] Deploy to multiple AWS regions:
-  - Primary: us-east-2 (Ohio)
-  - Secondary: us-west-2 (Oregon)
-- [ ] Configure database replication (PostgreSQL streaming replication)
-- [ ] Implement health checks and failover
-- [ ] Test disaster recovery procedures
-- **Goal**: Lower latency for global users, high availability
+- [ ] REST API — Full access to all endpoints
+- [ ] WebSocket Feeds — Real-time price + signal streaming
+- [ ] Bulk Data Downloads — Historical OHLCV, trend breaks, 13F, forex
+- [ ] Webhook Alerts — Push trade signals to external systems
+- [ ] API key management dashboard
+- [ ] Usage analytics
+- [ ] Custom data exports (CSV, JSON)
+- [ ] SLA guarantees (Enterprise tier)
 
 ---
 
-## Future Considerations
+## Features — Future (Unscheduled)
 
-**Beyond 2026**: These features are on the horizon but not yet scheduled.
+Not committed to a tier or timeline. Will be prioritized based on user demand and business needs.
 
-### Machine Learning Enhancements
+### Analysis
+- [ ] Candlestick pattern recognition (auto-detect and label)
+- [ ] Raindrop / volume profile charts
+- [ ] DCF / intrinsic value model with adjustable assumptions
+- [ ] Earnings call transcripts with key quote extraction
+- [ ] Correlation matrix — cross-asset heatmap (stocks, forex, crypto, commodities)
 
-- **Reinforcement Learning for Position Sizing**: Use RL agent to optimize position sizes based on market conditions
-- **Ensemble Models**: Combine multiple ML models (XGBoost, LightGBM, LSTM) for better predictions
-- **Auto-ML**: Automatically tune hyperparameters and select best models
-- **Explainable AI**: SHAP values for feature importance, model interpretability
+### Options
+- [ ] Risk profile / P&L diagram (visual profit/loss across prices)
+- [ ] Strategy builder (spreads, condors, butterflies — point-and-click construction)
 
-### Alternative Data
-
-- **Satellite Imagery**: Track retail foot traffic, commodity stockpiles
-- **Social Sentiment**: Twitter/Reddit sentiment analysis for meme stocks
-- **Web Scraping**: Supply chain data, hiring trends
-- **Credit Card Data**: Consumer spending patterns
-
-### Advanced Features
-
-- **Sector Rotation Strategies**: Automatically rotate into outperforming sectors
-- **Earnings Surprise Predictions**: ML model to predict earnings beats/misses
-- **Dark Pool Activity**: Track institutional dark pool trades
-- **Insider Trading Signals**: Monitor insider buy/sell activity
-
-### Platform Expansion
-
-- **Crypto Trading**: Extend platform to cryptocurrencies (Bitcoin, Ethereum)
-- **Forex Trading**: Expand forex from analysis to actual trading
-- **Futures & Commodities**: Support for futures contracts (ES, CL, GC)
-- **International Markets**: European, Asian stock markets
+### Trading
+- [ ] **Brokerage Integration (Schwab API)** — OAuth, account linking, order execution (market, limit, stop-loss), paper trading mode
+- [ ] Options + technical confluence signals (e.g., "heavy call buying at breakout above 200 SMA")
 
 ### Social & Community
+- [ ] Portfolio sharing — publish and follow top-performing portfolios
+- [ ] Strategy marketplace — buy/sell trading strategies
+- [ ] Social trading — copy trades from experienced traders
+- [ ] Community forum for trading ideas
 
-- **Portfolio Sharing**: Users can publish and follow top-performing portfolios
-- **Strategy Marketplace**: Buy/sell trading strategies from other users
-- **Social Trading**: Copy trades from experienced traders
-- **Community Forum**: Discussion boards for trading ideas
+### Alternative Data
+- [ ] Social sentiment (Twitter/Reddit for meme stocks)
+- [ ] Web scraping (supply chain data, hiring trends)
 
-### Enterprise Features
+### Machine Learning
+- [ ] Reinforcement learning for position sizing
+- [ ] Ensemble models (XGBoost + LightGBM + LSTM)
+- [ ] Auto-ML hyperparameter tuning
+- [ ] Explainable AI (SHAP values for feature importance)
 
-- **White-Label Solution**: License platform to hedge funds, RIAs
-- **Multi-User Teams**: Role-based access control, team portfolios
-- **Custom Models**: Allow institutions to train custom ML models
-- **Dedicated Infrastructure**: VPC, dedicated database, SLA guarantees
+### Platform Expansion
+- [ ] Crypto trading (Bitcoin, Ethereum)
+- [ ] Futures & commodities (ES, CL, GC)
+- [ ] International markets (Europe, Asia)
+
+### Enterprise
+- [ ] White-label solution for hedge funds / RIAs
+- [ ] Multi-user teams with role-based access
+- [ ] Custom ML model training
+- [ ] Dedicated infrastructure with SLA
+
+---
+
+## Customer Acquisition
+
+### Pre-Launch (Current)
+- [ ] **Landing Page** — Value proposition, feature screenshots, email capture for waitlist
+- [ ] **SEO Content** — Blog posts targeting: "best stock analysis tools", "Bloomberg alternative", "free options analysis", "AI trade scoring"
+- [ ] **Social Proof** — Backtest results (854K trades, 98.5% win rate) as marketing content
+- [ ] **Competitive Positioning** — "Bloomberg depth at 1/80th the cost" messaging
+- [ ] **Free Tool Hooks** — Offer free AI trade scoring, trend break alerts, and portfolio tracker as acquisition magnets
+
+### Launch
+- [ ] **Product Hunt Launch** — First-day push for visibility
+- [ ] **r/wallstreetbets, r/options, r/algotrading** — Authentic engagement showing platform capabilities
+- [ ] **FinTwit / X** — Daily market analysis posts with AlphaBreak screenshots
+- [ ] **YouTube** — Screen recordings: "How I analyze AAPL using AlphaBreak" tutorials
+- [ ] **Discord / Telegram Community** — Trading community around the platform
+- [ ] **Email Drip Campaign** — Waitlist → free trial → Pro conversion (7-day sequence)
+
+### Growth
+- [ ] **Referral Program** — "Give a friend 30 days Pro, get 30 days free"
+- [ ] **Freemium Conversion Funnel** — Track free → Pro conversion rate, optimize upgrade prompts
+- [ ] **Partnership** — Integrate with trading educators, finance YouTubers, newsletters
+- [ ] **Affiliate Program** — Revenue share for influencers driving paid signups
+- [ ] **App Store Presence** — iOS + Android apps with ASO optimization
+- [ ] **Stripe Integration** — Billing, plan management, trial periods (14-day), upgrade/downgrade flows
+
+### Retention
+- [ ] **Daily Email Digest** — Personalized watchlist alerts, trend breaks, earnings reminders
+- [ ] **Gamification** — Streak tracking, journal consistency badges, community leaderboards
+- [ ] **Onboarding Flow** — Guided tour for new users: add watchlist → analyze first ticker → create first journal entry
+- [ ] **NPS Surveys** — Quarterly user satisfaction measurement
+- [ ] **Feature Request Voting** — Public board where users vote on priorities
+
+### Metrics to Track
+| Metric | Target |
+|--------|--------|
+| Free signups / week | 500+ |
+| Free → Pro conversion | 5-8% |
+| Pro → Elite upgrade | 10-15% |
+| Monthly churn (Pro) | <5% |
+| DAU / MAU ratio | >30% |
+| NPS | >50 |
+| Time to first value | <5 minutes |
+
+---
+
+## Infrastructure
+
+Everything below is required to serve hundreds of thousands to millions of users reliably.
+
+### Current State — ✅ Complete
+- [x] k0s Kubernetes single-node (all services containerized)
+- [x] PostgreSQL 15 + TimescaleDB (106 tables, ~8GB)
+- [x] Redis caching layer
+- [x] Airflow with KubernetesExecutor (12 DAGs)
+- [x] Nginx reverse proxy
+- [x] SSL/HTTPS via Let's Encrypt (HTTP auto-redirect)
+- [x] Domain: alphabreak.vip with www redirect
+- [x] EC2 t3.medium, 100GB EBS gp2
+- [x] Docker images: trading-api + airflow-trading
+- [x] HPA auto-scaling, health/readiness probes
+- [x] AWS CLI configured
+
+### Scale Readiness — Must Build
+*These are prerequisites for handling real user traffic.*
+
+#### Database
+- [ ] **Connection Pooling** — PgBouncer or increase pool size for concurrent connections
+- [ ] **Query Optimization** — Add indexes on hot paths, analyze query plans, eliminate N+1 queries
+- [ ] **Read Replicas** — Postgres streaming replication for read-heavy endpoints (analyze, reports)
+- [ ] **Database Backups** — Automated daily to S3, 30-day retention, tested restore procedure
+- [ ] **Query Caching** — In-memory caching (Redis) with 1-5 min TTL for expensive queries
+
+#### Compute
+- [ ] **Horizontal Scaling** — Move from single-node k0s to multi-node cluster (EKS or multi-node k0s)
+- [ ] **API Response Time** — Target <200ms p95 (currently 200-500ms)
+- [ ] **CDN** — CloudFront for static assets (JS, CSS, images)
+- [ ] **Load Balancer** — ALB in front of API pods for traffic distribution
+
+#### Real-Time
+- [ ] **WebSocket Infrastructure** — Flask-SocketIO + Redis Pub/Sub for real-time streaming
+- [ ] **Connection Management** — Handle 10K+ concurrent WebSocket connections
+- [ ] **Price Feed Integration** — Polygon.io WebSocket → Redis → Client pipeline
+
+#### Monitoring & Observability
+- [ ] **Prometheus** — Metrics collection (API latency, error rate, DB query time)
+- [ ] **Grafana Dashboards** — System (CPU, RAM, disk), application (requests, errors), business (DAU, trades)
+- [ ] **Alerting** — PagerDuty or Slack for critical metrics (>500ms latency, >1% error rate, disk >80%)
+- [ ] **Structured Logging** — JSON logs → centralized log aggregation (Loki or CloudWatch)
+- [ ] **Uptime Monitoring** — External health check pings, status page
+
+#### Security
+- [ ] **Rate Limiting** — Per-user, per-endpoint limits (Flask-Limiter configured but needs tuning)
+- [ ] **Input Validation** — Sanitize all user inputs across all endpoints
+- [ ] **CORS Configuration** — Lock down to alphabreak.vip origins only
+- [ ] **Secrets Management** — Rotate API keys, DB passwords; move to AWS Secrets Manager
+- [ ] **DDoS Protection** — CloudFront + WAF for edge protection
+- [ ] **Penetration Testing** — Before public launch
+
+#### Email & Notifications
+- [ ] **SES Domain Verification** — Verify alphabreak.vip, move out of sandbox mode
+- [ ] **Email Templates** — Branded HTML templates for all notification types
+- [ ] **Bounce Handling** — SES bounce/complaint processing to maintain sender reputation
+
+#### Multi-Region (Future)
+- [ ] Primary: us-east-2 (Ohio)
+- [ ] Secondary: us-west-2 (Oregon)
+- [ ] Database replication across regions
+- [ ] Health checks and automated failover
+- [ ] Disaster recovery procedures tested
+
+#### Mobile
+- [ ] **React Native MVP** — Login, watchlist, portfolio summary, push notifications
+- [ ] **iOS TestFlight** — Beta distribution
+- [ ] **Google Play Beta** — Android distribution
+- [ ] **Push Notifications** — Firebase Cloud Messaging for mobile alerts
 
 ---
 
 ## Recently Completed
 
-**Q4 2025 - Q1 2026**: Major milestones achieved
+### v3.0 (Q1-Q2 2026)
+- ✅ Kubernetes migration (k0s, all services containerized)
+- ✅ Portfolio logic overhaul (50/30/20 allocation, options trading, multi-TF exits)
+- ✅ 40-year historical backtest (854K trades, 98.5% win rate)
+- ✅ Push notifications (AWS SES + in-app, 9 event types)
+- ✅ User profile / account page (Sharpe ratio, drawdown, equity curve)
+- ✅ Trade journal (free + premium tiers, AI scoring, 16 endpoints)
+- ✅ Redis caching layer
+- ✅ API rate limiting
+- ✅ EBS 50GB → 100GB expansion
+- ✅ Dark pool data pipeline (621K rows, 101 MB)
+- ✅ CBOE options statistics tracking
 
-### Q4 2025 (Oct-Dec 2025)
+### v2.0 (Q1 2026)
+- ✅ Forex correlation analysis (21 pairs, 123K rows)
+- ✅ Portfolio automation (Airflow, 12 DAGs)
+- ✅ SSL/HTTPS via Let's Encrypt
+- ✅ Documentation overhaul (6 docs)
+- ✅ 9-tab web dashboard
 
-- ✅ **Initial Release (v1.0.0)** - Nov 27, 2025
-  - Market sentiment analysis
-  - Options pricing models
-  - Trend break detection
-  - 13F institutional tracking
-  - Web dashboard (3 tabs)
-  - JWT authentication
-
-### Q1 2026 (Jan-Mar 2026)
-
-- ✅ **Major Feature Release (v2.0.0)** - Feb 2, 2026
-  - Forex correlation analysis (21 pairs, 123K rows)
-  - Portfolio automation (Airflow, 2 DAGs, LocalExecutor)
-  - 12 new ML features (forex-specific)
-  - Extended options window (90 days)
-  - Documentation overhaul (6 new docs)
-  - UI improvements (9 tabs, notifications)
-
-- ✅ **Infrastructure** - Q1 2026
-  - SSL/HTTPS via Let's Encrypt (ahead of Q2 schedule)
-  - Nginx replacing Python http.server for frontend
-  - Dark pool data pipeline (101 MB, 621K rows)
-  - CBOE options statistics tracking (3,253 rows)
-
----
-
-## Roadmap Management
-
-### How to Update This Roadmap
-
-**Quarterly Reviews**:
-- End of each quarter, review progress
-- Move completed items to "Recently Completed"
-- Adjust timeline for delayed items
-- Re-prioritize based on user feedback and business needs
-
-**When to Add New Items**:
-- User feature requests (vote-based priority)
-- Competitive analysis (keep pace with competitors)
-- Technical debt (address before it compounds)
-- Business opportunities (revenue-generating features)
-
-**Priority Levels**:
-- 🔴 **High**: Critical for business, security, or user satisfaction
-- 🟡 **Medium**: Valuable but not urgent
-- 🟢 **Low**: Nice-to-have, can be postponed
-
-**Status Indicators**:
-- ✅ **Completed**: Feature shipped to production
-- 🚧 **In Progress**: Actively being developed
-- ⏸️ **Paused**: Started but temporarily on hold
-- 📅 **Planned**: Scheduled for future quarter
-- ❌ **Cancelled**: Decided not to pursue
-
-### Feature Request Process
-
-1. **Submit**: User submits feature request via GitHub issue
-2. **Triage**: Team reviews and assigns priority
-3. **Vote**: Community votes on feature importance
-4. **Estimate**: Team estimates effort (T-shirt sizing: S/M/L/XL)
-5. **Schedule**: High-priority + feasible features added to roadmap
-6. **Develop**: Feature implemented in sprint
-7. **Release**: Shipped with release notes
-
-### Roadmap Transparency
-
-This roadmap is **public** and **living**:
-- Updated monthly with progress
-- Open to community feedback
-- Timelines are estimates, not guarantees
-- Priorities may shift based on business needs
+### v1.0 (Q4 2025)
+- ✅ Market sentiment analysis
+- ✅ Options pricing (Black-Scholes, Binomial Tree)
+- ✅ Trend break detection (78% accuracy)
+- ✅ 13F institutional holdings (20 funds)
+- ✅ JWT authentication
+- ✅ Initial web dashboard (3 tabs)
 
 ---
 
 ## Related Documentation
 
-- **[CHANGELOG.md](../CHANGELOG.md)** - Version history and completed features
-- **[RELEASE_NOTES.md](RELEASE_NOTES.md)** - Release process and templates
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical architecture and design
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Deployment procedures
-- **[COMPLETED_FEATURES.md](COMPLETED_FEATURES.md)** - Current production features
+- **[COMPETITIVE_ANALYSIS.md](COMPETITIVE_ANALYSIS.md)** — Feature matrix vs 10 competitors
+- **[PRICING_TIERS.md](PRICING_TIERS.md)** — Detailed tier breakdown with revenue projections
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — Technical architecture and design
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** — Production deployment procedures
+- **[COMPLETED_FEATURES.md](COMPLETED_FEATURES.md)** — Detailed production feature list
+- **[CHANGELOG.md](../CHANGELOG.md)** — Version history
 
 ---
 
-**Maintained By**: Product Team
-**Contributors**: Development Team, User Community
-**Review Cycle**: Monthly updates, Quarterly deep reviews
-**Feedback**: Open an issue on GitHub or contact the team
-
----
-
-**Last Updated**: February 2, 2026
-**Next Review**: March 1, 2026
-**Version**: 2.0
+**Last Updated**: April 3, 2026
