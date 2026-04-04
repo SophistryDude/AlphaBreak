@@ -1425,51 +1425,70 @@
                         </div>
                     </div>
 
-                    <!-- Institutional Holdings Table -->
-                    <div class="longterm-holdings-section">
-                        <h3 class="longterm-section-title">Hedge Fund Holdings <span class="longterm-quarter-badge" id="longtermQuarterBadge"></span></h3>
-                        <p class="longterm-section-desc">Aggregated 13F filings from top institutional investors. <span class="longterm-dividend-legend"><span class="longterm-dividend-icon"></span> = Pays Dividend</span></p>
-
-                        <div class="longterm-holdings-loading" id="longtermHoldingsLoading">Loading institutional holdings...</div>
-
-                        <div class="table-container" id="longtermHoldingsTableContainer" style="display:none;">
-                            <table class="longterm-holdings-table">
-                                <thead>
-                                    <tr>
-                                        <th>Ticker</th>
-                                        <th>Sector</th>
-                                        <th>Funds Holding</th>
-                                        <th>Sentiment</th>
-                                        <th>New</th>
-                                        <th>Increased</th>
-                                        <th>Decreased</th>
-                                        <th>Sold</th>
-                                        <th>Net Change</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="longtermHoldingsBody"></tbody>
-                            </table>
+                    <!-- My Holdings (Saved User Holdings) — Collapsible Widget -->
+                    <div class="widget-card" id="myHoldingsWidget">
+                        <div class="widget-header">
+                            <h3 class="widget-title">My Holdings</h3>
+                            <span class="widget-subtitle">Your saved positions. Data persists in your browser.</span>
+                            <div class="header-spacer"></div>
+                            <button class="widget-collapse-btn" data-target="myHoldingsBody" title="Collapse/Expand">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
+                        </div>
+                        <div class="widget-collapsible" id="myHoldingsBody">
+                            <div class="longterm-saved-section" style="padding:12px 16px;">
+                                <div class="longterm-saved-empty" id="longtermSavedEmpty">
+                                    <p>No saved holdings yet. Select a stock above and click "Save Holding" to add it here.</p>
+                                </div>
+                                <div class="longterm-saved-grid" id="longtermSavedGrid"></div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Fund Detail Panel -->
-                    <div class="longterm-fund-detail" id="longtermFundDetail" style="display:none;">
-                        <div class="longterm-fund-detail-header">
-                            <h4 id="longtermFundDetailTitle"></h4>
-                            <button class="btn btn-sm" id="longtermFundDetailClose">Close</button>
+                    <!-- Hedge Fund Holdings — Collapsible Widget -->
+                    <div class="widget-card" id="hedgeFundWidget">
+                        <div class="widget-header">
+                            <h3 class="widget-title">Hedge Fund Holdings <span class="longterm-quarter-badge" id="longtermQuarterBadge"></span></h3>
+                            <span class="widget-subtitle">Aggregated 13F filings from top institutional investors.</span>
+                            <div class="header-spacer"></div>
+                            <button class="widget-collapse-btn" data-target="hedgeFundBody" title="Collapse/Expand">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
                         </div>
-                        <div class="longterm-fund-list" id="longtermFundList"></div>
-                    </div>
+                        <div class="widget-collapsible" id="hedgeFundBody">
+                            <div class="longterm-holdings-section" style="padding:0 16px 12px;">
+                                <div class="longterm-holdings-loading" id="longtermHoldingsLoading">Loading institutional holdings...</div>
 
-                    <!-- Saved User Holdings -->
-                    <div class="longterm-saved-section">
-                        <h3 class="longterm-section-title">My Holdings</h3>
-                        <p class="longterm-section-desc">Your saved positions. Data persists in your browser.</p>
-                        <div class="longterm-saved-empty" id="longtermSavedEmpty">
-                            <p>No saved holdings yet. Select a stock above and click "Save Holding" to add it here.</p>
+                                <div class="table-container" id="longtermHoldingsTableContainer" style="display:none;">
+                                    <table class="longterm-holdings-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Ticker</th>
+                                                <th>Sector</th>
+                                                <th>Funds Holding</th>
+                                                <th>Sentiment</th>
+                                                <th>New</th>
+                                                <th>Increased</th>
+                                                <th>Decreased</th>
+                                                <th>Sold</th>
+                                                <th>Net Change</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="longtermHoldingsBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Fund Detail Panel -->
+                            <div class="longterm-fund-detail" id="longtermFundDetail" style="display:none;">
+                                <div class="longterm-fund-detail-header">
+                                    <h4 id="longtermFundDetailTitle"></h4>
+                                    <button class="btn btn-sm" id="longtermFundDetailClose">Close</button>
+                                </div>
+                                <div class="longterm-fund-list" id="longtermFundList"></div>
+                            </div>
                         </div>
-                        <div class="longterm-saved-grid" id="longtermSavedGrid"></div>
                     </div>
                 </div>
                 </div>
