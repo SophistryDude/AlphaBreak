@@ -214,6 +214,22 @@ const Earnings = {
             return;
         }
 
+        // Pro feature gate
+        if (typeof Premium !== 'undefined' && !Premium.canAccess('earnings_detail')) {
+            this.closeDetail();
+            const selectedRow = document.querySelector(`.earnings-row[data-ticker="${ticker}"]`);
+            if (!selectedRow) return;
+            selectedRow.classList.add('selected');
+            this.expandedTicker = ticker;
+            const detailRow = document.createElement('tr');
+            detailRow.className = 'earnings-detail-row';
+            detailRow.id = 'earningsDetailRow';
+            detailRow.innerHTML = '<td colspan="7"><div style="padding:16px;" id="earningsLockedPanel"></div></td>';
+            selectedRow.after(detailRow);
+            Premium.showLocked('earningsLockedPanel', 'earnings_detail');
+            return;
+        }
+
         // Close any existing detail row
         this.closeDetail();
 
@@ -262,6 +278,12 @@ const Earnings = {
 
         // Scroll to the detail row
         detailRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // Record trial if applicable
+        if (typeof Premium !== 'undefined') {
+            const access = Premium.checkAccess('earnings_detail');
+            if (access.isTrial) Premium.recordTrial('earnings_detail');
+        }
 
         // Load data
         try {

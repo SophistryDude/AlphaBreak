@@ -186,10 +186,27 @@ const Analyze = (() => {
             renderOptions(data.options);
             renderEarnings(data.earnings);
             renderNews(data.news);
-            renderInstitutional(data.institutional);
+
+            // Pro-gated features
+            if (Premium.canAccess('institutional_13f')) {
+                renderInstitutional(data.institutional);
+                const access = Premium.checkAccess('institutional_13f');
+                if (access.isTrial) {
+                    Premium.recordTrial('institutional_13f');
+                    Premium.showTrialBanner('analyzeInstitutional', 'institutional_13f');
+                }
+            } else {
+                Premium.showLocked('analyzeInstitutional', 'institutional_13f');
+            }
+
             renderGuides(data);
             initGuideToggles();
-            loadGrades(ticker);
+
+            if (Premium.canAccess('quant_grades')) {
+                loadGrades(ticker);
+            } else {
+                Premium.showLocked('analyzeGrades', 'quant_grades');
+            }
 
             document.getElementById('analyzeLoading').style.display = 'none';
             document.getElementById('analyzeContent').style.display = 'block';
@@ -806,17 +823,28 @@ const Analyze = (() => {
 
             AlphaCharts.setData('analyzeChartContainer', chartData.data, filteredOverlays);
 
-            // Add trendlines if enabled
+            // Add trendlines if enabled (Pro feature)
             if (document.getElementById('toggleTrendlines')?.checked && trendData) {
-                AlphaCharts.setTrendlines('analyzeChartContainer', trendData);
+                if (Premium.canAccess('trendlines')) {
+                    AlphaCharts.setTrendlines('analyzeChartContainer', trendData);
+                    const tlAccess = Premium.checkAccess('trendlines');
+                    if (tlAccess.isTrial) Premium.recordTrial('trendlines');
+                }
             }
 
-            // Add candlestick pattern markers if enabled
+            // Add candlestick pattern markers if enabled (Pro feature)
             if (document.getElementById('togglePatterns')?.checked && patternData) {
-                AlphaCharts.setPatterns('analyzeChartContainer', patternData);
-                // Render seasonality heatmap
-                if (patternData.seasonality) {
-                    AlphaCharts.renderSeasonality('analyzeChartContainer', patternData.seasonality);
+                if (Premium.canAccess('candlestick_patterns')) {
+                    AlphaCharts.setPatterns('analyzeChartContainer', patternData);
+                    const pAccess = Premium.checkAccess('candlestick_patterns');
+                    if (pAccess.isTrial) Premium.recordTrial('candlestick_patterns');
+
+                    // Seasonality (Pro feature)
+                    if (patternData.seasonality && Premium.canAccess('seasonality')) {
+                        AlphaCharts.renderSeasonality('analyzeChartContainer', patternData.seasonality);
+                        const sAccess = Premium.checkAccess('seasonality');
+                        if (sAccess.isTrial) Premium.recordTrial('seasonality');
+                    }
                 }
             } else {
                 const patternBar = document.getElementById('patternMarkers');
@@ -863,6 +891,11 @@ const Analyze = (() => {
             renderGrades(grades);
             renderGradesGuide(grades);
             appendGradesToBrief(grades);
+            const gradeAccess = Premium.checkAccess('quant_grades');
+            if (gradeAccess.isTrial) {
+                Premium.recordTrial('quant_grades');
+                Premium.showTrialBanner('analyzeGrades', 'quant_grades');
+            }
         } catch (e) {
             el.innerHTML = '<p class="muted">Grades unavailable</p>';
         }

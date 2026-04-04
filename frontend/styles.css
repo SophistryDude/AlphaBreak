@@ -7295,6 +7295,26 @@ body.chart-fullscreen-active { overflow: hidden; }
     padding: 4px 10px; background: var(--bg-elevated); border-radius: 4px; font-size: 12px; min-width: 120px;
 }
 
+/* Pro locked state */
+.pro-locked {
+    text-align: center; padding: 20px 16px;
+    background: var(--bg-surface); border-radius: 6px;
+}
+.pro-locked-icon { color: var(--text-muted); margin-bottom: 8px; }
+.pro-locked-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+.pro-locked-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; max-width: 300px; margin: 0 auto 12px; }
+.pro-locked-btn { font-size: 12px; }
+
+/* Pro trial banner */
+.pro-trial-banner {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    background: linear-gradient(90deg, rgba(41,98,255,0.1), rgba(41,98,255,0.02));
+    border: 1px solid rgba(41,98,255,0.2); border-radius: 6px;
+    font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;
+}
+.pro-trial-banner svg { color: var(--primary-color); flex-shrink: 0; }
+.pro-trial-banner strong { color: var(--primary-color); }
+
 /* Pro upsell */
 .pro-upsell {
     text-align: center; padding: 24px 16px;
