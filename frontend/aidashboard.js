@@ -310,7 +310,7 @@ const AIDashboard = (() => {
                             <span>Peer Comparison</span>
                             <span>Real-Time Data</span>
                         </div>
-                        <button class="btn btn-primary" style="margin-top:12px;">Upgrade to Pro — $99/mo</button>
+                        <button class="btn btn-primary pro-locked-btn" style="margin-top:12px;">Upgrade to Pro — $99/mo</button>
                         <p class="pro-upsell-note">Resets monthly. You've screened: ${uses.tickers.join(', ')}</p>
                     </div>
                 `;

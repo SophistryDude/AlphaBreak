@@ -133,6 +133,34 @@ def fetch_analyze_data(ticker: str, db_manager=None) -> Dict:
         'free_cash_flow': info.get('freeCashflow'),
     }
 
+    # ── Short Interest ────────────────────────────────────────────────────
+    shares_short = info.get('sharesShort')
+    shares_short_prior = info.get('sharesShortPriorMonth')
+    short_change = None
+    if shares_short and shares_short_prior and shares_short_prior > 0:
+        short_change = round((shares_short - shares_short_prior) / shares_short_prior, 4)
+
+    result['short_interest'] = {
+        'short_pct_float': _safe_val(info.get('shortPercentOfFloat')),
+        'short_pct_shares': _safe_val(info.get('shortPercentOfFloat')),
+        'shares_short': shares_short,
+        'shares_short_prior': shares_short_prior,
+        'short_change_mom': short_change,
+        'short_ratio': _safe_val(info.get('shortRatio')),
+        'days_to_cover': _safe_val(info.get('shortRatio')),  # same metric
+    }
+
+    # ── Dividend Analysis ─────────────────────────────────────────────────
+    result['dividend'] = {
+        'dividend_rate': _safe_val(info.get('dividendRate')),
+        'dividend_yield': _safe_val(info.get('dividendYield')),
+        'ex_date': info.get('exDividendDate'),
+        'payout_ratio': _safe_val(info.get('payoutRatio')),
+        'five_yr_avg_yield': _safe_val(info.get('fiveYearAvgDividendYield')),
+        'trailing_annual_rate': _safe_val(info.get('trailingAnnualDividendRate')),
+        'trailing_annual_yield': _safe_val(info.get('trailingAnnualDividendYield')),
+    }
+
     # ── Trend Break ───────────────────────────────────────────────────────
     result['trend_break'] = _get_trend_break_data(ticker, df, db_manager)
 

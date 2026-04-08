@@ -184,6 +184,8 @@ const Analyze = (() => {
             renderStats(data.stats);
             renderTrendBreak(data.trend_break, data.signals);
             renderIndicators(data.indicators, data.signals);
+            renderShortInterest(data.short_interest);
+            renderDividend(data.dividend);
             renderAnalyst(data.analyst);
             renderOptions(data.options);
             renderEarnings(data.earnings);
@@ -653,6 +655,87 @@ const Analyze = (() => {
         `;
     }
 
+    // ── Render: Short Interest ──────────────────────────────────────────
+    function renderShortInterest(si) {
+        const el = document.getElementById('analyzeShortInterest');
+        if (!si || si.short_pct_float == null) {
+            el.innerHTML = '<p class="muted">No short interest data available.</p>';
+            return;
+        }
+
+        const shortPct = si.short_pct_float ? (si.short_pct_float * 100).toFixed(1) + '%' : '--';
+        const daysTo = si.days_to_cover ? si.days_to_cover.toFixed(1) : '--';
+        const sharesShort = si.shares_short ? _fmtLargeNum(si.shares_short) : '--';
+        const priorShort = si.shares_short_prior ? _fmtLargeNum(si.shares_short_prior) : '--';
+        const momChange = si.short_change_mom != null ? (si.short_change_mom >= 0 ? '+' : '') + (si.short_change_mom * 100).toFixed(1) + '%' : '--';
+        const momCls = si.short_change_mom != null ? (si.short_change_mom > 0 ? 'negative' : 'positive') : '';
+
+        // Squeeze risk: >20% short float + <3 days to cover = high risk
+        let squeezeRisk = 'Low';
+        let squeezeCls = 'muted';
+        if (si.short_pct_float > 0.2 && si.days_to_cover && si.days_to_cover < 3) {
+            squeezeRisk = 'High';
+            squeezeCls = 'negative';
+        } else if (si.short_pct_float > 0.1) {
+            squeezeRisk = 'Moderate';
+            squeezeCls = 'warning';
+        }
+
+        el.innerHTML = `
+            <div class="analyze-stats-grid">
+                ${_statRow('Short % of Float', shortPct)}
+                ${_statRow('Days to Cover', daysTo)}
+                ${_statRow('Shares Short', sharesShort)}
+                ${_statRow('Prior Month', priorShort)}
+                ${_statRow('MoM Change', `<span class="${momCls}">${momChange}</span>`)}
+                ${_statRow('Squeeze Risk', `<span class="${squeezeCls}">${squeezeRisk}</span>`)}
+            </div>
+        `;
+    }
+
+    // ── Render: Dividend Analysis ────────────────────────────────────────
+    function renderDividend(d) {
+        const el = document.getElementById('analyzeDividend');
+        if (!d || (d.dividend_yield == null && d.dividend_rate == null)) {
+            el.innerHTML = '<p class="muted">This stock does not pay a dividend.</p>';
+            return;
+        }
+
+        const annualRate = d.dividend_rate ? '$' + d.dividend_rate.toFixed(2) : '--';
+        const yld = d.dividend_yield ? (d.dividend_yield * 100).toFixed(2) + '%' : '--';
+        const payout = d.payout_ratio ? (d.payout_ratio * 100).toFixed(1) + '%' : '--';
+        const fiveYrAvg = d.five_yr_avg_yield ? d.five_yr_avg_yield.toFixed(2) + '%' : '--';
+
+        // Ex-date: yfinance returns epoch seconds
+        let exDate = '--';
+        if (d.ex_date) {
+            try {
+                const dt = new Date(d.ex_date * 1000);
+                exDate = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            } catch (e) { exDate = String(d.ex_date); }
+        }
+
+        // Dividend safety: payout < 60% = safe, 60-80% = caution, >80% = high risk
+        let safety = '--';
+        let safetyCls = '';
+        if (d.payout_ratio != null) {
+            if (d.payout_ratio < 0.6) { safety = 'Safe'; safetyCls = 'positive'; }
+            else if (d.payout_ratio < 0.8) { safety = 'Caution'; safetyCls = 'warning'; }
+            else { safety = 'At Risk'; safetyCls = 'negative'; }
+        }
+
+        el.innerHTML = `
+            <div class="analyze-stats-grid">
+                ${_statRow('Annual Dividend', annualRate)}
+                ${_statRow('Yield', yld)}
+                ${_statRow('Payout Ratio', payout)}
+                ${_statRow('Safety', `<span class="${safetyCls}">${safety}</span>`)}
+                ${_statRow('5-Yr Avg Yield', fiveYrAvg)}
+                ${_statRow('Ex-Dividend Date', exDate)}
+            </div>
+        `;
+    }
+
     // ── Render: Options ──────────────────────────────────────────────────
     function renderOptions(o) {
         const el = document.getElementById('analyzeOptions');
@@ -660,7 +743,25 @@ const Analyze = (() => {
             el.innerHTML = '<p class="muted">No options data available.</p>';
             return;
         }
+
+        // Market Maker Move
+        let mmHtml = '';
+        if (o.mm_move_pct) {
+            const movePct = (o.mm_move_pct * 100).toFixed(1);
+            const moveDollar = o.mm_move_dollar.toFixed(2);
+            const rangeLow = o.mm_move_range ? '$' + o.mm_move_range[0].toFixed(2) : '--';
+            const rangeHigh = o.mm_move_range ? '$' + o.mm_move_range[1].toFixed(2) : '--';
+            mmHtml = `
+                <div class="mm-move-box">
+                    <div class="mm-move-header">Market Maker Expected Move</div>
+                    <div class="mm-move-value">&plusmn;${movePct}% ($${moveDollar})</div>
+                    <div class="mm-move-range">Range: ${rangeLow} — ${rangeHigh}</div>
+                </div>
+            `;
+        }
+
         el.innerHTML = `
+            ${mmHtml}
             <div class="analyze-stats-grid">
                 ${_statRow('Nearest Expiry', o.nearest_expiry || '--')}
                 ${_statRow('IV', o.implied_volatility ? (o.implied_volatility * 100).toFixed(1) + '%' : '--')}
@@ -779,6 +880,19 @@ const Analyze = (() => {
         el.innerHTML = html || '<p class="muted">No institutional data available.</p>';
     }
 
+    // ── Chart Pro Banner Helper ────────────────────────────────────────
+    function _showChartProBanner(message) {
+        const container = document.getElementById('analyzeChartContainer');
+        if (!container) return;
+        // Remove any existing banner
+        const existing = container.parentElement.querySelector('.chart-pro-banner');
+        if (existing) existing.remove();
+        const banner = document.createElement('div');
+        banner.className = 'chart-pro-banner';
+        banner.innerHTML = message;
+        container.parentElement.insertBefore(banner, container.nextSibling);
+    }
+
     // ── Chart (Lightweight Charts) ─────────────────────────────────────
     async function loadChart(ticker, period, interval) {
         currentChartPeriod = period;
@@ -828,26 +942,43 @@ const Analyze = (() => {
 
             // Add trendlines if enabled (Pro feature)
             if (document.getElementById('toggleTrendlines')?.checked && trendData) {
-                if (Premium.canAccess('trendlines')) {
+                const tlAccess = Premium.checkAccess('trendlines');
+                if (tlAccess.allowed) {
                     AlphaCharts.setTrendlines('analyzeChartContainer', trendData);
-                    const tlAccess = Premium.checkAccess('trendlines');
-                    if (tlAccess.isTrial) Premium.recordTrial('trendlines');
+                    if (tlAccess.isTrial) {
+                        Premium.recordTrial('trendlines');
+                        _showChartProBanner('Free trial of <strong>Auto-Detected Trendlines</strong>. Upgrade to Pro for permanent access.');
+                    }
+                } else {
+                    _showChartProBanner('🔒 <strong>Auto-Detected Trendlines</strong> is a Pro feature. <button class="btn btn-primary btn-xs pro-locked-btn">Upgrade to Pro — $99/mo</button>');
                 }
             }
 
             // Add candlestick pattern markers if enabled (Pro feature)
             if (document.getElementById('togglePatterns')?.checked && patternData) {
-                if (Premium.canAccess('candlestick_patterns')) {
+                const pAccess = Premium.checkAccess('candlestick_patterns');
+                if (pAccess.allowed) {
                     AlphaCharts.setPatterns('analyzeChartContainer', patternData);
-                    const pAccess = Premium.checkAccess('candlestick_patterns');
                     if (pAccess.isTrial) Premium.recordTrial('candlestick_patterns');
 
                     // Seasonality (Pro feature)
-                    if (patternData.seasonality && Premium.canAccess('seasonality')) {
-                        AlphaCharts.renderSeasonality('analyzeChartContainer', patternData.seasonality);
+                    if (patternData.seasonality) {
                         const sAccess = Premium.checkAccess('seasonality');
-                        if (sAccess.isTrial) Premium.recordTrial('seasonality');
+                        if (sAccess.allowed) {
+                            AlphaCharts.renderSeasonality('analyzeChartContainer', patternData.seasonality);
+                            if (sAccess.isTrial) {
+                                Premium.recordTrial('seasonality');
+                            }
+                        } else {
+                            const seasEl = document.getElementById('seasonalityContainer');
+                            if (seasEl) {
+                                seasEl.style.display = 'block';
+                                seasEl.innerHTML = '<div class="pro-locked"><div class="pro-locked-title">Seasonality Heatmap</div><div class="pro-locked-desc">5-year monthly return analysis. Upgrade to Pro for access.</div><button class="btn btn-primary btn-sm pro-locked-btn">Upgrade to Pro — $99/mo</button></div>';
+                            }
+                        }
                     }
+                } else {
+                    _showChartProBanner('🔒 <strong>Candlestick Patterns</strong> is a Pro feature. <button class="btn btn-primary btn-xs pro-locked-btn">Upgrade to Pro — $99/mo</button>');
                 }
             } else {
                 const patternBar = document.getElementById('patternMarkers');

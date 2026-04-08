@@ -312,6 +312,20 @@ def _get_options_summary(stock, current_price: float) -> Dict:
         put_iv = result.get('put_iv') or 0
         result['implied_volatility'] = round((call_iv + put_iv) / 2, 4) if (call_iv or put_iv) else None
 
+        # Market Maker Move (ATM straddle price / stock price = implied % move)
+        atm_call_price = result.get('nearest_call_price') or 0
+        atm_put_price = result.get('nearest_put_price') or 0
+        straddle_price = atm_call_price + atm_put_price
+        if straddle_price > 0 and current_price > 0:
+            mm_move_pct = round(straddle_price / current_price, 4)
+            mm_move_dollar = round(straddle_price, 2)
+            result['mm_move_pct'] = mm_move_pct
+            result['mm_move_dollar'] = mm_move_dollar
+            result['mm_move_range'] = [
+                round(current_price - straddle_price, 2),
+                round(current_price + straddle_price, 2),
+            ]
+
         return result
 
     except Exception as e:

@@ -28,6 +28,7 @@ const PAGE_TITLES = {
     forex: 'Forex Correlations',
     stats: 'Performance Stats',
     account: 'My Account',
+    pricing: 'Plans & Pricing',
 };
 
 // Initialize application
@@ -189,6 +190,45 @@ function initializeSidebar() {
             closeSidebar();
         }
     });
+
+    // ── Global: "Upgrade to Pro" buttons → navigate to Pricing tab ───────
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.pro-locked-btn, .pricing-upgrade-btn');
+        if (!btn) return;
+        e.preventDefault();
+        // Switch to pricing tab
+        sidebarLinks.forEach(l => l.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        const pricingLink = document.querySelector('[data-tab="pricing"]');
+        if (pricingLink) pricingLink.classList.add('active');
+        document.getElementById('pricingTab').classList.add('active');
+        document.getElementById('currentPageTitle').textContent = PAGE_TITLES['pricing'];
+        state.activeTab = 'pricing';
+        const ps = document.getElementById('persistentSentiment');
+        if (ps) ps.style.display = 'none';
+        closeSidebar();
+        // Scroll to top
+        window.scrollTo(0, 0);
+    });
+
+    // ── Pricing: Monthly / Annual toggle ─────────────────────────────────
+    const monthlyBtn = document.getElementById('pricingMonthly');
+    const annualBtn = document.getElementById('pricingAnnual');
+    if (monthlyBtn && annualBtn) {
+        function setPricingMode(annual) {
+            document.querySelectorAll('.pricing-price[data-monthly]').forEach(el => {
+                const mo = el.dataset.monthly;
+                const yr = el.dataset.annual;
+                el.innerHTML = annual
+                    ? `$${yr}<span class="pricing-period">/mo</span>`
+                    : `$${mo}<span class="pricing-period">/mo</span>`;
+            });
+            monthlyBtn.classList.toggle('active', !annual);
+            annualBtn.classList.toggle('active', annual);
+        }
+        monthlyBtn.addEventListener('click', () => setPricingMode(false));
+        annualBtn.addEventListener('click', () => setPricingMode(true));
+    }
 }
 
 // Form initialization

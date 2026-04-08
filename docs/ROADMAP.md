@@ -1,7 +1,7 @@
 # Product Roadmap
 
-**Version**: 4.2
-**Last Updated**: April 4, 2026
+**Version**: 4.3
+**Last Updated**: April 8, 2026
 **Domain**: alphabreak.vip
 
 ---
@@ -160,19 +160,19 @@ Pro is the revenue engine. These features justify the price by replacing 2-3 sep
 ### Analyze Tab — Advanced Analytics
 *Quant Grades and AI Dashboard moved to Free tier (already built). Auto-Detected Trendlines and Seasonality remain Pro features (built but need premium gating).*
 
-- [ ] **Premium gate: Auto-Detected Trendlines** — Built and working. Needs paywall toggle (show 1 free, require Pro for full access).
-- [ ] **Premium gate: Seasonality Heatmap** — Built and working. Needs paywall toggle.
+- [x] **Premium gate: Auto-Detected Trendlines** — Pro badge on toggle, locked overlay with upgrade CTA, 1 free trial
+- [x] **Premium gate: Seasonality Heatmap** — Pro badge on toggle, locked overlay with upgrade CTA, 1 free trial
 
 - [ ] **Peer Comparison Table** — Side-by-side P/E, EV/EBITDA, ROE, revenue growth vs sector peers (Bloomberg COMP-style)
-- [ ] **Short Interest Data** — Short float %, days to cover, short squeeze risk score (data in yfinance, needs dedicated section)
-- [ ] **Dividend Analysis** — Yield, payout ratio, growth rate, ex-dates, safety grade
+- [x] **Short Interest Data** — Short float %, days to cover, MoM change, squeeze risk score
+- [x] **Dividend Analysis** — Yield, payout ratio, ex-date, safety grade, 5-yr avg yield
 - [ ] **Insider Trading Signals** — SEC Form 4 filings, insider buy/sell activity with timeline
 - [ ] **News NLP Sentiment Scoring** — FinBERT-scored headlines with sentiment trends per ticker
 
 ### Options — Enhanced
 - [ ] **Unusual Options Activity** — Volume vs 5-day average, large block trades, sweep detection
 - [ ] **Probability of Profit** — IV-based probability calculations for any position
-- [ ] **Market Maker Move** — Implied earnings move from ATM straddle pricing
+- [x] **Market Maker Move** — Implied move from ATM straddle pricing with ±% and dollar range
 
 ### Charting — Phase 2
 - [ ] **AI-Assisted Drawing Tools** — Fibonacci (auto-placed at detected swings), trendlines (pre-drawn suggestions user can adjust), channels, pitchforks. AI suggests "draw here" based on pivot detection.
@@ -430,6 +430,13 @@ Everything below is required to serve hundreds of thousands to millions of users
 ---
 
 ## Recently Completed
+
+### v4.3 (April 8, 2026) — Pro Features + New Analytics
+- ✅ **Premium gate: Trendlines + Seasonality** — Pro badge on toggles, locked overlay with upgrade CTA, 1 free trial each
+- ✅ **Short Interest section** — Short % float, days to cover, MoM change, squeeze risk score
+- ✅ **Dividend Analysis section** — Yield, rate, payout ratio, safety grade, 5-yr avg, ex-date
+- ✅ **Market Maker Expected Move** — ATM straddle-based implied ±% move with dollar range in Options widget
+- ✅ **Security bug fixes** — SQL parameterization, error detail suppression in production, auth recursion guard
 
 ### v4.2 (April 4, 2026) — AI Dashboard + Quant Grades
 - ✅ **AI Dashboard tab** — dedicated market-wide AI view (regime, signals, sectors, history, screener)

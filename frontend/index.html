@@ -42,6 +42,8 @@
                     <li><a href="#" class="sidebar-link" data-tab="portfolio">Portfolio Tracker</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="forex">Forex Correlations</a></li>
                     <li><a href="#" class="sidebar-link" data-tab="stats">Performance Stats</a></li>
+                    <li class="sidebar-divider"></li>
+                    <li><a href="#" class="sidebar-link sidebar-pricing" data-tab="pricing">Upgrade to Pro</a></li>
                 </ul>
             </nav>
         </aside>
@@ -842,9 +844,9 @@
                                         <button data-period="5y" data-interval="1wk">5Y</button>
                                     </div>
                                     <div class="analyze-chart-toggles">
-                                        <label class="chart-toggle" title="Auto-detected trendlines">
+                                        <label class="chart-toggle" title="Auto-detected trendlines (Pro)">
                                             <input type="checkbox" id="toggleTrendlines" checked>
-                                            <span>Trendlines</span>
+                                            <span>Trendlines <span class="pro-tag">Pro</span></span>
                                         </label>
                                         <label class="chart-toggle" title="SMA 10 & 50">
                                             <input type="checkbox" id="toggleSMA" checked>
@@ -858,9 +860,9 @@
                                             <input type="checkbox" id="toggleCompare">
                                             <span>Compare</span>
                                         </label>
-                                        <label class="chart-toggle" title="Candlestick patterns">
+                                        <label class="chart-toggle" title="Candlestick patterns + seasonality (Pro)">
                                             <input type="checkbox" id="togglePatterns" checked>
-                                            <span>Patterns</span>
+                                            <span>Patterns <span class="pro-tag">Pro</span></span>
                                         </label>
                                         <button class="chart-fullscreen-btn" id="chartFullscreenBtn" title="Full Screen">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -929,6 +931,22 @@
                                 </div>
                                 <div class="section-guide hidden" id="statsGuide"></div>
                                 <div class="analyze-stats-grid" id="analyzeStats"></div>
+                            </div>
+
+                            <!-- Short Interest -->
+                            <div class="card analyze-section">
+                                <div class="section-header-row">
+                                    <h3>Short Interest</h3>
+                                </div>
+                                <div id="analyzeShortInterest" class="analyze-short-interest"></div>
+                            </div>
+
+                            <!-- Dividend Analysis -->
+                            <div class="card analyze-section">
+                                <div class="section-header-row">
+                                    <h3>Dividend Analysis</h3>
+                                </div>
+                                <div id="analyzeDividend" class="analyze-dividend"></div>
                             </div>
 
                             <!-- Analyst Consensus -->
@@ -2217,6 +2235,150 @@
                     <!-- Entry list -->
                     <div id="journalEntryList">
                         <p class="empty-state">Loading journal...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing Tab -->
+            <div class="tab-content" id="pricingTab">
+                <div class="pricing-page">
+                    <div class="pricing-hero">
+                        <h2 class="pricing-headline">Bloomberg-grade analysis at 1/80th the cost</h2>
+                        <p class="pricing-sub">Replace your TradingView + Seeking Alpha + Barchart stack with one platform.</p>
+                    </div>
+
+                    <div class="pricing-toggle">
+                        <span class="pricing-toggle-label active" id="pricingMonthly">Monthly</span>
+                        <span class="pricing-toggle-label" id="pricingAnnual">Annual <span class="pricing-save-badge">Save 20%</span></span>
+                    </div>
+
+                    <div class="pricing-grid">
+                        <!-- Free Tier -->
+                        <div class="pricing-card">
+                            <div class="pricing-card-header">
+                                <h3 class="pricing-tier-name">Free</h3>
+                                <div class="pricing-price">$0<span class="pricing-period">/mo</span></div>
+                                <p class="pricing-tier-desc">Core analysis tools for every trader</p>
+                            </div>
+                            <button class="btn btn-ghost pricing-cta" disabled>Current Plan</button>
+                            <ul class="pricing-features">
+                                <li>Sentiment analysis (8 indicators, 4 timeframes)</li>
+                                <li>Trend break reports (daily, hourly, 10-min)</li>
+                                <li>Options fair value + Greeks</li>
+                                <li>13F institutional holdings (20 funds)</li>
+                                <li>Forex correlations (21 pairs)</li>
+                                <li>AI trade scoring + journal</li>
+                                <li>Portfolio tracker ($100K paper)</li>
+                                <li>Earnings calendar + analyst consensus</li>
+                                <li class="pricing-feature-limit">15-min delayed data</li>
+                                <li class="pricing-feature-limit">1 free trial per premium feature</li>
+                            </ul>
+                        </div>
+
+                        <!-- Pro Tier -->
+                        <div class="pricing-card pricing-card-featured">
+                            <div class="pricing-popular-badge">Most Popular</div>
+                            <div class="pricing-card-header">
+                                <h3 class="pricing-tier-name">Pro</h3>
+                                <div class="pricing-price" data-monthly="99" data-annual="79">$99<span class="pricing-period">/mo</span></div>
+                                <p class="pricing-tier-desc">Advanced analytics for active traders</p>
+                            </div>
+                            <button class="btn btn-primary pricing-cta pricing-upgrade-btn" data-tier="pro">Upgrade to Pro</button>
+                            <div class="pricing-includes">Everything in Free, plus:</div>
+                            <ul class="pricing-features">
+                                <li class="pricing-feature-new">Auto-detected trendlines + confidence scoring</li>
+                                <li class="pricing-feature-new">Seasonality heatmaps (5yr monthly)</li>
+                                <li class="pricing-feature-new">Short interest + squeeze risk score</li>
+                                <li class="pricing-feature-new">Dividend analysis + safety grade</li>
+                                <li class="pricing-feature-new">Market Maker expected move</li>
+                                <li class="pricing-feature-new">Candlestick pattern recognition</li>
+                                <li>Quant letter grades (A+ to F)</li>
+                                <li>Peer comparison tables</li>
+                                <li>Unusual options activity</li>
+                                <li>Probability of profit</li>
+                                <li>Journal premium (tags, plans, reviews, patterns)</li>
+                                <li>Insider trading signals</li>
+                                <li>Smart checklists</li>
+                                <li>Unlimited watchlist</li>
+                            </ul>
+                        </div>
+
+                        <!-- Elite Tier -->
+                        <div class="pricing-card">
+                            <div class="pricing-card-header">
+                                <h3 class="pricing-tier-name">Elite</h3>
+                                <div class="pricing-price" data-monthly="299" data-annual="239">$299<span class="pricing-period">/mo</span></div>
+                                <p class="pricing-tier-desc">Institutional-grade tools for serious traders</p>
+                            </div>
+                            <button class="btn btn-primary pricing-cta pricing-upgrade-btn" data-tier="elite">Upgrade to Elite</button>
+                            <div class="pricing-includes">Everything in Pro, plus:</div>
+                            <ul class="pricing-features">
+                                <li class="pricing-feature-new">Real-time quotes (Polygon.io)</li>
+                                <li class="pricing-feature-new">WebSocket price streaming</li>
+                                <li class="pricing-feature-new">IV history + volatility surface</li>
+                                <li class="pricing-feature-new">ORATS historical options data</li>
+                                <li class="pricing-feature-new">IV crush modeling</li>
+                                <li class="pricing-feature-new">Options flow dashboard</li>
+                                <li>3-statement financials with trends</li>
+                                <li>DuPont decomposition (ROE breakdown)</li>
+                                <li>Supply chain mapping</li>
+                                <li>News NLP sentiment (FinBERT)</li>
+                                <li>Advanced backtesting framework</li>
+                                <li>Priority support + onboarding call</li>
+                            </ul>
+                        </div>
+
+                        <!-- API Tier -->
+                        <div class="pricing-card">
+                            <div class="pricing-card-header">
+                                <h3 class="pricing-tier-name">API</h3>
+                                <div class="pricing-price" data-monthly="499" data-annual="399">$499<span class="pricing-period">/mo</span></div>
+                                <p class="pricing-tier-desc">Programmatic access for quants &amp; funds</p>
+                            </div>
+                            <button class="btn btn-ghost pricing-cta pricing-upgrade-btn" data-tier="api">Contact Sales</button>
+                            <div class="pricing-includes">Everything in Elite, plus:</div>
+                            <ul class="pricing-features">
+                                <li class="pricing-feature-new">REST API (all endpoints)</li>
+                                <li class="pricing-feature-new">WebSocket signal feeds</li>
+                                <li class="pricing-feature-new">Bulk data downloads (CSV, JSON)</li>
+                                <li class="pricing-feature-new">Webhook alerts</li>
+                                <li>API key management dashboard</li>
+                                <li>Usage analytics</li>
+                                <li>Custom data exports</li>
+                                <li>SLA guarantees (Enterprise)</li>
+                            </ul>
+                            <div class="pricing-api-tiers">
+                                <div class="pricing-api-row"><span>Starter</span><span>$499/mo</span><span>10K req/day</span></div>
+                                <div class="pricing-api-row"><span>Growth</span><span>$749/mo</span><span>50K req/day</span></div>
+                                <div class="pricing-api-row"><span>Enterprise</span><span>$999/mo</span><span>Unlimited</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pricing-faq">
+                        <h3>Frequently Asked Questions</h3>
+                        <div class="pricing-faq-grid">
+                            <div class="pricing-faq-item">
+                                <h4>Can I cancel anytime?</h4>
+                                <p>Yes. No contracts, no cancellation fees. Downgrade or cancel from your account page at any time.</p>
+                            </div>
+                            <div class="pricing-faq-item">
+                                <h4>Is there a free trial?</h4>
+                                <p>Every premium feature has a 1-time free trial so you can test before committing. Pro and Elite also include a 14-day money-back guarantee.</p>
+                            </div>
+                            <div class="pricing-faq-item">
+                                <h4>What data sources do you use?</h4>
+                                <p>Free tier uses delayed data (15-min via yfinance). Elite and above get real-time quotes via Polygon.io with live WebSocket streaming.</p>
+                            </div>
+                            <div class="pricing-faq-item">
+                                <h4>How does AlphaBreak compare to Bloomberg?</h4>
+                                <p>Bloomberg Terminal costs $24,000/year. AlphaBreak Pro gives you charting + fundamentals + AI scoring + options analytics for $1,188/year. We bridge the TA and fundamental worlds that no competitor does.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pricing-footer-note">
+                        <p>Questions? <a href="mailto:contact@alphabreak.vip">contact@alphabreak.vip</a></p>
                     </div>
                 </div>
             </div>
