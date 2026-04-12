@@ -88,13 +88,10 @@ def create_app(config_name='development'):
     cache.init_app(app)
 
     # Rate limiting to prevent abuse (per-user when authenticated, per-IP otherwise)
-    limiter.init_app(
-        app,
-        key_func=_get_rate_limit_key,
-        default_limits=["5000 per day", "500 per hour"],
-        storage_uri=app.config.get('RATELIMIT_STORAGE_URL', 'memory://'),
-        default_limits_exempt_when=lambda: False,  # Apply limits by default
-    )
+    app.config['RATELIMIT_KEY_FUNC'] = _get_rate_limit_key
+    app.config['RATELIMIT_DEFAULT'] = "5000 per day;500 per hour"
+    app.config['RATELIMIT_STORAGE_URI'] = app.config.get('RATELIMIT_STORAGE_URL', 'memory://')
+    limiter.init_app(app)
 
     # Exempt health/ready/live endpoints from rate limiting (for K8s probes)
     @limiter.request_filter
