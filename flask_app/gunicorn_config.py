@@ -17,7 +17,7 @@ backlog = 2048
 # Worker Processes
 # Use 2 workers for container deployment to avoid OOM
 workers = int(os.environ.get('GUNICORN_WORKERS', 2))
-worker_class = 'eventlet'  # Required for Flask-SocketIO WebSocket support
+worker_class = 'sync'  # Use 'eventlet' when flask-socketio is installed
 worker_connections = 1000
 max_requests = 1000  # Restart workers after this many requests (prevents memory leaks)
 max_requests_jitter = 50  # Add randomness to max_requests
