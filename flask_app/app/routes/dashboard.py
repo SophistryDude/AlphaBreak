@@ -15,6 +15,7 @@ import time
 from app.utils import error_details
 import logging
 from flask import Blueprint, jsonify, current_app
+from app import limiter
 from app.utils.auth import log_request, require_api_key
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,7 @@ def _get_db_manager():
 # ──────────────────────────────────────────────────────────────────────────────
 
 @dashboard_bp.route('/dashboard/market-sentiment', methods=['GET'])
+@limiter.limit("30/minute")
 @log_request
 @require_api_key
 def market_sentiment():

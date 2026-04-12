@@ -246,7 +246,11 @@ def fetch_analyze_data(ticker: str, db_manager=None) -> Dict:
     }
 
     # ── News ──────────────────────────────────────────────────────────────
-    result['news'] = _get_news(stock)
+    news_items = _get_news(stock)
+    result['news'] = news_items
+
+    # ── News Sentiment (VADER) ───────────────────────────────────────────
+    result['news_sentiment'] = _score_news_sentiment(news_items)
 
     return result
 
@@ -530,6 +534,42 @@ def _get_news(stock) -> List[Dict]:
     except Exception as e:
         logger.debug(f"News fetch failed: {e}")
         return []
+
+
+def _score_news_sentiment(news_items: List[Dict]) -> Dict:
+    """Score news headlines with VADER and return sentiment summary."""
+    try:
+        from app.services.sentiment_service import score_headlines, aggregate_sentiment
+
+        headlines = [item.get('title', '') for item in news_items if item.get('title')]
+        if not headlines:
+            return {'headlines': [], 'overall': aggregate_sentiment([])}
+
+        scored = score_headlines(headlines)
+
+        # Merge sentiment data back with news metadata
+        enriched = []
+        for item, score_data in zip(news_items, scored):
+            enriched.append({
+                'title': item.get('title', ''),
+                'sentiment_score': score_data['sentiment_score'],
+                'sentiment_label': score_data['sentiment_label'],
+                'published': item.get('published'),
+                'link': item.get('link', ''),
+            })
+
+        overall = aggregate_sentiment(scored)
+
+        return {
+            'headlines': enriched,
+            'overall': overall,
+        }
+    except Exception as e:
+        logger.debug(f"News sentiment scoring failed: {e}")
+        return {'headlines': [], 'overall': {
+            'avg_score': 0.0, 'bullish_count': 0,
+            'bearish_count': 0, 'neutral_count': 0, 'label': 'Neutral',
+        }}
 
 
 def _safe_val(val):

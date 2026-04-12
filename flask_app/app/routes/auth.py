@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, current_app, g, jsonify, request
 
+from app import limiter
 from app.utils.auth import log_request
 from app.utils.database import (
     create_user,
@@ -73,6 +74,7 @@ def _get_client_ip():
 # ──────────────────────────────────────────────────────────────────────────────
 
 @auth_bp.route('/auth/register', methods=['POST'])
+@limiter.limit("5/hour")
 @log_request
 def register():
     """
@@ -159,6 +161,7 @@ def register():
 # ──────────────────────────────────────────────────────────────────────────────
 
 @auth_bp.route('/auth/login', methods=['POST'])
+@limiter.limit("10/minute")
 @log_request
 def login():
     """

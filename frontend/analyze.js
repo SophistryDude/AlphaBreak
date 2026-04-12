@@ -213,8 +213,14 @@ const Analyze = (() => {
             renderDividend(data.dividend);
             renderAnalyst(data.analyst);
             renderOptions(data.options);
+            // Pro-gated: Unusual Options Activity (async, non-blocking)
+            if (Premium.canAccess('unusual_options')) {
+                loadUnusualOptions(ticker);
+            } else {
+                Premium.showLocked('analyzeUnusualOptions', 'unusual_options');
+            }
             renderEarnings(data.earnings);
-            renderNews(data.news);
+            renderNews(data.news, data.news_sentiment);
 
             // Pro-gated features
             if (Premium.canAccess('institutional_13f')) {
@@ -226,6 +232,13 @@ const Analyze = (() => {
                 }
             } else {
                 Premium.showLocked('analyzeInstitutional', 'institutional_13f');
+            }
+
+            // Pro-gated: Insider Trading (async, non-blocking)
+            if (Premium.canAccess('insider_trading')) {
+                loadInsiderTrading(ticker);
+            } else {
+                Premium.showLocked('analyzeInsiderTrading', 'insider_trading');
             }
 
             renderGuides(data);
@@ -494,7 +507,9 @@ const Analyze = (() => {
         optionsGuide += '<p><strong>Options summary</strong> shows the nearest at-the-money (ATM) call and put for the closest expiration. ';
         optionsGuide += '<strong>IV (Implied Volatility)</strong> reflects how much movement the market expects. Higher IV = more expensive options. ';
         optionsGuide += 'ATM options are the most liquid and have the highest time value. ';
-        optionsGuide += 'Compare IV to historical levels — if IV is unusually high, options may be overpriced (good for sellers).</p>';
+        optionsGuide += 'Compare IV to historical levels — if IV is unusually high, options may be overpriced (good for sellers). ';
+        optionsGuide += '<strong>PoP (Probability of Profit)</strong> uses the Black-Scholes model to estimate the chance an option expires in-the-money. ';
+        optionsGuide += 'Green (>60%) = favorable odds, yellow (40-60%) = coin flip, red (<40%) = unfavorable odds.</p>';
         optionsGuide += '</div>';
         _setGuide('optionsGuide', optionsGuide);
 
@@ -784,6 +799,160 @@ const Analyze = (() => {
         }
     }
 
+    // ── Render: Insider Trading (Pro) ─────────────────────────────────
+    async function loadInsiderTrading(ticker) {
+        const el = document.getElementById('analyzeInsiderTrading');
+        if (!el) return;
+        el.innerHTML = '<p class="muted">Loading insider trading data...</p>';
+
+        try {
+            const resp = await apiRequest(`/api/analyze/${ticker}/insiders`);
+            if (!resp.ok) throw new Error('No data');
+            const data = await resp.json();
+            if (!data || data.error) throw new Error(data?.error || 'No data');
+
+            const txns = data.transactions || [];
+            const summary = data.summary || {};
+
+            // Summary line
+            const buys = summary.total_buys || 0;
+            const sells = summary.total_sells || 0;
+            const sentiment = summary.net_sentiment || 'N/A';
+            let sentimentCls = '';
+            if (sentiment === 'Bullish') sentimentCls = 'positive';
+            else if (sentiment === 'Bearish') sentimentCls = 'negative';
+
+            let summaryHtml = `
+                <div class="analyze-stats-grid">
+                    ${_statRow('Buys (90d)', `<span class="positive">${buys}</span>`)}
+                    ${_statRow('Sells (90d)', `<span class="negative">${sells}</span>`)}
+                    ${_statRow('Buy Value', _fmtLargeNum(summary.buy_value))}
+                    ${_statRow('Sell Value', _fmtLargeNum(summary.sell_value))}
+                    ${_statRow('Net Sentiment', `<span class="${sentimentCls}">${sentiment}</span>`)}
+                </div>
+            `;
+
+            // Transaction table
+            let tableHtml = '';
+            if (txns.length > 0) {
+                tableHtml = `
+                    <table class="inst-table" style="margin-top:8px">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Insider</th>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th>Shares</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                for (const t of txns) {
+                    const typeCls = t.type === 'Buy' ? 'positive' : 'negative';
+                    const typeLabel = t.type === 'Buy' ? '&#9650; Buy' : '&#9660; Sell';
+                    const valStr = t.value ? _fmtLargeNum(t.value) : '--';
+                    const sharesStr = t.shares ? _fmtNum(t.shares) : '--';
+                    tableHtml += `
+                        <tr>
+                            <td>${t.date || '--'}</td>
+                            <td>${t.insider || 'Unknown'}</td>
+                            <td>${t.title || '--'}</td>
+                            <td><span class="${typeCls}">${typeLabel}</span></td>
+                            <td>${sharesStr}</td>
+                            <td>${valStr}</td>
+                        </tr>
+                    `;
+                }
+                tableHtml += '</tbody></table>';
+            } else {
+                tableHtml = '<p class="muted" style="margin-top:8px">No insider transactions in the last 90 days.</p>';
+            }
+
+            el.innerHTML = summaryHtml + tableHtml;
+
+            // Record trial if applicable
+            const access = Premium.checkAccess('insider_trading');
+            if (access.isTrial) {
+                Premium.recordTrial('insider_trading');
+                Premium.showTrialBanner('analyzeInsiderTrading', 'insider_trading');
+            }
+        } catch (e) {
+            el.innerHTML = '<p class="muted">No insider trading data available.</p>';
+        }
+    }
+
+    // ── Render: Unusual Options Activity (Pro) ─────────────────────────
+    async function loadUnusualOptions(ticker) {
+        const el = document.getElementById('analyzeUnusualOptions');
+        if (!el) return;
+        el.innerHTML = '<p class="muted">Loading unusual options activity...</p>';
+
+        try {
+            const resp = await apiRequest(`/api/analyze/${ticker}/unusual-options`);
+            if (!resp.ok) throw new Error('No data');
+            const data = await resp.json();
+            if (!data || data.error) throw new Error(data?.error || 'No data');
+
+            const s = data.summary || {};
+            const contracts = data.unusual_contracts || [];
+
+            if (s.total_unusual === 0) {
+                el.innerHTML = '<p class="muted">No unusual options activity detected.</p>';
+                return;
+            }
+
+            // Summary line
+            const premiumStr = _fmtLargeNum(s.total_premium);
+            let summaryHtml = `<div class="unusual-options-summary" style="margin-bottom:12px;padding:10px;border-radius:6px;background:var(--card-bg);border:1px solid var(--border);">`;
+            summaryHtml += `<strong>${s.total_unusual} unusual contract${s.total_unusual !== 1 ? 's' : ''} detected</strong> &mdash; `;
+            summaryHtml += `<span style="color:var(--green)">${s.bullish_count} bullish</span>, `;
+            summaryHtml += `<span style="color:var(--red)">${s.bearish_count} bearish</span>, `;
+            summaryHtml += `${premiumStr} total premium`;
+            summaryHtml += `</div>`;
+
+            // Table
+            let tableHtml = '<div style="overflow-x:auto"><table class="inst-table"><thead><tr>';
+            tableHtml += '<th>Expiry</th><th>Strike</th><th>Type</th><th>Volume</th><th>OI</th><th>Vol/OI</th><th>IV</th><th>Sweep</th>';
+            tableHtml += '</tr></thead><tbody>';
+
+            for (const c of contracts) {
+                const typeColor = c.type === 'call' ? 'var(--green)' : 'var(--red)';
+                const typeLabel = c.type === 'call' ? 'CALL' : 'PUT';
+                const sweepBadge = c.is_sweep
+                    ? '<span style="background:var(--accent);color:#fff;padding:1px 6px;border-radius:3px;font-size:11px;font-weight:600">SWEEP</span>'
+                    : '';
+                const volOi = c.vol_oi_ratio != null ? c.vol_oi_ratio.toFixed(1) + 'x' : '--';
+                const iv = c.iv != null ? (c.iv * 100).toFixed(1) + '%' : '--';
+
+                tableHtml += `<tr>`;
+                tableHtml += `<td>${c.expiry}</td>`;
+                tableHtml += `<td>$${c.strike.toFixed(2)}</td>`;
+                tableHtml += `<td style="color:${typeColor};font-weight:600">${typeLabel}</td>`;
+                tableHtml += `<td>${_fmtNum(c.volume)}</td>`;
+                tableHtml += `<td>${_fmtNum(c.open_interest)}</td>`;
+                tableHtml += `<td>${volOi}</td>`;
+                tableHtml += `<td>${iv}</td>`;
+                tableHtml += `<td>${sweepBadge}</td>`;
+                tableHtml += `</tr>`;
+            }
+
+            tableHtml += '</tbody></table></div>';
+
+            el.innerHTML = summaryHtml + tableHtml;
+
+            // Show trial banner if applicable
+            const access = Premium.checkAccess('unusual_options');
+            if (access.isTrial) {
+                Premium.recordTrial('unusual_options');
+                Premium.showTrialBanner('analyzeUnusualOptions', 'unusual_options');
+            }
+        } catch (e) {
+            el.innerHTML = '<p class="muted">Unusual options data unavailable.</p>';
+        }
+    }
+
     // ── Render: Peer Comparison (Pro) ──────────────────────────────────
     async function loadPeerComparison(ticker) {
         const el = document.getElementById('analyzePeerComparison');
@@ -918,8 +1087,58 @@ const Analyze = (() => {
                 ${_statRow('Call Price', o.nearest_call_price ? '$' + o.nearest_call_price.toFixed(2) : '--')}
                 ${_statRow('ATM Put', o.nearest_put_strike ? '$' + o.nearest_put_strike.toFixed(2) : '--')}
                 ${_statRow('Put Price', o.nearest_put_price ? '$' + o.nearest_put_price.toFixed(2) : '--')}
+                <div class="stat-row" id="popCallRow" style="display:none"><span class="stat-label">Call PoP</span><span class="stat-value" id="popCallValue">--</span></div>
+                <div class="stat-row" id="popPutRow" style="display:none"><span class="stat-label">Put PoP</span><span class="stat-value" id="popPutValue">--</span></div>
             </div>
         `;
+
+        // Pro-gated: Load Probability of Profit asynchronously
+        if (currentTicker && Premium.canAccess('probability_of_profit')) {
+            _loadPoP(currentTicker);
+        }
+    }
+
+    // ── Load Probability of Profit (Pro feature) ────────────────────────
+    async function _loadPoP(ticker) {
+        try {
+            const resp = await apiRequest(`/api/analyze/${ticker}/pop`);
+            if (!resp.ok) return;
+            const pop = await resp.json();
+            if (!pop || !pop.available) return;
+
+            const callRow = document.getElementById('popCallRow');
+            const putRow = document.getElementById('popPutRow');
+            const callVal = document.getElementById('popCallValue');
+            const putVal = document.getElementById('popPutValue');
+            if (!callRow || !putRow) return;
+
+            if (pop.atm_call_pop != null) {
+                const pct = (pop.atm_call_pop * 100).toFixed(1);
+                callVal.innerHTML = _popBadge(pct);
+                callRow.style.display = '';
+            }
+            if (pop.atm_put_pop != null) {
+                const pct = (pop.atm_put_pop * 100).toFixed(1);
+                putVal.innerHTML = _popBadge(pct);
+                putRow.style.display = '';
+            }
+
+            // Record trial if applicable
+            const access = Premium.checkAccess('probability_of_profit');
+            if (access.isTrial) {
+                Premium.recordTrial('probability_of_profit');
+            }
+        } catch (e) {
+            // Silently fail — PoP is supplemental
+        }
+    }
+
+    function _popBadge(pctStr) {
+        const pct = parseFloat(pctStr);
+        let cls = 'pop-red';
+        if (pct >= 60) cls = 'pop-green';
+        else if (pct >= 40) cls = 'pop-yellow';
+        return `<span class="pop-badge ${cls}">${pctStr}% PoP</span>`;
     }
 
     // ── Render: Earnings ─────────────────────────────────────────────────
@@ -956,7 +1175,7 @@ const Analyze = (() => {
 
     // ── Render: Institutional ────────────────────────────────────────────
     // ── Render: News ───────────────────────────────────────────────────
-    function renderNews(news) {
+    function renderNews(news, sentiment) {
         const el = document.getElementById('analyzeNews');
         if (!el) return;
 
@@ -965,17 +1184,73 @@ const Analyze = (() => {
             return;
         }
 
-        el.innerHTML = news.map(item => {
+        // Build sentiment lookup by title
+        const sentMap = {};
+        if (sentiment && sentiment.headlines) {
+            sentiment.headlines.forEach(h => { sentMap[h.title] = h; });
+        }
+
+        const canSeeSentiment = Premium.canAccess('news_sentiment');
+
+        // Overall sentiment summary (Pro-gated)
+        let summaryHtml = '';
+        if (canSeeSentiment && sentiment && sentiment.overall) {
+            const o = sentiment.overall;
+            const total = o.bullish_count + o.bearish_count + o.neutral_count;
+
+            if (total > 0) {
+                const bullPct = Math.round(o.bullish_count / total * 100);
+                const neutPct = Math.round(o.neutral_count / total * 100);
+                const bearPct = 100 - bullPct - neutPct;
+                const labelClass = o.label === 'Bullish' ? 'sentiment-bullish'
+                    : o.label === 'Bearish' ? 'sentiment-bearish'
+                    : 'sentiment-neutral';
+
+                summaryHtml = `
+                    <div class="news-sentiment-summary">
+                        <div class="news-sentiment-header">
+                            <span>News Sentiment: <strong class="${labelClass}">${o.label}</strong>
+                            (${o.bullish_count}/${total} positive)</span>
+                            <span class="pro-badge-sm">PRO</span>
+                        </div>
+                        <div class="sentiment-bar">
+                            <div class="sentiment-bar-bull" style="width:${bullPct}%"></div>
+                            <div class="sentiment-bar-neut" style="width:${neutPct}%"></div>
+                            <div class="sentiment-bar-bear" style="width:${bearPct}%"></div>
+                        </div>
+                        <div class="sentiment-bar-labels">
+                            <span class="sentiment-bullish">${o.bullish_count} Bullish</span>
+                            <span class="sentiment-neutral">${o.neutral_count} Neutral</span>
+                            <span class="sentiment-bearish">${o.bearish_count} Bearish</span>
+                        </div>
+                    </div>`;
+            }
+        }
+
+        const newsHtml = news.map(item => {
             const thumb = item.thumbnail
                 ? `<img class="news-thumb" src="${item.thumbnail}" alt="" loading="lazy">`
                 : '';
             const time = item.published
                 ? _timeAgo(item.published)
                 : '';
+
+            // Sentiment badge (Pro-gated)
+            let badge = '';
+            if (canSeeSentiment) {
+                const s = sentMap[item.title];
+                if (s) {
+                    const cls = s.sentiment_label === 'Bullish' ? 'sentiment-badge-bull'
+                        : s.sentiment_label === 'Bearish' ? 'sentiment-badge-bear'
+                        : 'sentiment-badge-neut';
+                    badge = ` <span class="sentiment-badge ${cls}">${s.sentiment_label}</span>`;
+                }
+            }
+
             return `<a class="news-item" href="${item.link}" target="_blank" rel="noopener">
                 ${thumb}
                 <div class="news-item-body">
-                    <div class="news-item-title">${item.title}</div>
+                    <div class="news-item-title">${item.title}${badge}</div>
                     <div class="news-item-meta">
                         <span class="news-item-publisher">${item.publisher}</span>
                         ${time ? `<span class="news-item-time">${time}</span>` : ''}
@@ -983,6 +1258,8 @@ const Analyze = (() => {
                 </div>
             </a>`;
         }).join('');
+
+        el.innerHTML = summaryHtml + newsHtml;
     }
 
     function _timeAgo(unixTs) {

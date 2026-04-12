@@ -7,6 +7,7 @@ Full CRUD, sharing, AI scoring, auto-import, and premium-gated features.
 import logging
 import re
 from flask import Blueprint, g, jsonify, request
+from app import limiter
 from app.utils.auth import log_request
 from app.utils.jwt_auth import require_jwt
 from app.utils.database import (
@@ -46,6 +47,7 @@ def _premium_gate(user, feature_name):
 # ──────────────────────────────────────────────────────────────
 
 @journal_bp.route('/journal/entries', methods=['POST'])
+@limiter.limit("30/minute")
 @log_request
 @require_jwt
 def create():

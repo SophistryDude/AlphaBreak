@@ -5,12 +5,13 @@ Creates and configures the Flask application with all necessary extensions,
 blueprints, and error handlers.
 """
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import jwt as pyjwt
 import logging
 from logging.handlers import RotatingFileHandler
 import math
@@ -37,6 +38,29 @@ class SafeJSONProvider(DefaultJSONProvider):
 
 
 cache = Cache()
+limiter = Limiter(key_func=get_remote_address)
+
+
+def _get_rate_limit_key():
+    """
+    Per-user rate-limit key: use the JWT subject (user ID) when an
+    Authorization Bearer token is present and valid; fall back to the
+    client IP address for anonymous requests.
+    """
+    auth_header = request.headers.get('Authorization', '')
+    if auth_header.startswith('Bearer '):
+        token = auth_header[7:]
+        try:
+            from flask import current_app
+            secret = current_app.config.get('JWT_SECRET_KEY')
+            algorithm = current_app.config.get('JWT_ALGORITHM', 'HS256')
+            payload = pyjwt.decode(token, secret, algorithms=[algorithm])
+            user_id = payload.get('sub')
+            if user_id:
+                return f"user:{user_id}"
+        except Exception:
+            pass
+    return get_remote_address()
 
 
 def create_app(config_name='development'):
@@ -63,11 +87,10 @@ def create_app(config_name='development'):
     # Initialize Flask-Caching
     cache.init_app(app)
 
-    # Rate limiting to prevent abuse
-    # Exempt health check endpoints from rate limiting
-    limiter = Limiter(
-        app=app,
-        key_func=get_remote_address,
+    # Rate limiting to prevent abuse (per-user when authenticated, per-IP otherwise)
+    limiter.init_app(
+        app,
+        key_func=_get_rate_limit_key,
         default_limits=["5000 per day", "500 per hour"],
         storage_uri=app.config.get('RATELIMIT_STORAGE_URL', 'memory://'),
         default_limits_exempt_when=lambda: False,  # Apply limits by default

@@ -38,6 +38,18 @@ const Premium = (() => {
             name: 'AI Screener (Unlimited)',
             desc: 'Score any ticker with full quant grades. Free users get 3/month.',
         },
+        insider_trading: {
+            name: 'Insider Trading Signals',
+            desc: 'Track SEC Form 4 filings: insider buys/sells, transaction values, and net sentiment from company executives and directors.',
+        },
+        probability_of_profit: {
+            name: 'Probability of Profit',
+            desc: 'Black-Scholes based probability calculations for each strike showing the likelihood an option expires in-the-money.',
+        },
+        news_sentiment: {
+            name: 'News Sentiment Scoring',
+            desc: 'NLP-powered sentiment analysis of recent headlines. See Bullish/Bearish/Neutral scores per headline plus an overall sentiment bar.',
+        },
     };
 
     function _getTrials() {
