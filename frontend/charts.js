@@ -756,12 +756,50 @@ const AlphaCharts = (() => {
             case 'stochastic':
                 inst.indicatorPanes.stochastic = ChartIndicators.renderStochastic(containerId, inst.chartData, inst.chart);
                 break;
+            case 'atr':
+                inst.indicatorPanes.atr = ChartIndicators.renderATR(containerId, inst.chartData, inst.chart);
+                break;
+            case 'adx':
+                inst.indicatorPanes.adx = ChartIndicators.renderADX(containerId, inst.chartData, inst.chart);
+                break;
+            case 'obv':
+                inst.indicatorPanes.obv = ChartIndicators.renderOBV(containerId, inst.chartData, inst.chart);
+                break;
             case 'vwap':
                 if (inst.overlays.vwap) {
                     try { inst.chart.removeSeries(inst.overlays.vwap); } catch (e) {}
                     delete inst.overlays.vwap;
                 } else {
                     ChartIndicators.addVWAP(inst, inst.chartData);
+                }
+                break;
+            case 'supertrend':
+                if (inst.overlays.supertrendUp || inst.overlays.supertrendDown) {
+                    ChartIndicators.removeSupertrend(inst);
+                } else {
+                    ChartIndicators.addSupertrend(inst, inst.chartData);
+                }
+                break;
+            case 'keltner':
+                if (inst.overlays.keltnerMid) {
+                    ChartIndicators.removeKeltner(inst);
+                } else {
+                    ChartIndicators.addKeltner(inst, inst.chartData);
+                }
+                break;
+            case 'ichimoku':
+                if (inst.overlays.ichiTenkan) {
+                    ChartIndicators.removeIchimoku(inst);
+                } else {
+                    ChartIndicators.addIchimoku(inst, inst.chartData);
+                }
+                break;
+            case 'vpvr':
+                if (inst.overlays.vpvr) {
+                    inst.overlays.vpvr.destroy();
+                    delete inst.overlays.vpvr;
+                } else if (typeof ChartVolumeProfile !== 'undefined') {
+                    inst.overlays.vpvr = ChartVolumeProfile.attach(inst, inst.chartData);
                 }
                 break;
         }

@@ -81,14 +81,26 @@ const Analyze = (() => {
             });
         }
 
-        // Indicator sub-pane toggles (RSI, MACD, Stochastic)
-        ['toggleRSI', 'toggleMACD', 'toggleStoch'].forEach(id => {
+        // Indicator toggles — sub-panes and main-chart overlays.
+        // Each entry: [checkbox id, indicator name passed to toggleIndicator()]
+        const indicatorToggles = [
+            ['toggleRSI', 'rsi'],
+            ['toggleMACD', 'macd'],
+            ['toggleStoch', 'stochastic'],
+            ['toggleATR', 'atr'],
+            ['toggleADX', 'adx'],
+            ['toggleOBV', 'obv'],
+            ['toggleSupertrend', 'supertrend'],
+            ['toggleKeltner', 'keltner'],
+            ['toggleIchimoku', 'ichimoku'],
+            ['toggleVPVR', 'vpvr'],
+        ];
+        for (const [id, name] of indicatorToggles) {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => {
-                const indicator = id === 'toggleRSI' ? 'rsi' : id === 'toggleMACD' ? 'macd' : 'stochastic';
-                AlphaCharts.toggleIndicator('analyzeChartContainer', indicator);
+                AlphaCharts.toggleIndicator('analyzeChartContainer', name);
             });
-        });
+        }
 
         // Compare toggle — loads/clears comparison data
         const compareToggle = document.getElementById('toggleCompare');
@@ -1465,17 +1477,23 @@ const Analyze = (() => {
             AlphaCharts.initDrawings('analyzeChartContainer', ticker);
 
             // Re-apply indicator pane toggles if they were on
-            if (document.getElementById('toggleVWAP')?.checked) {
-                AlphaCharts.toggleIndicator('analyzeChartContainer', 'vwap');
-            }
-            if (document.getElementById('toggleRSI')?.checked) {
-                AlphaCharts.toggleIndicator('analyzeChartContainer', 'rsi');
-            }
-            if (document.getElementById('toggleMACD')?.checked) {
-                AlphaCharts.toggleIndicator('analyzeChartContainer', 'macd');
-            }
-            if (document.getElementById('toggleStoch')?.checked) {
-                AlphaCharts.toggleIndicator('analyzeChartContainer', 'stochastic');
+            const _reapply = [
+                ['toggleVWAP', 'vwap'],
+                ['toggleRSI', 'rsi'],
+                ['toggleMACD', 'macd'],
+                ['toggleStoch', 'stochastic'],
+                ['toggleATR', 'atr'],
+                ['toggleADX', 'adx'],
+                ['toggleOBV', 'obv'],
+                ['toggleSupertrend', 'supertrend'],
+                ['toggleKeltner', 'keltner'],
+                ['toggleIchimoku', 'ichimoku'],
+                ['toggleVPVR', 'vpvr'],
+            ];
+            for (const [id, name] of _reapply) {
+                if (document.getElementById(id)?.checked) {
+                    AlphaCharts.toggleIndicator('analyzeChartContainer', name);
+                }
             }
 
         } catch (e) {
