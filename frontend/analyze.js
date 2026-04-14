@@ -120,6 +120,10 @@ const Analyze = (() => {
         const fsBtn = document.getElementById('chartFullscreenBtn');
         if (fsBtn) fsBtn.addEventListener('click', () => AlphaCharts.toggleFullscreen('analyzeChartContainer'));
 
+        // Export PNG button
+        const exportBtn = document.getElementById('chartExportBtn');
+        if (exportBtn) exportBtn.addEventListener('click', () => AlphaCharts.exportPNG('analyzeChartContainer'));
+
         // Presets dropdown
         const presetsBtn = document.getElementById('chartPresetsBtn');
         if (presetsBtn && typeof ChartPresets !== 'undefined') {
@@ -130,6 +134,11 @@ const Analyze = (() => {
         // is called in analyzeTicker() so saves are scoped to the current symbol.
         if (typeof ChartLayouts !== 'undefined') {
             ChartLayouts.init();
+        }
+
+        // Rich hover tooltips on chart-toolbar indicator labels
+        if (typeof ChartTooltips !== 'undefined') {
+            ChartTooltips.init();
         }
 
         // Multi-Chart toggle (Pro feature)

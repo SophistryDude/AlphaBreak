@@ -7166,6 +7166,46 @@ body.chart-fullscreen-active { overflow: hidden; }
     color: var(--text-muted, #8b95a5);
 }
 
+/* Rich hover tooltip for chart-toolbar indicator labels */
+.chart-tooltip-card {
+    position: absolute;
+    z-index: 2000;
+    pointer-events: none;
+    max-width: 320px;
+    background: var(--bg-elevated, #1a1f2e);
+    border: 1px solid var(--border-color, #2a2e39);
+    border-radius: 6px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+    padding: 10px 12px;
+    font-family: inherit;
+    color: var(--text-primary, #e0e0e0);
+    animation: chart-tooltip-fade-in 0.12s ease-out;
+}
+@keyframes chart-tooltip-fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.chart-tooltip-title {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--accent, #2962FF);
+}
+.chart-tooltip-what {
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--text-primary, #e0e0e0);
+    margin-bottom: 6px;
+}
+.chart-tooltip-when {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--text-muted, #8b95a5);
+}
+.chart-tooltip-when strong {
+    color: var(--text-primary, #e0e0e0);
+}
+
 /* Pattern markers bar */
 .pattern-markers-bar {
     display: flex; gap: 6px; padding: 8px 12px; flex-wrap: wrap;

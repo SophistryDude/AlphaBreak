@@ -718,6 +718,65 @@ const AlphaCharts = (() => {
         el.innerHTML = html;
     }
 
+    // ── Export Chart as PNG ─────────────────────────────────────────────
+    // Uses lightweight-charts' native takeScreenshot() which returns an
+    // HTMLCanvasElement of the price pane only. For the final PNG we stitch
+    // the main chart on top of the volume histogram, plus any indicator
+    // sub-panes, so the export looks like what the user sees on screen.
+    function exportPNG(containerId) {
+        const inst = instances[containerId];
+        if (!inst?.chart) return;
+
+        const panes = [inst.chart];
+        if (inst.volumeChart) panes.push(inst.volumeChart);
+        for (const key of Object.keys(inst.indicatorPanes || {})) {
+            const p = inst.indicatorPanes[key]?.pane?.chart;
+            if (p) panes.push(p);
+        }
+
+        const canvases = panes
+            .map(c => { try { return c.takeScreenshot(); } catch (e) { return null; } })
+            .filter(Boolean);
+        if (!canvases.length) return;
+
+        const width = Math.max(...canvases.map(c => c.width));
+        const totalHeight = canvases.reduce((sum, c) => sum + c.height, 0);
+
+        const out = document.createElement('canvas');
+        out.width = width;
+        out.height = totalHeight;
+        const ctx = out.getContext('2d');
+        ctx.fillStyle = '#131722';
+        ctx.fillRect(0, 0, width, totalHeight);
+
+        let y = 0;
+        for (const c of canvases) {
+            ctx.drawImage(c, 0, y);
+            y += c.height;
+        }
+
+        // Watermark
+        ctx.fillStyle = 'rgba(139, 149, 165, 0.5)';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('alphabreak.vip', width - 8, totalHeight - 6);
+
+        const ticker = inst.ticker || 'chart';
+        const fileName = `${ticker}_${new Date().toISOString().slice(0, 10)}.png`;
+        out.toBlob(blob => {
+            if (!blob) return;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }, 'image/png');
+    }
+
     // ── Full Screen ──────────────────────────────────────────────────────
     function toggleFullscreen(containerId) {
         const card = document.getElementById(containerId)?.closest('.analyze-chart-card');
@@ -1171,6 +1230,53 @@ const AlphaCharts = (() => {
         _setupCrosshairSync(controller, index);
     }
 
+    // Normalize a lightweight-charts time to unix seconds for cross-timeframe
+    // comparison. Day-resolution charts emit {year, month, day}; intraday
+    // charts emit a number (seconds). Returns null if we can't parse.
+    function _timeToSec(time) {
+        if (time == null) return null;
+        if (typeof time === 'number') return time;
+        if (typeof time === 'object' && 'year' in time) {
+            return Math.floor(new Date(Date.UTC(time.year, time.month - 1, time.day)).getTime() / 1000);
+        }
+        return null;
+    }
+
+    // Binary-search the nearest candle in a cell's data to a given unix-seconds
+    // target. Returns the candle (which has timestamp + OHLCV fields) or null.
+    function _findNearestCandle(cell, targetSec) {
+        const data = cell?.candleData;
+        if (!data?.length || targetSec == null) return null;
+
+        let bestIdx = 0, bestDist = Infinity;
+        for (let i = 0; i < data.length; i++) {
+            const ts = data[i].timestamp || data[i].date;
+            const s = typeof ts === 'string'
+                ? Math.floor(new Date(ts).getTime() / 1000)
+                : Number(ts);
+            if (!isFinite(s)) continue;
+            const dist = Math.abs(s - targetSec);
+            if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+        }
+        return data[bestIdx] || null;
+    }
+
+    // Convert a candle's timestamp back to the lightweight-charts time shape
+    // the destination chart expects. Day-resolution target charts need the
+    // {year,month,day} form; intraday targets want unix seconds.
+    function _candleTimeForCell(candle, cell) {
+        const interval = cell.currentInterval || '1d';
+        const isDaily = interval === '1d' || interval === '1wk' || interval === '1mo';
+        const ts = candle.timestamp || candle.date;
+        if (isDaily) {
+            const d = new Date(ts);
+            return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+        }
+        return typeof ts === 'string'
+            ? Math.floor(new Date(ts).getTime() / 1000)
+            : Number(ts);
+    }
+
     function _setupCrosshairSync(controller, sourceIndex) {
         const sourceCell = controller.cells[sourceIndex];
         if (!sourceCell?.instance?.chart) return;
@@ -1180,8 +1286,8 @@ const AlphaCharts = (() => {
             controller.syncingCrosshair = true;
 
             try {
-                const time = param.time;
-                if (!time) {
+                const sourceSec = _timeToSec(param.time);
+                if (sourceSec == null) {
                     // Clear crosshairs on other charts
                     for (let i = 0; i < controller.cells.length; i++) {
                         if (i === sourceIndex) continue;
@@ -1190,21 +1296,32 @@ const AlphaCharts = (() => {
                             try { cell.instance.chart.clearCrosshairPosition(); } catch (e) {}
                         }
                     }
-                } else {
-                    // Sync crosshair to other charts at the same time
-                    for (let i = 0; i < controller.cells.length; i++) {
-                        if (i === sourceIndex) continue;
-                        const cell = controller.cells[i];
-                        if (cell?.instance?.chart && cell?.instance?.candleSeries) {
-                            try {
-                                cell.instance.chart.setCrosshairPosition(
-                                    undefined, // price — let the chart figure it out
-                                    time,
-                                    cell.instance.candleSeries
-                                );
-                            } catch (e) {}
-                        }
-                    }
+                    return;
+                }
+
+                // For each other cell, find the nearest candle to the source
+                // time and set crosshair at (close, time-in-target-shape).
+                // Passing undefined for price breaks silently in v4.1 — we
+                // need a real finite number.
+                for (let i = 0; i < controller.cells.length; i++) {
+                    if (i === sourceIndex) continue;
+                    const cell = controller.cells[i];
+                    if (!cell?.instance?.chart || !cell?.instance?.candleSeries) continue;
+
+                    const candle = _findNearestCandle(cell, sourceSec);
+                    if (!candle) continue;
+
+                    const targetTime = _candleTimeForCell(candle, cell);
+                    const price = Number(candle.close);
+                    if (!isFinite(price)) continue;
+
+                    try {
+                        cell.instance.chart.setCrosshairPosition(
+                            price,
+                            targetTime,
+                            cell.instance.candleSeries
+                        );
+                    } catch (e) { /* silently skip this cell */ }
                 }
             } finally {
                 controller.syncingCrosshair = false;
@@ -1273,7 +1390,7 @@ const AlphaCharts = (() => {
     }
 
     return { create, setData, setTrendlines, setPatterns, setCompare, clearCompare,
-             renderSeasonality, toggleFullscreen, toggleIndicator, initDrawings,
+             renderSeasonality, toggleFullscreen, toggleIndicator, initDrawings, exportPNG,
              quickCandlestick, quickLine,
              multiChart, multiChartAddCell, multiChartRemoveCell, destroyMultiChart,
              getMultiChartController,
