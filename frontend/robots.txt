@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /portfolio
+Disallow: /trading
+
+Sitemap: https://alphabreak.vip/sitemap.xml

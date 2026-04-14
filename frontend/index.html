@@ -3,11 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AlphaBreak - AI-Powered Stock Predictions</title>
+    <title>AlphaBreak — AI-Powered Stock Analysis, Trend Break Detection, and Options Analytics</title>
+    <meta name="description" content="AlphaBreak bridges charting and fundamentals in one platform. Auto-detected trendlines, 17 indicators, AI trade scoring, regime classification, dark pool flow, institutional holdings, and an AI-scored trade journal. Free tier, no credit card.">
+    <meta name="keywords" content="stock analysis, AI trading, trend break detection, options analytics, quant grades, trade journal, TradingView alternative, Bloomberg alternative, Seeking Alpha alternative, technical indicators, regime classification">
+    <meta name="author" content="AlphaBreak">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://alphabreak.vip/">
+
+    <!-- Open Graph / Facebook / LinkedIn -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="AlphaBreak">
+    <meta property="og:title" content="AlphaBreak — AI-Powered Stock Analysis">
+    <meta property="og:description" content="Auto-detected trendlines, 17 indicators, AI trade scoring, regime classification, dark pool flow, and an AI-scored trade journal. Free tier, no credit card.">
+    <meta property="og:url" content="https://alphabreak.vip/">
+    <meta property="og:image" content="https://alphabreak.vip/og-image.png">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="AlphaBreak — AI-Powered Stock Analysis">
+    <meta name="twitter:description" content="Auto-detected trendlines, AI trade scoring, regime classification, dark pool flow. Free tier, no credit card.">
+    <meta name="twitter:image" content="https://alphabreak.vip/og-image.png">
+
+    <!-- Schema.org JSON-LD: Organization + WebSite + SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "Organization",
+                "@id": "https://alphabreak.vip/#organization",
+                "name": "AlphaBreak",
+                "url": "https://alphabreak.vip/",
+                "logo": "https://alphabreak.vip/og-image.png",
+                "description": "AI-powered stock analysis platform bridging charting and fundamentals."
+            },
+            {
+                "@type": "WebSite",
+                "@id": "https://alphabreak.vip/#website",
+                "url": "https://alphabreak.vip/",
+                "name": "AlphaBreak",
+                "publisher": { "@id": "https://alphabreak.vip/#organization" },
+                "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": "https://alphabreak.vip/stocks/{search_term_string}",
+                    "query-input": "required name=search_term_string"
+                }
+            },
+            {
+                "@type": "SoftwareApplication",
+                "name": "AlphaBreak",
+                "applicationCategory": "FinanceApplication",
+                "operatingSystem": "Web",
+                "offers": [
+                    { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
+                    { "@type": "Offer", "name": "Pro", "price": "99", "priceCurrency": "USD" },
+                    { "@type": "Offer", "name": "Elite", "price": "299", "priceCurrency": "USD" }
+                ]
+            }
+        ]
+    }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=6">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
@@ -2626,6 +2687,184 @@
                         <p class="empty-state">Loading journal...</p>
                     </div>
                 </div>
+            </div>
+
+            <!-- Comparison Page: AlphaBreak vs TradingView -->
+            <div class="tab-content" id="compare-tradingview-Tab">
+                <article class="compare-page">
+                    <header class="compare-hero">
+                        <h1>AlphaBreak vs TradingView — Honest 2026 Comparison</h1>
+                        <p class="compare-sub">TradingView has the best charts on the internet. AlphaBreak has charts that are <em>good enough</em> plus everything TradingView is missing: AI trade scoring, trend break detection, institutional holdings, dark pool flow, and an AI-scored trade journal — all free.</p>
+                    </header>
+                    <section class="compare-verdict">
+                        <div class="compare-verdict-card">
+                            <h3>Pick TradingView if you are:</h3>
+                            <ul>
+                                <li>A professional chart-first trader who draws dozens of tools per session</li>
+                                <li>Building custom Pine Script indicators for a niche strategy</li>
+                                <li>Day-trading on a single screen with no fundamental needs</li>
+                            </ul>
+                        </div>
+                        <div class="compare-verdict-card compare-verdict-card--ours">
+                            <h3>Pick AlphaBreak if you want:</h3>
+                            <ul>
+                                <li>AI-scored trade ideas with confidence + regime alignment (<strong>exclusive</strong>)</li>
+                                <li>78%-accurate auto-detected trend breaks with historical analog matching (<strong>exclusive</strong>)</li>
+                                <li>Institutional 13F holdings, insider trades, and dark pool flow inline with the chart</li>
+                                <li>An AI-graded trade journal that learns from your wins and losses</li>
+                                <li>Bloomberg-grade fundamentals + charting + options <em>in one workflow</em>, not three subscriptions</li>
+                            </ul>
+                        </div>
+                    </section>
+                    <section class="compare-matrix">
+                        <h2>Feature-by-feature</h2>
+                        <table class="compare-table">
+                            <thead><tr><th>Feature</th><th>TradingView</th><th>AlphaBreak</th></tr></thead>
+                            <tbody>
+                                <tr><td>Interactive candlestick charts</td><td>✅ Best-in-class</td><td>✅ Lightweight Charts (TradingView's own engine)</td></tr>
+                                <tr><td>Built-in indicators</td><td>~100</td><td>17 (plus 4 research-backed presets)</td></tr>
+                                <tr><td>Drawing tools</td><td>50+</td><td>7 (trendline, h-line, fib, rect, parallel channel, measure, text)</td></tr>
+                                <tr><td>Auto-detected trendlines with confidence</td><td>❌</td><td>✅ AlphaBreak exclusive</td></tr>
+                                <tr><td>AI trade scoring</td><td>❌</td><td>✅ AlphaBreak exclusive</td></tr>
+                                <tr><td>Trend break detection (78% accuracy)</td><td>❌</td><td>✅ AlphaBreak exclusive</td></tr>
+                                <tr><td>Regime classification (BULL/BEAR/RANGE)</td><td>❌</td><td>✅</td></tr>
+                                <tr><td>13F institutional holdings</td><td>❌</td><td>✅ 8.4M-row archive</td></tr>
+                                <tr><td>Dark pool / FINRA ATS data</td><td>❌</td><td>✅ 621K rows inline</td></tr>
+                                <tr><td>Insider trading signals</td><td>❌</td><td>✅ SEC Form 4 parsing</td></tr>
+                                <tr><td>AI-scored trade journal</td><td>❌</td><td>✅</td></tr>
+                                <tr><td>Quant letter grades vs sector peers</td><td>❌</td><td>✅ 6-factor scoring</td></tr>
+                                <tr><td>Options analytics + Greeks</td><td>❌</td><td>✅ Black-Scholes, PoP, IV, MMM</td></tr>
+                                <tr><td>Pine Script / custom scripting</td><td>✅</td><td>❌</td></tr>
+                                <tr><td>Community-shared ideas</td><td>✅ Huge library</td><td>⏳ Planned</td></tr>
+                                <tr><td><strong>Free tier</strong></td><td>Limited (1 indicator/chart, ads)</td><td><strong>Full Security Analysis + 17 indicators + AI scores</strong></td></tr>
+                                <tr><td><strong>Paid plan (most popular)</strong></td><td>$30/mo</td><td>$99/mo (replaces 3 competitor subscriptions)</td></tr>
+                            </tbody>
+                        </table>
+                    </section>
+                    <section class="compare-cta">
+                        <h2>Try AlphaBreak free — no credit card required</h2>
+                        <p>The free tier includes auto-trendlines, AI scoring, trend break reports, 17 indicators, institutional holdings, and the trade journal. Takes 30 seconds to sign up.</p>
+                        <a href="#analyze/AAPL" class="btn btn-primary btn-lg">Analyze AAPL now</a>
+                    </section>
+                </article>
+            </div>
+
+            <!-- Comparison Page: AlphaBreak vs Seeking Alpha -->
+            <div class="tab-content" id="compare-seeking-alpha-Tab">
+                <article class="compare-page">
+                    <header class="compare-hero">
+                        <h1>AlphaBreak vs Seeking Alpha — Honest 2026 Comparison</h1>
+                        <p class="compare-sub">Seeking Alpha built its reputation on quant grades and article analysis. AlphaBreak takes the quant-grade idea, adds AI trade scoring + technical analysis + options analytics, and keeps the core free.</p>
+                    </header>
+                    <section class="compare-verdict">
+                        <div class="compare-verdict-card">
+                            <h3>Pick Seeking Alpha if you want:</h3>
+                            <ul>
+                                <li>A massive library of long-form investment articles and analyst commentary</li>
+                                <li>Earnings estimate revisions and surprise history as your primary signal</li>
+                                <li>Long-term buy-and-hold investing without technical analysis</li>
+                            </ul>
+                        </div>
+                        <div class="compare-verdict-card compare-verdict-card--ours">
+                            <h3>Pick AlphaBreak if you want:</h3>
+                            <ul>
+                                <li>AI-scored trade ideas that combine technicals <em>and</em> fundamentals (<strong>exclusive</strong>)</li>
+                                <li>Real-time trend break detection, not just quarterly earnings estimates</li>
+                                <li>Institutional-grade charting (TradingView-quality) in the same view as your quant grades</li>
+                                <li>Options analytics (Greeks, PoP, unusual flow) that Seeking Alpha doesn't offer at all</li>
+                                <li>Dark pool flow and 13F data inline with price action</li>
+                            </ul>
+                        </div>
+                    </section>
+                    <section class="compare-matrix">
+                        <h2>Feature-by-feature</h2>
+                        <table class="compare-table">
+                            <thead><tr><th>Feature</th><th>Seeking Alpha Premium</th><th>AlphaBreak</th></tr></thead>
+                            <tbody>
+                                <tr><td>Quant letter grades</td><td>✅ Industry standard</td><td>✅ 6-factor including AI Score (exclusive)</td></tr>
+                                <tr><td>Earnings estimates & revisions</td><td>✅ Best</td><td>✅</td></tr>
+                                <tr><td>Analyst articles and commentary</td><td>✅ Huge library</td><td>❌ (we focus on signals, not opinions)</td></tr>
+                                <tr><td>Interactive charting</td><td>❌ Basic</td><td>✅ Full TradingView-quality charts + drawings</td></tr>
+                                <tr><td>Technical indicators</td><td>❌</td><td>✅ 17 built-in</td></tr>
+                                <tr><td>Auto-detected trendlines + AI score</td><td>❌</td><td>✅ AlphaBreak exclusive</td></tr>
+                                <tr><td>Trend break detection</td><td>❌</td><td>✅ 78% accuracy</td></tr>
+                                <tr><td>Options chain + Greeks + PoP</td><td>❌</td><td>✅</td></tr>
+                                <tr><td>Dark pool flow</td><td>❌</td><td>✅ 621K FINRA ATS rows</td></tr>
+                                <tr><td>13F institutional holdings</td><td>Limited</td><td>✅ 8.4M-row archive</td></tr>
+                                <tr><td>Insider trading signals</td><td>✅</td><td>✅</td></tr>
+                                <tr><td>AI-scored trade journal</td><td>❌</td><td>✅</td></tr>
+                                <tr><td>Regime classification</td><td>❌</td><td>✅</td></tr>
+                                <tr><td><strong>Free tier</strong></td><td>Very limited</td><td><strong>Full Security Analysis + charts + AI scores</strong></td></tr>
+                                <tr><td><strong>Paid plan</strong></td><td>$239/yr ≈ $20/mo</td><td>$99/mo (but replaces 3 subscriptions)</td></tr>
+                            </tbody>
+                        </table>
+                    </section>
+                    <section class="compare-cta">
+                        <h2>Try AlphaBreak free — no credit card required</h2>
+                        <p>Get quant grades PLUS the charting, technical signals, and options analytics Seeking Alpha doesn't offer. Takes 30 seconds to sign up.</p>
+                        <a href="#analyze/AAPL" class="btn btn-primary btn-lg">Analyze AAPL now</a>
+                    </section>
+                </article>
+            </div>
+
+            <!-- Comparison Page: AlphaBreak vs Bloomberg Terminal -->
+            <div class="tab-content" id="compare-bloomberg-Tab">
+                <article class="compare-page">
+                    <header class="compare-hero">
+                        <h1>AlphaBreak vs Bloomberg Terminal — Can a $99/mo Tool Really Compete?</h1>
+                        <p class="compare-sub">Bloomberg Terminal costs <strong>$24,000/year</strong>. AlphaBreak costs <strong>$1,188/year</strong> — 1/20th the price. Here is an honest breakdown of where we match Bloomberg, where we don't, and whether that matters for you.</p>
+                    </header>
+                    <section class="compare-verdict">
+                        <div class="compare-verdict-card">
+                            <h3>You genuinely need Bloomberg if you are:</h3>
+                            <ul>
+                                <li>A buy-side PM at a fund with institutional order flow and Level 2 requirements</li>
+                                <li>A sell-side trader needing Bloomberg's chat/IB network for deal flow</li>
+                                <li>Working in fixed-income, FX, or global macro with Bloomberg-native data feeds</li>
+                                <li>Required to use Bloomberg by regulation or compliance</li>
+                            </ul>
+                        </div>
+                        <div class="compare-verdict-card compare-verdict-card--ours">
+                            <h3>AlphaBreak is enough if you are:</h3>
+                            <ul>
+                                <li>An individual trader, small fund analyst, or fintech builder</li>
+                                <li>Focused on US equities + options (no FX/fixed income desk)</li>
+                                <li>Fine with 15-min delayed data (or upgrade for real-time Polygon when we add it)</li>
+                                <li>Getting 85% of Bloomberg's equity analysis depth for 5% of the price</li>
+                            </ul>
+                        </div>
+                    </section>
+                    <section class="compare-matrix">
+                        <h2>Feature-by-feature</h2>
+                        <table class="compare-table">
+                            <thead><tr><th>Feature</th><th>Bloomberg Terminal</th><th>AlphaBreak</th></tr></thead>
+                            <tbody>
+                                <tr><td>Price</td><td>~$24,000/yr</td><td>$1,188/yr (<strong>1/20th the cost</strong>)</td></tr>
+                                <tr><td>Fundamentals — 10+ years history</td><td>✅ Gold standard</td><td>✅ Income, balance sheet, cash flow</td></tr>
+                                <tr><td>Interactive charting</td><td>✅ Professional</td><td>✅ TradingView Lightweight Charts (17 indicators)</td></tr>
+                                <tr><td>Auto-trendlines + AI score</td><td>❌</td><td>✅ AlphaBreak exclusive</td></tr>
+                                <tr><td>AI trade scoring + regime classification</td><td>❌</td><td>✅ AlphaBreak exclusive</td></tr>
+                                <tr><td>13F institutional holdings</td><td>✅</td><td>✅ 8.4M-row archive</td></tr>
+                                <tr><td>Options chain + Greeks</td><td>✅</td><td>✅</td></tr>
+                                <tr><td>IV history + volatility surface</td><td>✅</td><td>⏳ Elite tier (planned)</td></tr>
+                                <tr><td>Dark pool flow</td><td>✅</td><td>✅ 621K rows</td></tr>
+                                <tr><td>Supply chain mapping</td><td>✅ BB SPLC</td><td>⏳ Elite tier (planned)</td></tr>
+                                <tr><td>Revenue by segment / geography</td><td>✅</td><td>⏳ Elite tier (planned)</td></tr>
+                                <tr><td>Fixed income / FX / commodities</td><td>✅</td><td>❌ (US equities focus)</td></tr>
+                                <tr><td>Bloomberg chat / IB network</td><td>✅</td><td>❌ (not applicable)</td></tr>
+                                <tr><td>Bloomberg Query Language (BQL)</td><td>✅</td><td>❌</td></tr>
+                                <tr><td>AI-scored trade journal</td><td>❌</td><td>✅</td></tr>
+                                <tr><td>Backtesting (854K-trade history)</td><td>Limited</td><td>✅</td></tr>
+                                <tr><td><strong>Free tier</strong></td><td>❌</td><td>✅ <strong>Full Security Analysis + charts + AI</strong></td></tr>
+                            </tbody>
+                        </table>
+                    </section>
+                    <section class="compare-cta">
+                        <h2>The honest summary</h2>
+                        <p>If you need Bloomberg's fixed-income + FX + chat ecosystem, nothing replaces Bloomberg. If you are an equities-focused individual trader or analyst, AlphaBreak delivers ~85% of Bloomberg's equity depth for 5% of the price — plus AI features Bloomberg doesn't have at all.</p>
+                        <a href="#analyze/AAPL" class="btn btn-primary btn-lg">Try AlphaBreak free</a>
+                    </section>
+                </article>
             </div>
 
             <!-- Pricing Tab -->

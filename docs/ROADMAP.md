@@ -1,7 +1,7 @@
 # Product Roadmap
 
-**Version**: 4.4
-**Last Updated**: April 10, 2026
+**Version**: 4.5
+**Last Updated**: April 14, 2026
 **Domain**: alphabreak.vip
 
 ---
@@ -163,27 +163,33 @@ Pro is the revenue engine. These features justify the price by replacing 2-3 sep
 - [x] **Premium gate: Auto-Detected Trendlines** — Pro badge on toggle, locked overlay with upgrade CTA, 1 free trial
 - [x] **Premium gate: Seasonality Heatmap** — Pro badge on toggle, locked overlay with upgrade CTA, 1 free trial
 
-- [ ] **Peer Comparison Table** — Side-by-side P/E, EV/EBITDA, ROE, revenue growth vs sector peers (Bloomberg COMP-style)
+- [x] **Peer Comparison Table** — Side-by-side P/E, EV/EBITDA, ROE, revenue growth vs sector peers (Bloomberg COMP-style), Pro-gated
 - [x] **Short Interest Data** — Short float %, days to cover, MoM change, squeeze risk score
 - [x] **Dividend Analysis** — Yield, payout ratio, ex-date, safety grade, 5-yr avg yield
-- [ ] **Insider Trading Signals** — SEC Form 4 filings, insider buy/sell activity with timeline
-- [ ] **News NLP Sentiment Scoring** — FinBERT-scored headlines with sentiment trends per ticker
+- [x] **Insider Trading Signals** — SEC Form 4 parsing, buy/sell signals with net sentiment, Pro-gated
+- [x] **News NLP Sentiment Scoring** — VADER-scored headlines with sentiment bar + badges, Pro-gated
 
 ### Options — Enhanced
-- [ ] **Unusual Options Activity** — Volume vs 5-day average, large block trades, sweep detection
-- [ ] **Probability of Profit** — IV-based probability calculations for any position
+- [x] **Unusual Options Activity** — Volume/OI detection, sweep detection, premium summary, Pro-gated
+- [x] **Probability of Profit** — Black-Scholes PoP for ATM and full chain, Pro-gated
 - [x] **Market Maker Move** — Implied move from ATM straddle pricing with ±% and dollar range
 
-### Charting — Phase 2
-- [x] **Drawing Tools** — Trendline, horizontal line, Fibonacci retracement, rectangle with keyboard shortcuts (T/H/F/R), undo, clear, per-ticker localStorage persistence
+### Charting — Phase 2 — ✅ Complete
+- [x] **Drawing Tools (7)** — Trendline, horizontal line, Fibonacci, rectangle, parallel channel, measure tool, text annotation. Keyboard shortcuts (T/H/F/R/P/M/A/D), clone-last, delete-all confirm, **shift-to-snap-to-OHLC**, undo, per-ticker localStorage persistence
 - [x] **Indicator Sub-Panes** — RSI (14), MACD (12,26,9), Stochastic (14,3) as synced sub-charts below main chart, toggle on/off
 - [x] **VWAP Overlay** — Volume-weighted average price as main chart overlay
 - [x] **AI Trendline Popover** — Click any auto-detected trendline for confidence breakdown, analog analysis, price projections, suggested action
-- [ ] **Multi-Chart Layout** — 2-4 charts side-by-side with synced crosshairs. Compare same ticker across timeframes or different tickers.
-- [ ] **Multi-Timeframe Analysis** — Overlay indicators from daily + hourly + 15min on single view
+- [x] **Multi-Chart Layout** — 2-4 charts side-by-side with **synced crosshairs across timeframes** (1d ↔ 15m nearest-candle matching)
+- [ ] **Multi-Timeframe Analysis** — Overlay indicators from daily + hourly + 15min on single view *(multi-chart done; full indicator overlay still pending)*
 
-### Charting — Phase 3
-- [ ] **Indicator Library (100+)** — Ichimoku, OBV, Williams %R, Keltner, ATR, Parabolic SAR, etc.
+### Charting — Phase 3 — ✅ Core Complete (research-prioritized indicator expansion)
+- [x] **Indicator library expansion (4 → 17)**: ATR, Supertrend, Keltner Channels, ADX + DI±, OBV, Ichimoku Cloud, Volume Profile (VPVR with POC + Value Area), Squeeze Momentum (LazyBear). All client-side, no API work.
+- [x] **Differentiated presets (4 stacks)** — Trend Break / Volume Flow / Regime-Aware / AI Confluence. Each bundles standard indicators with proprietary AlphaBreak signals so the stack can't be replicated on TradingView/TOS.
+- [x] **Per-ticker saved chart layouts** — auto-persist toolbar state to localStorage, restore on ticker change
+- [x] **Rich indicator tooltips** — 17 curated "what is this + when to use" hover cards on every chart-toolbar indicator
+- [x] **Export chart as PNG** — stitches main pane + volume + all indicator sub-panes, alphabreak.vip watermark
+- [ ] **Indicator Library (100+)** — ship remaining long-tail (Parabolic SAR, CMF, Williams %R, Elder Ray, Aroon, CCI, MFI, etc.)
+- [ ] **Indicator settings modal** — configurable periods (currently hardcoded), parameter presets
 - [ ] **Regime-Aware Weighting** — In BULL regime, weight momentum indicators. In RANGE, weight mean-reversion. Only highlight top 5 most predictive for current regime.
 - [ ] **Indicator Search + Add** — Search bar to find and overlay any indicator with custom parameters
 
@@ -208,11 +214,11 @@ Pro is the revenue engine. These features justify the price by replacing 2-3 sep
 ### Data — Pro
 - [ ] **Real-Time Data** — Live quotes via Polygon.io (no 15-min delay)
 - [ ] **WebSocket Streaming** — Real-time price updates pushed to client
-- [ ] **Dark Pool Data** — Expose existing 621K-row dataset (backend exists, needs API routes + UI)
+- [x] **Dark Pool Data** — API routes + analyze-tab panel exposing the 621K-row FINRA dataset (volume, WoW change, top ATS venues, 12-week trend sparkline)
 
 ### Trade Thesis Builder
 - [x] Pre-trade plans (premium-gated)
-- [ ] Structured thesis template: entry criteria, target, stop-loss, time horizon, catalysts, risks
+- [x] **Structured thesis template** — entry criteria, price target, stop loss, time horizon, catalysts, risks, conviction level (7 fields in a JSONB column)
 
 ---
 
@@ -321,10 +327,10 @@ Not committed to a tier or timeline. Will be prioritized based on user demand an
 - [x] **Landing Page** — Hero, social proof (854K trades), problem/solution comparison, 6-feature grid, CTAs, shown to unauthenticated visitors
 - [x] **Contact Page** — Contact form (name, email, subject dropdown, message), info card, FAQ, mailto fallback
 - [ ] **Stripe Integration** — Billing, plan management, trial periods (14-day), upgrade/downgrade flows
-- [ ] **SEO Content** — Blog posts targeting: "best stock analysis tools", "Bloomberg alternative", "free options analysis", "AI trade scoring"
-- [ ] **Social Proof** — Backtest results (854K trades, 98.5% win rate) as marketing content
+- [x] **SEO Content** — 20 in-depth trading education articles + blog page + viewer + social posts shipped
+- [x] **Social Proof** — Landing page expanded to 6 data points (854K trades, 98.5% win rate, 8.4M 13F holdings, etc.)
 - [ ] **Competitive Positioning** — "Bloomberg depth at 1/80th the cost" messaging
-- [ ] **Free Tool Hooks** — Offer free AI trade scoring, trend break alerts, and portfolio tracker as acquisition magnets
+- [x] **Free Tool Hooks** — "Start free, upgrade when you're ready" section with AI scoring, trend breaks, portfolio tracker
 
 ### Launch
 - [ ] **Product Hunt Launch** — First-day push for visibility
@@ -382,16 +388,16 @@ Everything below is required to serve hundreds of thousands to millions of users
 ### Scale Readiness — Must Build
 
 #### Database
-- [ ] **Connection Pooling** — PgBouncer or increase pool size for concurrent connections
-- [ ] **Query Optimization** — Add indexes on hot paths, analyze query plans, eliminate N+1 queries
+- [x] **Connection Pooling** — psycopg2 ThreadedConnectionPool (min=2, max=20, env-configurable)
+- [x] **Query Optimization** — 25 indexes added across 17 tables, applied to production DB
 - [ ] **Read Replicas** — Postgres streaming replication for read-heavy endpoints (analyze, reports)
 - [x] **Database Backups** — Manual pg_dump backup/restore procedure documented, first backup taken (643MB)
-- [ ] **Query Caching** — In-memory caching (Redis) with 1-5 min TTL for expensive queries
+- [x] **Query Caching** — Flask-Caching with RedisCache in prod, SimpleCache in dev. Replaced in-memory dicts in analyze/dashboard/earnings routes.
 
 #### Compute
 - [ ] **Horizontal Scaling** — Move from single-node k0s to multi-node cluster (EKS or multi-node k0s)
 - [ ] **API Response Time** — Target <200ms p95 (currently 200-500ms)
-- [ ] **CDN** — CloudFront for static assets (JS, CSS, images)
+- [x] **CDN** — CloudFront setup scripts ready (kubernetes/scripts/setup-cloudfront.sh, update-nginx-cloudfront.conf)
 - [ ] **Load Balancer** — ALB in front of API pods for traffic distribution
 
 #### Real-Time
@@ -407,17 +413,17 @@ Everything below is required to serve hundreds of thousands to millions of users
 - [ ] **Uptime Monitoring** — External health check pings, status page
 
 #### Security
-- [ ] **Rate Limiting** — Per-user, per-endpoint limits (Flask-Limiter configured but needs tuning)
-- [ ] **Input Validation** — Sanitize all user inputs across all endpoints
-- [ ] **CORS Configuration** — Lock down to alphabreak.vip origins only
-- [ ] **Secrets Management** — Rotate API keys, DB passwords; move to AWS Secrets Manager
-- [ ] **DDoS Protection** — CloudFront + WAF for edge protection
+- [x] **Rate Limiting** — Per-user JWT key function, per-endpoint limits (analyze 60/min, auth 5-10/min, dashboard 30/min)
+- [x] **Input Validation** — Ticker regex, interval/period whitelists, safe int conversions across journal/reports/notifications/analyze routes
+- [x] **CORS Configuration** — Locked down to alphabreak.vip + www.alphabreak.vip origins
+- [ ] **Secrets Management** — Rotate API keys, DB passwords; move to AWS Secrets Manager (password defaults now stripped from src/ modules, still need AWS Secrets Manager migration)
+- [x] **DDoS Protection** — AWS WAF setup script with rate limiting, common rules, bad inputs, IP reputation
 - [ ] **Penetration Testing** — Before public launch
 
 #### Email & Notifications
 - [x] **SES Domain Verification** — Domain identity + DKIM initiated, DNS records pending propagation
-- [ ] **Email Templates** — Branded HTML templates for all notification types
-- [ ] **Bounce Handling** — SES bounce/complaint processing to maintain sender reputation
+- [x] **Email Templates** — 10 branded HTML templates (dark theme, mobile-responsive) + email service with SES sending
+- [x] **Bounce Handling** — SES bounce/complaint webhook via SNS, auto-disables bounced emails
 
 #### Multi-Region (Future)
 - [ ] Primary: us-east-2 (Ohio)
@@ -435,6 +441,17 @@ Everything below is required to serve hundreds of thousands to millions of users
 ---
 
 ## Recently Completed
+
+### v4.5 (April 13-14, 2026) — Charting Phase 2/3 + Code Hygiene
+- ✅ **Charting Phase 2 complete** — 5 new drawing tools (parallel channel, measure, text annotation, clone-last, shift-snap-to-OHLC); 4 → 7 total tools. Multi-chart crosshair sync bug fixed (was silently broken in v4.1 — now passes real price values + handles cross-timeframe time normalization).
+- ✅ **Charting Phase 3 core complete** — 8 new research-prioritized indicators (ATR, Supertrend, Keltner Channels, ADX+DI±, OBV, Ichimoku Cloud, Volume Profile/VPVR with POC+Value Area, Squeeze Momentum). 4 → 17 total indicators, all client-side.
+- ✅ **Differentiated presets** — 4 one-click stacks (Trend Break / Volume Flow / Regime-Aware / AI Confluence) bundling standard indicators with proprietary AlphaBreak signals.
+- ✅ **Per-ticker saved chart layouts** — auto-persist toolbar state to localStorage, 200ms debounced, restore on ticker change.
+- ✅ **Rich indicator tooltips** — 17 curated hover cards ("what is it + when to use") suppressing native titles.
+- ✅ **Chart export as PNG** — stitches main pane + volume + sub-panes, alphabreak.vip watermark, auto-downloads as {ticker}_{date}.png.
+- ✅ **Charting research pass** — external usage data gathered from TradingView, QuantifiedStrategies, Dhan, Trader-Dale, Schwab (12 sources); build path validated against what retail traders actually use. Documented in CHARTING_UPGRADE_PLAN.md.
+- ✅ **Drawing-tools library spike (negative result)** — evaluated deepentropy/lightweight-charts-drawing, rejected because it requires lightweight-charts v5 (we're on v4.1.3) and is at v0.1.1 alpha. Hand-coded fallback shipped instead.
+- ✅ **Code hygiene sweep** — 11 easy-lift cleanups: docs/DEPLOYMENT.md URLs corrected to alphabreak.vip + Arkanisbot/AlphaBreak clone path; ROADMAP.old.md archived; Slack TODO stub removed; requirements.txt optional-deps documented; ProductionConfig.validate_env() fails fast on missing secrets; hardcoded 'trading123' defaults stripped from 10 src/ modules; ~47 print() calls → logger.info/error in 5 Airflow DAGs; 8 frontend console.logs gated behind window.DEBUG; .empty-state--fill CSS extracted; _fetchJson helper collapses repeated fetch/error plumbing in analyze.js.
 
 ### v4.4 (April 9-10, 2026) — Chart Migration + Auth Stability
 - ✅ **Chart.js → Lightweight Charts migration** — All 14 Chart.js instances across 7 files (dashboard, earnings, forex, portfolio, account, longterm, watchlist) converted to Lightweight Charts. Only portfolio allocation doughnut remains as Chart.js.
@@ -527,4 +544,4 @@ Everything below is required to serve hundreds of thousands to millions of users
 
 ---
 
-**Last Updated**: April 10, 2026
+**Last Updated**: April 14, 2026

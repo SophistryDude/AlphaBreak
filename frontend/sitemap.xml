@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemap.org/schemas/sitemap/0.9">
+    <!-- Core pages -->
+    <url>
+        <loc>https://alphabreak.vip/</loc>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>https://alphabreak.vip/pricing</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://alphabreak.vip/blogs</loc>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://alphabreak.vip/contact</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.5</priority>
+    </url>
+
+    <!-- Competitive comparison pages -->
+    <url><loc>https://alphabreak.vip/compare/tradingview</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+    <url><loc>https://alphabreak.vip/compare/seeking-alpha</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+    <url><loc>https://alphabreak.vip/compare/bloomberg</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+
+    <!-- Blog articles -->
+    <url><loc>https://alphabreak.vip/blog/01-why-most-new-traders-lose-money</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/02-risk-management</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/03-how-to-read-a-chart</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/04-what-moves-stock-prices</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/05-technical-vs-fundamental</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/06-emotions-trading-enemy</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/07-illusion-of-control</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/08-handling-losing-streaks</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/09-first-trading-plan</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/10-power-of-probabilities</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/11-support-and-resistance</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/12-volume</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/13-trend-vs-mean-reversion</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/14-what-pros-look-for</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/15-reading-order-flow</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/16-trading-styles</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/17-why-backtests-lie</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/18-building-a-watchlist</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/19-when-to-cut-losses</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/20-six-month-roadmap</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/advanced_options_pricing</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/advanced_order_flow</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/advanced_technical_analysis</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/institutional-order-flow-what-smart-money-reveals</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/options-pricing-what-you-are-actually-buying</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>https://alphabreak.vip/blog/why-most-technical-analysis-fails</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+
+    <!-- Ticker analysis pages — expanded by backend route /stocks/<TICKER> -->
+    <url><loc>https://alphabreak.vip/stocks/AAPL</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/MSFT</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/GOOGL</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/AMZN</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/NVDA</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/META</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/TSLA</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/SPY</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/QQQ</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/NFLX</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/AMD</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/BRK-B</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/JPM</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/V</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/WMT</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/DIS</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/BAC</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/XOM</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/COIN</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+    <url><loc>https://alphabreak.vip/stocks/PLTR</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+</urlset>

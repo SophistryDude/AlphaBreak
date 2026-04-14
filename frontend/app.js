@@ -55,11 +55,115 @@ document.addEventListener('DOMContentLoaded', () => {
     checkApiHealth();
     setDefaultDates();
     initWidgetCollapse();
+    initProgrammaticTickerRoute();
+    initComparisonRoute();
     // Onboarding tour (after auth state is resolved)
     setTimeout(() => {
         if (typeof Onboarding !== 'undefined') Onboarding.init();
     }, 500);
 });
+
+// Programmatic ticker SEO routes: /stocks/<TICKER>
+// The nginx config rewrites /stocks/* → /index.html, so the SPA bootstraps
+// with the original path intact in location.pathname. We detect it here,
+// extract the ticker, rewrite title + meta tags for per-ticker SEO, and
+// deep-link into the Analyze tab.
+function initProgrammaticTickerRoute() {
+    const path = window.location.pathname;
+    const match = path.match(/^\/stocks\/([A-Z0-9\-\.]{1,10})\/?$/i);
+    if (!match) return;
+
+    const ticker = match[1].toUpperCase();
+
+    // Ticker-specific meta — overrides the generic index.html tags so each
+    // /stocks/<T> URL looks like its own page to crawlers.
+    document.title = `${ticker} Stock Analysis — AI Score, Trend Breaks, Options | AlphaBreak`;
+    _setMeta('name', 'description', `Free AI-powered analysis for ${ticker}: auto-detected trendlines, trend break probability, 17 technical indicators, options chain, institutional holdings, dark pool flow, and regime classification. No signup required.`);
+    _setMeta('property', 'og:title', `${ticker} Stock Analysis | AlphaBreak`);
+    _setMeta('property', 'og:description', `AI-scored technical + fundamental analysis for ${ticker}. Free tier, no account required.`);
+    _setMeta('property', 'og:url', `https://alphabreak.vip/stocks/${ticker}`);
+    _setMeta('name', 'twitter:title', `${ticker} Stock Analysis | AlphaBreak`);
+    _setMeta('name', 'twitter:description', `AI-scored technical + fundamental analysis for ${ticker}. Free.`);
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.href = `https://alphabreak.vip/stocks/${ticker}`;
+
+    // Inject a per-ticker Schema.org block so Google gets a FinancialProduct entity.
+    const tickerSchema = document.createElement('script');
+    tickerSchema.type = 'application/ld+json';
+    tickerSchema.textContent = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "FinancialProduct",
+        "name": `${ticker} Stock Analysis`,
+        "description": `AI-powered analysis of ${ticker} including trend break detection, technical indicators, options analytics, and institutional holdings.`,
+        "url": `https://alphabreak.vip/stocks/${ticker}`,
+        "provider": { "@type": "Organization", "name": "AlphaBreak", "url": "https://alphabreak.vip/" },
+    });
+    document.head.appendChild(tickerSchema);
+
+    // Switch the SPA to the analyze tab and load this ticker once Analyze is ready.
+    const loadTicker = () => {
+        const tabContents = document.querySelectorAll('.tab-content');
+        const sidebarLinks = document.querySelectorAll('.sidebar-link');
+        tabContents.forEach(c => c.classList.remove('active'));
+        sidebarLinks.forEach(l => l.classList.remove('active'));
+        const watchlistTab = document.getElementById('watchlistTab');
+        const watchlistLink = document.querySelector('[data-tab="watchlist"]');
+        if (watchlistTab) watchlistTab.classList.add('active');
+        if (watchlistLink) watchlistLink.classList.add('active');
+        document.getElementById('currentPageTitle').textContent = `${ticker} — Security Analysis`;
+        state.activeTab = 'watchlist';
+
+        const input = document.getElementById('analyzeTickerInput');
+        if (input) input.value = ticker;
+        if (typeof Analyze !== 'undefined' && Analyze.analyzeTicker) {
+            Analyze.analyzeTicker(ticker);
+        }
+    };
+    // Analyze.init() runs after DOMContentLoaded, so defer one tick.
+    setTimeout(loadTicker, 0);
+}
+
+// Programmatic comparison routes: /compare/<slug>
+// Similar pattern — static shell pages handled client-side. Supported slugs:
+// tradingview, seeking-alpha, bloomberg.
+function initComparisonRoute() {
+    const path = window.location.pathname;
+    const match = path.match(/^\/compare\/(tradingview|seeking-alpha|bloomberg)\/?$/i);
+    if (!match) return;
+    const slug = match[1].toLowerCase();
+
+    // Show the comparison tab (we add one in index.html below).
+    const tab = document.getElementById(`compare-${slug}-Tab`);
+    if (!tab) return;
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    tab.classList.add('active');
+
+    const labels = {
+        'tradingview': 'TradingView',
+        'seeking-alpha': 'Seeking Alpha',
+        'bloomberg': 'Bloomberg Terminal',
+    };
+    const competitor = labels[slug];
+    document.title = `AlphaBreak vs ${competitor} — Honest Comparison 2026 | AlphaBreak`;
+    _setMeta('name', 'description', `How AlphaBreak compares to ${competitor}: feature-by-feature breakdown, pricing, and honest pros/cons. Free tier, no credit card.`);
+    _setMeta('property', 'og:title', `AlphaBreak vs ${competitor}`);
+    _setMeta('property', 'og:url', `https://alphabreak.vip/compare/${slug}`);
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.href = `https://alphabreak.vip/compare/${slug}`;
+    document.getElementById('currentPageTitle').textContent = `AlphaBreak vs ${competitor}`;
+    state.activeTab = `compare-${slug}`;
+}
+
+function _setMeta(attrName, attrValue, content) {
+    let tag = document.querySelector(`meta[${attrName}="${attrValue}"]`);
+    if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute(attrName, attrValue);
+        document.head.appendChild(tag);
+    }
+    tag.setAttribute('content', content);
+}
 
 // Widget collapse — works for all widgets with collapse buttons
 function initWidgetCollapse() {
@@ -172,6 +276,9 @@ function initializeSidebar() {
             if (persistentSentiment) {
                 persistentSentiment.style.display = (tabName === 'forex' || tabName === 'portfolio' || tabName === 'account' || tabName === 'contact' || tabName === 'landing' || tabName === 'pricing') ? 'none' : '';
             }
+
+            // Apply inline auth gate if the tab requires an account
+            _applyAuthGateToActiveTab();
 
             // Close sidebar after selection
             closeSidebar();
@@ -698,48 +805,130 @@ function initLanding() {
     });
 }
 
-// Show landing for unauthenticated users, Security Analysis for authenticated
+// Tabs that require an account — everything else is open to anonymous visitors.
+// Kept small and explicit so adding features to the free tier doesn't accidentally
+// gate them.
+const AUTH_REQUIRED_TABS = new Set(['portfolio', 'trading', 'account']);
+
+// Initial tab selection for unauthenticated vs authenticated visitors.
+// Previously this hid the sidebar and locked the whole app behind login — killing
+// conversions because Google can't show us to anyone who hasn't already signed up.
+// New behavior: everyone sees the full app. Unauthenticated visitors land on the
+// Security Analysis tab (the core free value) unless the URL hash deep-links
+// somewhere else. The landing-page marketing tab is still reachable but no longer
+// blocks the app.
 function showLandingIfNeeded() {
-    // Check both current auth state AND stored tokens (async validation may still be running)
     const isAuth = typeof Auth !== 'undefined' && Auth.isAuthenticated;
     const hasStoredToken = !!(localStorage.getItem('alphabreak_access_token') && localStorage.getItem('alphabreak_user'));
 
+    const sidebar = document.getElementById('sidebar');
+    // Sidebar is always visible now — anonymous visitors get to browse everything
+    // that doesn't require user state.
+    if (sidebar) sidebar.classList.remove('landing-hidden');
+
+    // If a tab is already active (e.g. from deep-linked programmatic SEO page),
+    // leave it alone. Otherwise pick a sensible default.
+    if (document.querySelector('.tab-content.active')) {
+        // Re-check auth gating on whatever tab is currently active.
+        _applyAuthGateToActiveTab();
+        return;
+    }
+
     const tabContents = document.querySelectorAll('.tab-content');
     const sidebarLinks = document.querySelectorAll('.sidebar-link');
-    const sidebar = document.getElementById('sidebar');
-    const persistentSentiment = document.getElementById('persistentSentiment');
+    tabContents.forEach(c => c.classList.remove('active'));
+    sidebarLinks.forEach(l => l.classList.remove('active'));
 
-    if (!isAuth && !hasStoredToken) {
-        // No auth at all — show landing page, hide sidebar
-        tabContents.forEach(c => c.classList.remove('active'));
-        sidebarLinks.forEach(l => l.classList.remove('active'));
-        const landingTab = document.getElementById('landingTab');
-        if (landingTab) landingTab.classList.add('active');
-        if (sidebar) sidebar.classList.add('landing-hidden');
-        if (persistentSentiment) persistentSentiment.style.display = 'none';
-        document.getElementById('currentPageTitle').textContent = '';
-        state.activeTab = 'landing';
-    } else if (isAuth || hasStoredToken) {
-        // Authenticated or has stored tokens — show the app
-        if (sidebar) sidebar.classList.remove('landing-hidden');
-        if (state.activeTab === 'landing' || !document.querySelector('.tab-content.active')) {
-            tabContents.forEach(c => c.classList.remove('active'));
-            sidebarLinks.forEach(l => l.classList.remove('active'));
-            const watchlistTab = document.getElementById('watchlistTab');
-            const watchlistLink = document.querySelector('[data-tab="watchlist"]');
-            if (watchlistTab) watchlistTab.classList.add('active');
-            if (watchlistLink) watchlistLink.classList.add('active');
-            document.getElementById('currentPageTitle').textContent = PAGE_TITLES['watchlist'];
-            if (persistentSentiment) persistentSentiment.style.display = '';
-            state.activeTab = 'watchlist';
+    if (isAuth || hasStoredToken) {
+        // Authenticated — go straight to the main analysis tab.
+        const watchlistTab = document.getElementById('watchlistTab');
+        const watchlistLink = document.querySelector('[data-tab="watchlist"]');
+        if (watchlistTab) watchlistTab.classList.add('active');
+        if (watchlistLink) watchlistLink.classList.add('active');
+        document.getElementById('currentPageTitle').textContent = PAGE_TITLES['watchlist'] || 'Security Analysis';
+        state.activeTab = 'watchlist';
 
-            // Re-render pending charts that couldn't render while hidden
-            if (typeof Dashboard !== 'undefined' && Dashboard._sentimentPending) {
-                Dashboard._sentimentPending = false;
-                setTimeout(() => Dashboard.updateMarketSentimentChart(), 100);
-            }
+        if (typeof Dashboard !== 'undefined' && Dashboard._sentimentPending) {
+            Dashboard._sentimentPending = false;
+            setTimeout(() => Dashboard.updateMarketSentimentChart(), 100);
         }
+    } else {
+        // Anonymous visitor — land on Security Analysis too. The landing page
+        // marketing content is still reachable from the sidebar footer if needed
+        // but the free product is what converts, not the pitch.
+        const watchlistTab = document.getElementById('watchlistTab');
+        const watchlistLink = document.querySelector('[data-tab="watchlist"]');
+        if (watchlistTab) watchlistTab.classList.add('active');
+        if (watchlistLink) watchlistLink.classList.add('active');
+        document.getElementById('currentPageTitle').textContent = PAGE_TITLES['watchlist'] || 'Security Analysis';
+        state.activeTab = 'watchlist';
     }
+}
+
+// Called whenever a tab becomes active — if the tab requires auth and the user
+// is anonymous, overlay it with a sign-in prompt rather than dumping broken UI
+// on them.
+function _applyAuthGateToActiveTab() {
+    const tabName = state.activeTab;
+    if (!AUTH_REQUIRED_TABS.has(tabName)) {
+        // Free tab — remove any previously-added gate.
+        _clearInlineAuthGate();
+        return;
+    }
+    const isAuth = typeof Auth !== 'undefined' && Auth.isAuthenticated;
+    if (isAuth) {
+        _clearInlineAuthGate();
+        return;
+    }
+    _showInlineAuthGate(tabName);
+}
+
+function _clearInlineAuthGate() {
+    document.querySelectorAll('.inline-auth-gate').forEach(el => el.remove());
+}
+
+function _showInlineAuthGate(tabName) {
+    const tabEl = document.getElementById(`${tabName}Tab`);
+    if (!tabEl) return;
+    // Don't stack multiples
+    if (tabEl.querySelector('.inline-auth-gate')) return;
+
+    const labels = {
+        portfolio: 'the Portfolio Tracker',
+        trading: 'Trade Execution',
+        account: 'your account (journal, settings, notifications)',
+    };
+    const feature = labels[tabName] || 'this feature';
+
+    const gate = document.createElement('div');
+    gate.className = 'inline-auth-gate';
+    gate.innerHTML = `
+        <div class="inline-auth-gate-card">
+            <div class="inline-auth-gate-icon">
+                <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            </div>
+            <h2>Sign in to use ${feature}</h2>
+            <p>Free to browse Security Analysis, AI Dashboard, Reports, Options, and more without an account.
+               Portfolio tracking and journaling need an account so we can save your data.</p>
+            <div class="inline-auth-gate-actions">
+                <button type="button" class="btn btn-primary inline-auth-gate-signup">Sign up free</button>
+                <button type="button" class="btn btn-ghost inline-auth-gate-signin">Sign in</button>
+            </div>
+            <p class="inline-auth-gate-footer">No credit card required. 30-second signup.</p>
+        </div>
+    `;
+    // Insert at the top of the tab so whatever is below is visually covered.
+    tabEl.insertBefore(gate, tabEl.firstChild);
+
+    gate.querySelector('.inline-auth-gate-signup')?.addEventListener('click', () => {
+        document.getElementById('authSignUpBtn')?.click();
+    });
+    gate.querySelector('.inline-auth-gate-signin')?.addEventListener('click', () => {
+        document.getElementById('authSignInBtn')?.click();
+    });
 }
 
 // ── Contact form logic ──────────────────────────────────────────────────────
