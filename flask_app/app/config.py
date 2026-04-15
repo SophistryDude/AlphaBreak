@@ -83,7 +83,7 @@ class ProductionConfig(Config):
     REQUIRED_ENV_VARS = (
         'SECRET_KEY',
         'JWT_SECRET_KEY',
-        'POSTGRES_PASSWORD',
+        'TIMESERIES_DB_PASSWORD',
     )
 
     @classmethod
