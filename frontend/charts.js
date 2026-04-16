@@ -777,6 +777,45 @@ const AlphaCharts = (() => {
         }, 'image/png');
     }
 
+    // ── Capture chart as base64 (for journal snapshots) ────────────────
+    function captureBase64(containerId) {
+        const inst = instances[containerId];
+        if (!inst?.chart) return null;
+
+        const panes = [inst.chart];
+        if (inst.volumeChart) panes.push(inst.volumeChart);
+        for (const key of Object.keys(inst.indicatorPanes || {})) {
+            const p = inst.indicatorPanes[key]?.pane?.chart;
+            if (p) panes.push(p);
+        }
+
+        const canvases = panes
+            .map(c => { try { return c.takeScreenshot(); } catch (e) { return null; } })
+            .filter(Boolean);
+        if (!canvases.length) return null;
+
+        const width = Math.max(...canvases.map(c => c.width));
+        const totalHeight = canvases.reduce((sum, c) => sum + c.height, 0);
+
+        const out = document.createElement('canvas');
+        out.width = width;
+        out.height = totalHeight;
+        const ctx = out.getContext('2d');
+        ctx.fillStyle = '#131722';
+        ctx.fillRect(0, 0, width, totalHeight);
+
+        let y = 0;
+        for (const c of canvases) { ctx.drawImage(c, 0, y); y += c.height; }
+
+        ctx.fillStyle = 'rgba(139, 149, 165, 0.5)';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('alphabreak.vip', width - 8, totalHeight - 6);
+
+        return out.toDataURL('image/png');
+    }
+
     // ── Full Screen ──────────────────────────────────────────────────────
     function toggleFullscreen(containerId) {
         const card = document.getElementById(containerId)?.closest('.analyze-chart-card');
@@ -790,11 +829,40 @@ const AlphaCharts = (() => {
     }
 
     // ── Indicator Pane Toggles ─────────────────────────────────────────
+
+    // Re-render callback for when indicator settings change: destroy the
+    // existing pane/overlay and re-create it with the new parameters.
+    function _reRenderIndicator(containerId, indicator) {
+        const inst = instances[containerId];
+        if (!inst?.chartData) return;
+        // Destroy existing
+        if (inst.indicatorPanes[indicator]) {
+            const pane = inst.indicatorPanes[indicator];
+            if (pane.pane?.wrapper) pane.pane.wrapper.remove();
+            delete inst.indicatorPanes[indicator];
+        }
+        // For overlays, remove first
+        const overlayMap = {
+            supertrend: () => ChartIndicators.removeSupertrend(inst),
+            keltner: () => ChartIndicators.removeKeltner(inst),
+            ichimoku: () => ChartIndicators.removeIchimoku(inst),
+        };
+        if (overlayMap[indicator]) overlayMap[indicator]();
+        // Re-render
+        toggleIndicator(containerId, indicator);
+    }
+
     function toggleIndicator(containerId, indicator) {
         const inst = instances[containerId];
         if (!inst?.chartData) return;
 
         if (typeof ChartIndicators === 'undefined') return;
+
+        const _addGear = (ind) => {
+            if (typeof ChartSettings !== 'undefined' && ChartSettings.REGISTRY[ind]) {
+                ChartSettings.addGearToPane(containerId, ind, () => _reRenderIndicator(containerId, ind));
+            }
+        };
 
         // If already rendered, destroy it
         if (inst.indicatorPanes[indicator]) {
@@ -804,28 +872,37 @@ const AlphaCharts = (() => {
             return;
         }
 
+        // Helper to read user-configured settings (or defaults)
+        const _settings = (name) => (typeof ChartSettings !== 'undefined') ? ChartSettings.get(name) : undefined;
+
         // Render the indicator pane
         switch (indicator) {
             case 'rsi':
-                inst.indicatorPanes.rsi = ChartIndicators.renderRSI(containerId, inst.chartData, inst.chart);
+                inst.indicatorPanes.rsi = ChartIndicators.renderRSI(containerId, inst.chartData, inst.chart, _settings('rsi'));
+                _addGear('rsi');
                 break;
             case 'macd':
-                inst.indicatorPanes.macd = ChartIndicators.renderMACD(containerId, inst.chartData, inst.chart);
+                inst.indicatorPanes.macd = ChartIndicators.renderMACD(containerId, inst.chartData, inst.chart, _settings('macd'));
+                _addGear('macd');
                 break;
             case 'stochastic':
-                inst.indicatorPanes.stochastic = ChartIndicators.renderStochastic(containerId, inst.chartData, inst.chart);
+                inst.indicatorPanes.stochastic = ChartIndicators.renderStochastic(containerId, inst.chartData, inst.chart, _settings('stochastic'));
+                _addGear('stochastic');
                 break;
             case 'atr':
-                inst.indicatorPanes.atr = ChartIndicators.renderATR(containerId, inst.chartData, inst.chart);
+                inst.indicatorPanes.atr = ChartIndicators.renderATR(containerId, inst.chartData, inst.chart, _settings('atr'));
+                _addGear('atr');
                 break;
             case 'adx':
-                inst.indicatorPanes.adx = ChartIndicators.renderADX(containerId, inst.chartData, inst.chart);
+                inst.indicatorPanes.adx = ChartIndicators.renderADX(containerId, inst.chartData, inst.chart, _settings('adx'));
+                _addGear('adx');
                 break;
             case 'obv':
                 inst.indicatorPanes.obv = ChartIndicators.renderOBV(containerId, inst.chartData, inst.chart);
                 break;
             case 'squeeze':
-                inst.indicatorPanes.squeeze = ChartIndicators.renderSqueezeMomentum(containerId, inst.chartData, inst.chart);
+                inst.indicatorPanes.squeeze = ChartIndicators.renderSqueezeMomentum(containerId, inst.chartData, inst.chart, _settings('squeeze'));
+                _addGear('squeeze');
                 break;
             case 'vwap':
                 if (inst.overlays.vwap) {
@@ -839,21 +916,21 @@ const AlphaCharts = (() => {
                 if (inst.overlays.supertrendUp || inst.overlays.supertrendDown) {
                     ChartIndicators.removeSupertrend(inst);
                 } else {
-                    ChartIndicators.addSupertrend(inst, inst.chartData);
+                    ChartIndicators.addSupertrend(inst, inst.chartData, _settings('supertrend'));
                 }
                 break;
             case 'keltner':
                 if (inst.overlays.keltnerMid) {
                     ChartIndicators.removeKeltner(inst);
                 } else {
-                    ChartIndicators.addKeltner(inst, inst.chartData);
+                    ChartIndicators.addKeltner(inst, inst.chartData, _settings('keltner'));
                 }
                 break;
             case 'ichimoku':
                 if (inst.overlays.ichiTenkan) {
                     ChartIndicators.removeIchimoku(inst);
                 } else {
-                    ChartIndicators.addIchimoku(inst, inst.chartData);
+                    ChartIndicators.addIchimoku(inst, inst.chartData, _settings('ichimoku'));
                 }
                 break;
             case 'vpvr':
@@ -1391,7 +1468,7 @@ const AlphaCharts = (() => {
 
     return { create, setData, setTrendlines, setPatterns, setCompare, clearCompare,
              renderSeasonality, toggleFullscreen, toggleIndicator, initDrawings, exportPNG,
-             quickCandlestick, quickLine,
+             captureBase64, quickCandlestick, quickLine,
              multiChart, multiChartAddCell, multiChartRemoveCell, destroyMultiChart,
              getMultiChartController,
              destroy, resize, instances };

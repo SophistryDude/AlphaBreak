@@ -44,6 +44,15 @@ const Forex = {
             });
         }
 
+        const heatmapTf = document.getElementById('heatmapTimeframe');
+        if (heatmapTf) {
+            heatmapTf.addEventListener('change', () => {
+                if (this._lastCorrelations) {
+                    this.renderHeatmap(this._lastCorrelations, heatmapTf.value);
+                }
+            });
+        }
+
         const pairFilter = document.getElementById('forexPairFilter');
         if (pairFilter) {
             pairFilter.addEventListener('change', () => {
@@ -703,6 +712,8 @@ const Forex = {
 
             const data = await response.json();
             this.renderCorrelations(data.correlations || [], data.thresholds);
+            const heatmapTf = document.getElementById('heatmapTimeframe');
+            this.renderHeatmap(data.correlations || [], heatmapTf?.value || 'correlation_all');
         } catch (error) {
             tbody.innerHTML = `<tr><td colspan="6" class="error">Failed to load correlations: ${error.message}</td></tr>`;
         }
@@ -750,6 +761,84 @@ const Forex = {
                 `;
             }
         }
+    },
+
+    // ──────────────────────────────────────────────────────────
+    // CORRELATION MATRIX HEATMAP
+    // ──────────────────────────────────────────────────────────
+
+    _lastCorrelations: null,
+
+    renderHeatmap(correlations, timeframe) {
+        const container = document.getElementById('correlationHeatmap');
+        if (!container) return;
+        this._lastCorrelations = correlations;
+
+        const field = timeframe || 'correlation_all';
+
+        // Extract unique pairs
+        const pairSet = new Set();
+        for (const c of correlations) {
+            pairSet.add(c.pair_a);
+            pairSet.add(c.pair_b);
+        }
+        const pairs = [...pairSet].sort();
+        const n = pairs.length;
+        if (n === 0) { container.innerHTML = '<p class="muted-text">No data</p>'; return; }
+
+        // Build NxN correlation lookup
+        const lookup = {};
+        for (const c of correlations) {
+            const key = `${c.pair_a}|${c.pair_b}`;
+            const rKey = `${c.pair_b}|${c.pair_a}`;
+            const val = c[field] ?? c.correlation_all ?? 0;
+            lookup[key] = val;
+            lookup[rKey] = val;
+        }
+
+        // Color scale: -1 (red) → 0 (neutral dark) → +1 (green)
+        function corrColor(v) {
+            const abs = Math.min(Math.abs(v), 1);
+            if (v > 0) return `rgba(38, 166, 154, ${0.15 + abs * 0.75})`;
+            if (v < 0) return `rgba(239, 83, 80, ${0.15 + abs * 0.75})`;
+            return 'rgba(139, 149, 165, 0.1)';
+        }
+
+        function textColor(v) {
+            return Math.abs(v) > 0.6 ? '#fff' : 'var(--text-primary, #e0e0e0)';
+        }
+
+        // Render grid using HTML table for accessibility + hover
+        let html = '<table class="heatmap-table"><thead><tr><th></th>';
+        for (const p of pairs) html += `<th class="heatmap-col-label">${p.replace('/', '')}</th>`;
+        html += '</tr></thead><tbody>';
+
+        for (let i = 0; i < n; i++) {
+            html += `<tr><td class="heatmap-row-label">${pairs[i]}</td>`;
+            for (let j = 0; j < n; j++) {
+                if (i === j) {
+                    html += `<td class="heatmap-cell heatmap-diag" style="background:rgba(41,98,255,0.3);">1.00</td>`;
+                } else {
+                    const key = `${pairs[i]}|${pairs[j]}`;
+                    const val = lookup[key] ?? 0;
+                    const bg = corrColor(val);
+                    const tc = textColor(val);
+                    const sign = val >= 0 ? '+' : '';
+                    html += `<td class="heatmap-cell" style="background:${bg};color:${tc};" title="${pairs[i]} vs ${pairs[j]}: ${sign}${(val * 100).toFixed(1)}%">${sign}${(val * 100).toFixed(0)}</td>`;
+                }
+            }
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+
+        // Legend
+        html += `<div class="heatmap-legend">
+            <span class="heatmap-legend-end" style="color:#ef5350;">-100%</span>
+            <div class="heatmap-gradient"></div>
+            <span class="heatmap-legend-end" style="color:#26a69a;">+100%</span>
+        </div>`;
+
+        container.innerHTML = html;
     },
 
     // ──────────────────────────────────────────────────────────

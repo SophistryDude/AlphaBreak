@@ -152,6 +152,12 @@ const Analyze = (() => {
             ChartLayouts.init();
         }
 
+        // Indicator search dropdown
+        const searchBtn = document.getElementById('indicatorSearchBtn');
+        if (searchBtn && typeof ChartSettings !== 'undefined') {
+            ChartSettings.attachIndicatorSearch(searchBtn);
+        }
+
         // Rich hover tooltips on chart-toolbar indicator labels
         if (typeof ChartTooltips !== 'undefined') {
             ChartTooltips.init();

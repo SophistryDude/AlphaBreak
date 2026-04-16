@@ -4945,6 +4945,77 @@ a.indicator-chip.bearish:hover {
     background: var(--bg-secondary);
 }
 
+/* Correlation Matrix Heatmap */
+.correlation-heatmap-container {
+    overflow-x: auto;
+    margin-top: 8px;
+}
+.heatmap-table {
+    border-collapse: collapse;
+    font-size: 11px;
+    width: auto;
+    margin: 0 auto;
+}
+.heatmap-table th,
+.heatmap-table td {
+    padding: 0;
+    text-align: center;
+    border: 1px solid rgba(42, 46, 57, 0.4);
+}
+.heatmap-col-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-muted, #8b95a5);
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    padding: 6px 2px !important;
+    height: 56px;
+    white-space: nowrap;
+}
+.heatmap-row-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-muted, #8b95a5);
+    padding: 2px 6px !important;
+    text-align: right !important;
+    white-space: nowrap;
+}
+.heatmap-cell {
+    width: 40px;
+    height: 28px;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: default;
+    transition: transform 0.1s;
+}
+.heatmap-cell:hover {
+    transform: scale(1.15);
+    z-index: 1;
+    position: relative;
+    box-shadow: 0 0 6px rgba(0,0,0,0.5);
+}
+.heatmap-diag {
+    font-weight: 700;
+    color: var(--text-muted, #8b95a5) !important;
+}
+.heatmap-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 10px;
+}
+.heatmap-legend-end {
+    font-weight: 600;
+}
+.heatmap-gradient {
+    width: 120px;
+    height: 10px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #ef5350, rgba(42,46,57,0.5), #26a69a);
+}
+
 .forex-pair-row {
     cursor: pointer;
 }
@@ -6678,6 +6749,27 @@ a.auth-user-name:hover {
 
 .ai-suggestions li { margin: 4px 0; }
 
+.journal-snapshots-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+.journal-snapshot-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.journal-snapshot-img {
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid var(--border-color, #2a2e39);
+    cursor: pointer;
+}
+.journal-snapshot-img:hover {
+    border-color: var(--primary-color, #2962FF);
+}
+
 .journal-detail-actions {
     display: flex;
     gap: 8px;
@@ -7204,6 +7296,162 @@ body.chart-fullscreen-active { overflow: hidden; }
 }
 .chart-tooltip-when strong {
     color: var(--text-primary, #e0e0e0);
+}
+
+/* Indicator settings popover */
+.indicator-settings-popover {
+    position: absolute;
+    z-index: 10001;
+    width: 240px;
+    background: var(--bg-elevated, #1a1f2e);
+    border: 1px solid var(--primary-color, #2962FF);
+    border-radius: 8px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+    font-family: inherit;
+    color: var(--text-primary, #e0e0e0);
+    animation: chart-tooltip-fade-in 0.15s ease-out;
+}
+.ind-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color, #2a2e39);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent, #2962FF);
+}
+.ind-settings-close {
+    background: none;
+    border: none;
+    color: var(--text-muted, #888);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+}
+.ind-settings-body {
+    padding: 10px 12px;
+}
+.ind-settings-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.ind-settings-field label {
+    font-size: 11px;
+    color: var(--text-muted, #8b95a5);
+}
+.ind-settings-field input {
+    width: 72px;
+    padding: 4px 6px;
+    font-size: 12px;
+    border: 1px solid var(--border-color, #2a2e39);
+    border-radius: 4px;
+    background: var(--bg-surface, #131722);
+    color: var(--text-primary, #e0e0e0);
+    text-align: right;
+}
+.ind-settings-field input:focus {
+    outline: none;
+    border-color: var(--primary-color, #2962FF);
+}
+.ind-settings-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border-color, #2a2e39);
+}
+.ind-settings-reset {
+    background: none;
+    border: none;
+    color: var(--text-muted, #8b95a5);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 4px 0;
+}
+.ind-settings-reset:hover {
+    color: var(--text-primary, #e0e0e0);
+}
+.ind-settings-apply {
+    background: var(--primary-color, #2962FF);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ind-settings-apply:hover {
+    opacity: 0.9;
+}
+
+/* Indicator search dropdown */
+.indicator-search-menu {
+    position: absolute;
+    z-index: 1000;
+    width: 300px;
+    max-height: 400px;
+    background: var(--bg-elevated, #1a1f2e);
+    border: 1px solid var(--border-color, #2a2e39);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    animation: chart-tooltip-fade-in 0.12s ease-out;
+}
+.indicator-search-input {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 12px;
+    border: none;
+    border-bottom: 1px solid var(--border-color, #2a2e39);
+    background: var(--bg-surface, #131722);
+    color: var(--text-primary, #e0e0e0);
+    outline: none;
+    box-sizing: border-box;
+}
+.indicator-search-input::placeholder {
+    color: var(--text-muted, #8b95a5);
+}
+.indicator-search-list {
+    overflow-y: auto;
+    max-height: 340px;
+    padding: 4px;
+}
+.indicator-search-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+.indicator-search-item:hover {
+    background: var(--bg-surface-hover, rgba(41, 98, 255, 0.12));
+}
+.indicator-search-item input[type="checkbox"] {
+    accent-color: var(--primary-color, #2962FF);
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+.indicator-search-item-info {
+    flex: 1;
+    min-width: 0;
+}
+.indicator-search-item-name {
+    font-weight: 600;
+    color: var(--text-primary, #e0e0e0);
+}
+.indicator-search-item-desc {
+    font-size: 10px;
+    color: var(--text-muted, #8b95a5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Inline auth gate — shown on user-state tabs when an anonymous visitor

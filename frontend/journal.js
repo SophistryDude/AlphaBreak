@@ -260,6 +260,27 @@ const Journal = {
                     ` : `<button class="btn btn-sm ${this.isPremium ? 'btn-primary' : 'btn-ghost'}" onclick="Journal.detectPattern(${entry.id})">${this.premiumButtonLabel('pattern_recognition', 'Detect Pattern')}</button>`}
                 </div>
 
+                <!-- Chart Snapshots -->
+                <div class="journal-detail-section">
+                    <h4>Chart Snapshots</h4>
+                    <div class="journal-snapshots-row">
+                        <div class="journal-snapshot-col">
+                            <span class="muted-text" style="font-size:11px;">Entry</span>
+                            ${entry.chart_snapshot_entry
+                                ? `<img src="${entry.chart_snapshot_entry}" class="journal-snapshot-img" alt="Entry chart">`
+                                : `<button class="btn btn-sm btn-ghost" onclick="Journal.captureSnapshot(${entry.id}, 'entry')">Capture Current Chart</button>`
+                            }
+                        </div>
+                        <div class="journal-snapshot-col">
+                            <span class="muted-text" style="font-size:11px;">Exit</span>
+                            ${entry.chart_snapshot_exit
+                                ? `<img src="${entry.chart_snapshot_exit}" class="journal-snapshot-img" alt="Exit chart">`
+                                : `<button class="btn btn-sm btn-ghost" onclick="Journal.captureSnapshot(${entry.id}, 'exit')">Capture Current Chart</button>`
+                            }
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Tags (Premium) -->
                 ${this.isPremium ? `
                 <div class="journal-detail-section">
@@ -304,6 +325,28 @@ const Journal = {
                 if (typeof showSnackbar === 'function') showSnackbar('Notes saved', 'success');
             }
         } catch (e) { /* ignore */ }
+    },
+
+    async captureSnapshot(id, type) {
+        if (typeof AlphaCharts === 'undefined' || !AlphaCharts.captureBase64) {
+            if (typeof showSnackbar === 'function') showSnackbar('Chart not available — navigate to Security Analysis first', 'error');
+            return;
+        }
+        const base64 = AlphaCharts.captureBase64('analyzeChartContainer');
+        if (!base64) {
+            if (typeof showSnackbar === 'function') showSnackbar('No chart to capture', 'error');
+            return;
+        }
+        const field = type === 'exit' ? 'chart_snapshot_exit' : 'chart_snapshot_entry';
+        try {
+            const res = await apiRequest(`/api/journal/entries/${id}`, 'PUT', { [field]: base64 });
+            if (res.ok) {
+                if (typeof showSnackbar === 'function') showSnackbar(`${type === 'exit' ? 'Exit' : 'Entry'} chart captured`, 'success');
+                this.openEntry(id);
+            }
+        } catch (e) {
+            if (typeof showSnackbar === 'function') showSnackbar('Failed to save snapshot', 'error');
+        }
     },
 
     async generateAiScore(id) {

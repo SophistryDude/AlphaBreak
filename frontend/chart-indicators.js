@@ -448,14 +448,17 @@ const ChartIndicators = (() => {
 
     // ── Render RSI Pane ─────────────────────────────────────────────────
 
-    function renderRSI(containerId, chartData, mainChart) {
+    function renderRSI(containerId, chartData, mainChart, settings) {
         const container = document.getElementById(containerId);
         if (!container || !chartData?.length) return null;
 
-        const closes = chartData.map(d => d.close);
-        const rsiValues = calcRSI(closes, 14);
+        const s = settings || (typeof ChartSettings !== 'undefined' ? ChartSettings.get('rsi') : {});
+        const period = s.period || 14;
 
-        const pane = _createPane(container, 100, 'RSI (14)');
+        const closes = chartData.map(d => d.close);
+        const rsiValues = calcRSI(closes, period);
+
+        const pane = _createPane(container, 100, `RSI (${period})`);
 
         // Overbought/oversold bands
         const overboughtLine = pane.chart.addLineSeries({
@@ -512,14 +515,17 @@ const ChartIndicators = (() => {
 
     // ── Render MACD Pane ─────────────────────────────────────────────────
 
-    function renderMACD(containerId, chartData, mainChart) {
+    function renderMACD(containerId, chartData, mainChart, settings) {
         const container = document.getElementById(containerId);
         if (!container || !chartData?.length) return null;
 
-        const closes = chartData.map(d => d.close);
-        const { macd, signal, histogram } = calcMACD(closes, 12, 26, 9);
+        const s = settings || (typeof ChartSettings !== 'undefined' ? ChartSettings.get('macd') : {});
+        const fast = s.fast || 12, slow = s.slow || 26, sig = s.signal || 9;
 
-        const pane = _createPane(container, 120, 'MACD (12, 26, 9)');
+        const closes = chartData.map(d => d.close);
+        const { macd, signal, histogram } = calcMACD(closes, fast, slow, sig);
+
+        const pane = _createPane(container, 120, `MACD (${fast}, ${slow}, ${sig})`);
 
         // Histogram
         const histSeries = pane.chart.addHistogramSeries({
@@ -574,16 +580,19 @@ const ChartIndicators = (() => {
 
     // ── Render Stochastic Pane ───────────────────────────────────────────
 
-    function renderStochastic(containerId, chartData, mainChart) {
+    function renderStochastic(containerId, chartData, mainChart, settings) {
         const container = document.getElementById(containerId);
         if (!container || !chartData?.length) return null;
+
+        const s = settings || (typeof ChartSettings !== 'undefined' ? ChartSettings.get('stochastic') : {});
+        const kPeriod = s.kPeriod || 14, dPeriod = s.dPeriod || 3;
 
         const highs = chartData.map(d => d.high);
         const lows = chartData.map(d => d.low);
         const closes = chartData.map(d => d.close);
-        const { k, d } = calcStochastic(highs, lows, closes, 14, 3);
+        const { k, d } = calcStochastic(highs, lows, closes, kPeriod, dPeriod);
 
-        const pane = _createPane(container, 100, 'Stochastic (14, 3)');
+        const pane = _createPane(container, 100, `Stochastic (${kPeriod}, ${dPeriod})`);
 
         // Overbought/oversold
         const obLine = pane.chart.addLineSeries({
@@ -653,16 +662,19 @@ const ChartIndicators = (() => {
 
     // ── Render ATR Pane ─────────────────────────────────────────────────
 
-    function renderATR(containerId, chartData, mainChart) {
+    function renderATR(containerId, chartData, mainChart, settings) {
         const container = document.getElementById(containerId);
         if (!container || !chartData?.length) return null;
+
+        const s = settings || (typeof ChartSettings !== 'undefined' ? ChartSettings.get('atr') : {});
+        const period = s.period || 14;
 
         const highs = chartData.map(d => d.high);
         const lows = chartData.map(d => d.low);
         const closes = chartData.map(d => d.close);
-        const atrValues = calcATR(highs, lows, closes, 14);
+        const atrValues = calcATR(highs, lows, closes, period);
 
-        const pane = _createPane(container, 90, 'ATR (14)');
+        const pane = _createPane(container, 90, `ATR (${period})`);
         const series = pane.chart.addLineSeries({
             color: COLORS.atr, lineWidth: 2,
             crosshairMarkerVisible: true, lastValueVisible: true, priceLineVisible: false,
@@ -677,16 +689,19 @@ const ChartIndicators = (() => {
 
     // ── Render ADX Pane ─────────────────────────────────────────────────
 
-    function renderADX(containerId, chartData, mainChart) {
+    function renderADX(containerId, chartData, mainChart, settings) {
         const container = document.getElementById(containerId);
         if (!container || !chartData?.length) return null;
+
+        const s = settings || (typeof ChartSettings !== 'undefined' ? ChartSettings.get('adx') : {});
+        const period = s.period || 14;
 
         const highs = chartData.map(d => d.high);
         const lows = chartData.map(d => d.low);
         const closes = chartData.map(d => d.close);
-        const { adx, plusDI, minusDI } = calcADX(highs, lows, closes, 14);
+        const { adx, plusDI, minusDI } = calcADX(highs, lows, closes, period);
 
-        const pane = _createPane(container, 110, 'ADX (14)  +DI  -DI');
+        const pane = _createPane(container, 110, `ADX (${period})  +DI  -DI`);
 
         // 25 threshold reference line
         const threshold = pane.chart.addLineSeries({
@@ -744,14 +759,16 @@ const ChartIndicators = (() => {
 
     // ── Render Squeeze Momentum Pane ────────────────────────────────────
 
-    function renderSqueezeMomentum(containerId, chartData, mainChart) {
+    function renderSqueezeMomentum(containerId, chartData, mainChart, settings) {
         const container = document.getElementById(containerId);
         if (!container || !chartData?.length) return null;
+
+        const s = settings || (typeof ChartSettings !== 'undefined' ? ChartSettings.get('squeeze') : {});
 
         const highs = chartData.map(d => d.high);
         const lows = chartData.map(d => d.low);
         const closes = chartData.map(d => d.close);
-        const { momentum, squeezeOn } = calcSqueezeMomentum(highs, lows, closes);
+        const { momentum, squeezeOn } = calcSqueezeMomentum(highs, lows, closes, s.length, s.mult, s.kcLength, s.kcMult);
 
         const pane = _createPane(container, 110, 'SQUEEZE MOMENTUM');
 
@@ -816,13 +833,16 @@ const ChartIndicators = (() => {
     // Main-chart overlay. Uses color changes to signal trend flips.
     // Because lightweight-charts line series can't change color mid-series
     // cleanly, we split into two series (up and down) and null out the other.
-    function addSupertrend(instance, chartData) {
+    function addSupertrend(instance, chartData, settings) {
         if (!instance || !chartData?.length) return null;
+
+        const s = settings || (typeof ChartSettings !== 'undefined' ? ChartSettings.get('supertrend') : {});
+        const period = s.period || 10, multiplier = s.multiplier || 3;
 
         const highs = chartData.map(d => d.high);
         const lows = chartData.map(d => d.low);
         const closes = chartData.map(d => d.close);
-        const { value, direction } = calcSupertrend(highs, lows, closes, 10, 3);
+        const { value, direction } = calcSupertrend(highs, lows, closes, period, multiplier);
 
         const upSeries = instance.chart.addLineSeries({
             color: COLORS.supertrendUp, lineWidth: 2,
@@ -865,13 +885,16 @@ const ChartIndicators = (() => {
 
     // ── Add Keltner Channels Overlay ────────────────────────────────────
 
-    function addKeltner(instance, chartData) {
+    function addKeltner(instance, chartData, settings) {
         if (!instance || !chartData?.length) return null;
+
+        const s = settings || (typeof ChartSettings !== 'undefined' ? ChartSettings.get('keltner') : {});
+        const emaPeriod = s.emaPeriod || 20, atrPeriod = s.atrPeriod || 10, multiplier = s.multiplier || 2;
 
         const highs = chartData.map(d => d.high);
         const lows = chartData.map(d => d.low);
         const closes = chartData.map(d => d.close);
-        const { upper, mid, lower } = calcKeltner(highs, lows, closes, 20, 10, 2);
+        const { upper, mid, lower } = calcKeltner(highs, lows, closes, emaPeriod, atrPeriod, multiplier);
 
         const commonOpts = {
             lineWidth: 1,
@@ -910,13 +933,16 @@ const ChartIndicators = (() => {
     // cloud covers the historical range. Area series fill between two lines is
     // emulated by drawing senkouA and senkouB as separate line series and
     // relying on the user's eye — proper cloud fill would need a custom series.
-    function addIchimoku(instance, chartData) {
+    function addIchimoku(instance, chartData, settings) {
         if (!instance || !chartData?.length) return null;
+
+        const s = settings || (typeof ChartSettings !== 'undefined' ? ChartSettings.get('ichimoku') : {});
+        const tenkanP = s.tenkanP || 9, kijunP = s.kijunP || 26, senkouP = s.senkouP || 52;
 
         const highs = chartData.map(d => d.high);
         const lows = chartData.map(d => d.low);
         const closes = chartData.map(d => d.close);
-        const { tenkan, kijun, senkouA, senkouB, chikou } = calcIchimoku(highs, lows, closes, 9, 26, 52);
+        const { tenkan, kijun, senkouA, senkouB, chikou } = calcIchimoku(highs, lows, closes, tenkanP, kijunP, senkouP);
 
         const mkLine = (color, title, extra = {}) => instance.chart.addLineSeries({
             color, lineWidth: 1,

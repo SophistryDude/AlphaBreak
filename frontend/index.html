@@ -1272,6 +1272,10 @@
                                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
                                             <span>Presets</span>
                                         </button>
+                                        <button class="chart-presets-btn" id="indicatorSearchBtn" type="button" title="Search & add indicators">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                            <span>Indicators</span>
+                                        </button>
                                         <button class="chart-fullscreen-btn" id="chartExportBtn" title="Export chart as PNG">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                         </button>
@@ -2301,6 +2305,20 @@
                         </div>
                     </div>
 
+                    <!-- Correlation Matrix Heatmap -->
+                    <div class="forex-section">
+                        <h3>Correlation Matrix</h3>
+                        <div class="forex-controls">
+                            <select id="heatmapTimeframe" class="forex-filter">
+                                <option value="correlation_all">All-Time</option>
+                                <option value="correlation_1y">1 Year</option>
+                                <option value="correlation_90d">90 Day</option>
+                                <option value="correlation_30d">30 Day</option>
+                            </select>
+                        </div>
+                        <div id="correlationHeatmap" class="correlation-heatmap-container"></div>
+                    </div>
+
                     <!-- Individual Pair Chart (hidden until pair selected) -->
                     <div class="forex-chart-container" id="forexChartContainer" style="display:none;">
                         <h3 id="forexChartTitle">Select a pair to view chart</h3>
@@ -3150,7 +3168,8 @@
     <script src="chart-volume-profile.js?v=1"></script>
     <script src="chart-drawings.js?v=2"></script>
     <script src="chart-presets.js?v=2"></script>
-    <script src="charts.js?v=5"></script>
+    <script src="chart-settings.js?v=1"></script>
+    <script src="charts.js?v=6"></script>
     <script src="analyze.js?v=5"></script>
     <script src="educational.js?v=1"></script>
     <script src="aidashboard.js?v=1"></script>

@@ -81,7 +81,7 @@ cat > /tmp/cloudfront-config.json <<EOF
     "MaxTTL": 86400
   },
   "CacheBehaviors": {
-    "Quantity": 2,
+    "Quantity": 4,
     "Items": [
       {
         "PathPattern": "/api/*",
@@ -113,6 +113,36 @@ cat > /tmp/cloudfront-config.json <<EOF
         "DefaultTTL": 86400,
         "MinTTL": 86400,
         "MaxTTL": 604800
+      },
+      {
+        "PathPattern": "*.css",
+        "TargetOriginId": "alphabreak-origin",
+        "ViewerProtocolPolicy": "redirect-to-https",
+        "AllowedMethods": { "Quantity": 2, "Items": ["GET", "HEAD"] },
+        "CachedMethods": { "Quantity": 2, "Items": ["GET", "HEAD"] },
+        "Compress": true,
+        "ForwardedValues": {
+          "QueryString": false,
+          "Cookies": { "Forward": "none" }
+        },
+        "DefaultTTL": 86400,
+        "MinTTL": 86400,
+        "MaxTTL": 604800
+      },
+      {
+        "PathPattern": "*.png",
+        "TargetOriginId": "alphabreak-origin",
+        "ViewerProtocolPolicy": "redirect-to-https",
+        "AllowedMethods": { "Quantity": 2, "Items": ["GET", "HEAD"] },
+        "CachedMethods": { "Quantity": 2, "Items": ["GET", "HEAD"] },
+        "Compress": false,
+        "ForwardedValues": {
+          "QueryString": false,
+          "Cookies": { "Forward": "none" }
+        },
+        "DefaultTTL": 604800,
+        "MinTTL": 604800,
+        "MaxTTL": 2592000
       }
     ]
   },
