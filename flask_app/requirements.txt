@@ -60,5 +60,8 @@ python-json-logger>=2.0.0
 # in flask_app/app/__init__.py so metrics light up automatically.
 # prometheus-flask-instrumentator>=4.0.0
 
+# AWS SES (email delivery for password reset, smart alerts, portfolio events)
+boto3>=1.34.0
+
 # Utilities
 python-dotenv>=1.0.0
