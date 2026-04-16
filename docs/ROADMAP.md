@@ -1,7 +1,7 @@
 # Product Roadmap
 
-**Version**: 4.5
-**Last Updated**: April 14, 2026
+**Version**: 4.6
+**Last Updated**: April 15, 2026
 **Domain**: alphabreak.vip
 
 ---
@@ -148,6 +148,7 @@ The free tier drives user acquisition. It must be good enough that traders switc
 ### Authentication — ✅ Complete
 - [x] JWT + refresh tokens (bcrypt password hashing)
 - [x] Registration, login, logout
+- [x] Self-service password reset (email link, 1-hour token TTL, all-device logout on reset)
 - [x] User profiles (display name, email, is_premium flag)
 - [x] 1 free trial per premium feature
 
@@ -194,7 +195,7 @@ Pro is the revenue engine. These features justify the price by replacing 2-3 sep
 - [ ] **Indicator Search + Add** — Search bar to find and overlay any indicator with custom parameters
 
 ### Charting — Phase 4
-- [ ] **Smart Alerts** — "If regime = breakout AND RSI < 30, notify me" — parsed by backend AI
+- [x] **Smart Alerts** — Rule-based price/indicator alerts (up to 10 rules, 3 AND-chained conditions, 12 indicator fields). 10-min evaluator DAG during market hours. Delivery via in-app bell + SES email. Account > Smart Alerts sub-tab + "+ Alert" button on chart toolbar.
 - [ ] **Custom Screeners** — "Show me all stocks with bullish engulfing AND above 200 SMA AND insider buying" — natural language to filter
 - [ ] **Strategy Builder** — "Backtest buying when trend break > 90% bullish, selling when RSI > 70" — automated strategy
 
@@ -421,9 +422,11 @@ Everything below is required to serve hundreds of thousands to millions of users
 - [ ] **Penetration Testing** — Before public launch
 
 #### Email & Notifications
-- [x] **SES Domain Verification** — Domain identity + DKIM initiated, DNS records pending propagation
+- [x] **SES Domain Verification** — Domain identity + DKIM verified and signing in us-east-1
+- [x] **SES Production Pipeline** — IAM user `alphabreak-ses-sender` (least-privilege), k8s secret `ses-credentials`, boto3 in requirements, `SES_SANDBOX_MODE=false` in pod env. Production access request filed 2026-04-15.
 - [x] **Email Templates** — 10 branded HTML templates (dark theme, mobile-responsive) + email service with SES sending
-- [x] **Bounce Handling** — SES bounce/complaint webhook via SNS, auto-disables bounced emails
+- [x] **Bounce Handling** — SNS topic `ses-bounces-complaints` → HTTPS `/api/ses/webhook` (auto-confirmed), attached to SES identity for bounces + complaints
+- [x] **Password Reset** — Self-service forgot/reset password flow with 1-hour hashed token, branded HTML email, atomic token consumption, all-device logout on reset
 
 #### Multi-Region (Future)
 - [ ] Primary: us-east-2 (Ohio)
@@ -441,6 +444,15 @@ Everything below is required to serve hundreds of thousands to millions of users
 ---
 
 ## Recently Completed
+
+### v4.6 (April 15, 2026) — Smart Alerts + Password Reset + SES Pipeline + Infra Fixes
+- ✅ **Smart Alerts** — Rule-based price/indicator alert engine. Users define up to 10 rules with 3 AND-chained conditions across 12 indicator fields (price, volume, RSI, SMA, EMA, MACD, Stochastic, CCI, ADX). Airflow DAG evaluates every 10 min during US market hours. Per-rule cooldown (1h/4h/1d/until-reset). Delivery via in-app bell + SES email. Backend: `alert_service.py` (CRUD + indicator snapshot reusing `dashboard_service`), `/api/alerts` REST blueprint, `smart_alerts_evaluator_dag.py`. Frontend: `alerts.js` module, Account > Smart Alerts sub-tab, "+ Alert" button on Security Analysis chart toolbar with ticker prefill.
+- ✅ **Self-service password reset** — `/api/auth/forgot-password` (5/hr, generic 200 to prevent email enumeration) + `/api/auth/reset-password` (10/hr, atomic token consumption). 1-hour hashed tokens in `password_reset_tokens` table. Branded HTML email via SES. Revokes all refresh tokens on reset (forces re-login everywhere). Frontend: forgot-password link on login form, dedicated reset form, `#reset-password?token=` hash handler.
+- ✅ **SES production pipeline** — Domain `alphabreak.vip` DKIM-verified in us-east-1. IAM user `alphabreak-ses-sender` (least-privilege SES send). k8s secret `ses-credentials` mounted into trading-api. SNS topic `ses-bounces-complaints` with HTTPS subscription to `/api/ses/webhook` (auto-confirmed). `SES_SANDBOX_MODE=false` in pod env. Production access request filed. `boto3` added to requirements.txt (was missing — all SES sends were silently failing).
+- ✅ **Airflow recovery** — `airflow-trading:latest` had been pruned from k0s containerd by `docker system prune -af` during a prior backend deploy. All scheduler/webserver pods stuck on `ErrImageNeverPull` for ~4 days. Rebuilt image, imported, cleaned 12 zombie pods. `smart_alerts_evaluator` DAG registered and unpaused.
+- ✅ **`scripts/deploy-backend.sh`** — Single deploy script that rebuilds BOTH `trading-api` + `airflow-trading`, imports in one tarball, prunes only dangling layers (never `-af`). Flags: `--api-only`, `--airflow-only`, `--no-pull`. README updated. Prevents the image-GC bug.
+- ✅ **ProductionConfig fix** — `validate_env()` required `POSTGRES_PASSWORD` but deployment uses `TIMESERIES_DB_PASSWORD`. Latent since v4.5 code hygiene; surfaced on first image rebuild.
+- ✅ **Stale us-east-2 SES cleanup** — Deleted PENDING `alphabreak.vip` identity in us-east-2 (superseded by verified us-east-1 identity).
 
 ### v4.5 (April 13-14, 2026) — Charting Phase 2/3 + Code Hygiene
 - ✅ **Charting Phase 2 complete** — 5 new drawing tools (parallel channel, measure, text annotation, clone-last, shift-snap-to-OHLC); 4 → 7 total tools. Multi-chart crosshair sync bug fixed (was silently broken in v4.1 — now passes real price values + handles cross-timeframe time normalization).
@@ -544,4 +556,4 @@ Everything below is required to serve hundreds of thousands to millions of users
 
 ---
 
-**Last Updated**: April 14, 2026
+**Last Updated**: April 15, 2026

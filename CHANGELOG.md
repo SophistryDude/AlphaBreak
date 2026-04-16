@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.6.0] - 2026-04-15
+
+### Added
+
+#### Smart Alerts
+- Rule-based price/indicator alert engine with 12 supported fields (price, volume, RSI, SMA 20/50/200, EMA 20/50, MACD histogram, Stochastic %K, CCI, ADX)
+- Up to 10 rules per user, 3 AND-chained conditions per rule
+- Per-rule cooldown: 1 hour, 4 hours, 1 day, or manual reset
+- Airflow DAG `smart_alerts_evaluator` runs every 10 minutes during US market hours
+- Delivery via existing in-app notification bell + SES email
+- Database: `user_alert_rules`, `alert_rule_firings` tables
+- Backend: `alert_service.py` (CRUD + indicator snapshot engine), `/api/alerts` REST blueprint (6 endpoints)
+- Frontend: `alerts.js` module, Account > Smart Alerts sub-tab, "+ Alert" button on Security Analysis chart toolbar
+- `smart_alert` event type added to notification preferences
+
+#### Self-Service Password Reset
+- `POST /api/auth/forgot-password` — rate-limited (5/hr), generic 200 response (no email enumeration)
+- `POST /api/auth/reset-password` — atomic token consumption, revokes all refresh tokens
+- `password_reset_tokens` table with SHA-256 hashed tokens, 1-hour TTL
+- Branded HTML email via SES with reset link
+- Frontend: "Forgot password?" link on login form, forgot-password form, reset-password form
+- Handles `#reset-password?token=` URL hash for email link landing
+
+#### SES Production Pipeline
+- IAM user `alphabreak-ses-sender` with least-privilege SES send-only policy (us-east-1)
+- k8s secret `ses-credentials` mounted as env vars into trading-api pods
+- SNS topic `ses-bounces-complaints` with HTTPS subscription to `/api/ses/webhook` (auto-confirmed)
+- Bounce + complaint notifications attached to SES domain identity
+- `boto3>=1.34.0` added to requirements.txt (was missing — all SES sends silently failed)
+- `SES_SANDBOX_MODE=false`, `SES_REGION=us-east-1`, `SES_FROM_EMAIL=noreply@alphabreak.vip` set in pod env
+- Production access request filed; sandbox still allows sends to verified addresses
+
+#### Deploy Script
+- `scripts/deploy-backend.sh` — rebuilds BOTH `trading-api` and `airflow-trading` images
+- Imports both in a single tarball via `k0s ctr images import`
+- Prunes only dangling Docker layers (`docker image prune -f`, never `-af`)
+- Flags: `--api-only`, `--airflow-only`, `--no-pull`
+
+### Fixed
+- **Airflow recovery** — `airflow-trading:latest` was pruned from k0s containerd by `docker system prune -af` during a prior deploy. Scheduler + webserver pods stuck on `ErrImageNeverPull` for ~4 days. Rebuilt image, imported, cleaned 12 zombie pods.
+- **ProductionConfig.validate_env()** — Required `POSTGRES_PASSWORD` but k8s deployment uses `TIMESERIES_DB_PASSWORD`. Latent since v4.5; crashed pods on first image rebuild.
+- **Stale SES identity** — Deleted PENDING `alphabreak.vip` domain identity in us-east-2 (superseded by verified us-east-1 identity)
+
+---
+
 ## [3.0.0] - 2026-04-03
 
 ### Added
